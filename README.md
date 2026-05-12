@@ -9,7 +9,20 @@ The project is not an auto-apply bot and must not automatically submit applicati
 
 ## 0. Current Status
 
-The project is at the design stage.
+The project has completed the repository foundation and the initial FastAPI backend skeleton.
+
+Current implemented parts:
+
+- repository bootstrap with `uv`;
+- CI and pre-commit checks;
+- minimal FastAPI application factory;
+- health endpoints;
+- basic Jinja2 home page;
+- profile config loading;
+- profile path resolution;
+- bootstrap and Stage 1 tests.
+
+The next stage is the SQLite persistence foundation.
 
 
 ---
