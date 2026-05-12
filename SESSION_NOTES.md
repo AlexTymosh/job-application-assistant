@@ -14,25 +14,25 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 3 hardening — job input foundation.
+Stage 3.5 — preflight foundation.
 
 Completed:
 
 - Stage 0 — repository foundation;
 - Stage 1 — FastAPI backend skeleton;
 - Stage 2 — SQLite persistence foundation;
-- Stage 2 hardening — SQLite foreign keys, `session_scope()`, and external profile paths;
 - Stage 2.5 — Alembic migration baseline;
-- Stage 3 — initial job input foundation.
+- Stage 3 — job input foundation.
 
 Current task:
 
-- harden job input validation;
-- keep generated artefact paths privacy-aware;
-- update documentation to reflect the actual implemented state;
-- ensure repository bootstrap tests include Stage 3 files.
+- add preflight checks for prompt injection phrases;
+- add blacklist loading and matching;
+- add duplicate detection by job text hash;
+- add preflight service;
+- add tests for preflight logic.
 
-Do not add OpenAI client code, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, scraping, or external integrations yet.
+Do not add OpenAI client code, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, or external integrations yet.
 
 ---
 
@@ -284,22 +284,23 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Harden Stage 3 job input foundation.
+Complete Stage 3.5 — preflight foundation.
 
 Required:
 
-1. Update `README.md` and `SESSION_NOTES.md` to say that Stage 3 initial job input foundation exists.
-2. Add Stage 3 files to `tests/test_repository_bootstrap.py`.
-3. Strengthen `JobInput` validation so whitespace-only text is rejected.
-4. Add tests for whitespace-only manual job text.
-5. Store raw job artefact paths in a privacy-aware relative format.
-6. Add tests for raw job artefact metadata.
-7. Do not add OpenAI client code.
-8. Do not add URL scraping.
-9. Do not add CV loading.
-10. Do not add CV tailoring logic.
-11. Do not add exporters.
-12. Do not add dashboard functionality yet.
+1. Add prompt-injection phrase detection.
+2. Add blacklist loading and matching.
+3. Add duplicate detection by job text hash.
+4. Add preflight service.
+5. Add tests for prompt injection, blacklist, duplicate detection, and preflight service.
+6. Update repository bootstrap tests with preflight files.
+7. Run local checks.
+8. Do not add OpenAI client code.
+9. Do not add URL scraping.
+10. Do not add CV loading.
+11. Do not add CV tailoring.
+12. Do not add exporters.
+13. Do not add dashboard functionality.
 
 ---
 
