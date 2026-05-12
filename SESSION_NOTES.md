@@ -264,20 +264,22 @@ Add an application list showing:
 
 ## 6. Immediate Next Step
 
-Create the Stage 2 SQLite foundation.
+Harden Stage 2.
 
 Required:
 
-1. Add SQLAlchemy database session setup.
-2. Add initial ORM models.
-3. Add table creation helper for local development.
-4. Add repository classes for applications, events, and warnings.
-5. Add tests for database setup and basic repository operations.
-6. Keep the database layer independent of FastAPI route handlers.
-7. Do not add OpenAI client code.
-8. Do not add CV tailoring logic.
-9. Do not add exporters.
-10. Do not add dashboard functionality yet.
+1. Fix `session_scope()` so it can be used as a real context manager.
+2. Enable SQLite foreign key enforcement.
+3. Make profile path resolution explicitly support external absolute profile directories.
+4. Add tests for external profile paths.
+5. Add tests for SQLite foreign key enforcement.
+6. Add tests for `session_scope()` commit and rollback behaviour.
+7. Update `.env.example` with an external private profile directory example.
+8. Update README and SESSION_NOTES to state that real profile data should live outside the repository.
+9. Do not add OpenAI client code.
+10. Do not add CV tailoring logic.
+11. Do not add exporters.
+12. Do not add dashboard functionality yet.
 
 ---
 
@@ -322,7 +324,6 @@ git check-ignore -v profiles/alex/cv/variants/backend_developer.md
 
 At the current stage, do not:
 
-- write SQLAlchemy models;
 - write an OpenAI client;
 - write LLM prompts;
 - write a PDF exporter;
