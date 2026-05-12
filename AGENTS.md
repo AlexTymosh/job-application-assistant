@@ -5,6 +5,18 @@ Rules for AI agents working with the `local-job-application-assistant` project.
 This document is mandatory for Codex, ChatGPT, code-review agents, QA agents, and any other AI tools that will read, analyse, or modify the repository.
 
 ---
+## 0. Working Context
+
+Before starting any non-trivial task, the agent must read `SESSION_NOTES.md`, `SESSION_NOTES.md` contains:
+
+- the current project stage;
+- the immediate plan;
+- decisions already made;
+- deferred tasks;
+- current session constraints.
+
+If the stage, plan, or any important decisions have changed during the work, the agent must update `SESSION_NOTES.md`.
+
 
 ## 1. Project Purpose
 
