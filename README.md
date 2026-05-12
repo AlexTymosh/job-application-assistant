@@ -96,7 +96,7 @@ The first working release must include:
 9. Duplicate detection.
 10. CV version selection.
 11. Section-by-section Markdown CV adaptation.
-12. cv Change Log.
+12. CV Change Log.
 13. Evidence Matrix.
 14. CV Match Report.
 15. Cover letter generation.
@@ -341,7 +341,7 @@ If it is enabled, the user must see:
 
 Final PDF/DOCX documents are only created after approval.
 
-If Human Approval is disabled, the application may create artefacts immediately, but must still save the cv Change Log and QA Report.
+If Human Approval is disabled, the application may create artefacts immediately, but must still save the CV Log and QA Report.
 
 ---
 
@@ -453,7 +453,7 @@ Input
 → Prompt Injection Detector
 → Preflight Checker
 → cv Selector
-→ cv Tailor
+→ CV Tailor
 → Evidence Matrix Builder
 → CV Match Report Builder
 → QA Reviewer
@@ -619,13 +619,13 @@ Application statuses are informational and are not used in the application busin
 - Structured Outputs;
 - prompt injection warning.
 
-### v0.4 — cv tailoring
+### v0.4 — CV Tailoring
 
 - Markdown CV loader;
 - section parser;
 - fact bank;
 - safe tailoring;
-- cv Change Log.
+- CV Change Log.
 
 ### v0.5 — Reports
 
@@ -659,7 +659,7 @@ The first release is considered complete when the user is able to:
 7. Receive a cover letter.
 8. View the Evidence Matrix.
 9. View the CV Match Report.
-10. View the cv Change Log.
+10. View the CV Change Log.
 11. Confirm the result via Human Approval, if the option is enabled.
 12. Download the CV as a PDF.
 13. Download the CV as a DOCX.

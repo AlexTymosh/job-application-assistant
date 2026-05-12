@@ -136,7 +136,7 @@ Primary tables:
 
 - `applications`
 - `artifacts`
-- `CV_changes`
+- `cv_changes`
 - `evidence_items`
 - `events`
 - `contacts`
@@ -182,7 +182,7 @@ Use the term `cv`, not `resume`.
 
 ---
 
-### Stage 6 — Safe CV tailoring
+### Stage 6 — Safe CV Tailoring
 
 Add:
 
@@ -374,5 +374,5 @@ Stage 0 is complete when:
 - no real private profile files are committed;
 - `uv run pytest` passes;
 - `uv run ruff check .` passes;
-- `uv run black --check .` passes;
-- `uv run isort --check-only --diff .` passes;
+- uv run ruff format --check . passes;
+- uv run ruff check . passes;

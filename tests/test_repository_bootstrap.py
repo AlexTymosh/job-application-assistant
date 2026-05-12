@@ -1,5 +1,5 @@
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -58,9 +58,7 @@ def test_private_profile_files_are_not_tracked_by_git() -> None:
     )
 
     tracked_private_files = [
-        line.strip()
-        for line in result.stdout.splitlines()
-        if line.strip()
+        line.strip() for line in result.stdout.splitlines() if line.strip()
     ]
 
     assert tracked_private_files == []
@@ -68,9 +66,7 @@ def test_private_profile_files_are_not_tracked_by_git() -> None:
 
 def test_example_profile_uses_example_suffixes() -> None:
     example_profile_files = [
-        path
-        for path in (ROOT / "profiles" / "example").rglob("*")
-        if path.is_file()
+        path for path in (ROOT / "profiles" / "example").rglob("*") if path.is_file()
     ]
 
     unsafe_files = [

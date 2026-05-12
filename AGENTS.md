@@ -731,7 +731,7 @@ If it is enabled, the user must see the following before the final export:
 - original text;
 - adapted text;
 - diff;
-- cv Change Log;
+- CV Change Log;
 - Evidence Matrix;
 - CV Match Report;
 - QA warnings;
@@ -966,7 +966,7 @@ If the uncertainty is not critical, the agent must choose a simple option and re
 The project must remain:
 
 ```text
-Local-first CV tailoring assistant
+Local-first CV Tailoring assistant
 + SQLite application tracking
 + evidence-based LLM guardrails
 + Markdown source of truth
