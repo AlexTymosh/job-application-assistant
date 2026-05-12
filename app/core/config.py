@@ -5,22 +5,26 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class AppConfig(BaseModel):
+class StrictConfigModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class AppConfig(StrictConfigModel):
     profile_name: str
     data_dir: Path
 
 
-class WorkflowConfig(BaseModel):
+class WorkflowConfig(StrictConfigModel):
     require_human_approval_before_export: bool = True
     stop_on_blacklist: bool = True
     warn_on_duplicate: bool = True
     stop_on_prompt_injection: bool = False
 
 
-class LlmConfig(BaseModel):
+class LlmConfig(StrictConfigModel):
     provider: str = "openai"
     model_extract: str | None = None
     model_tailor: str | None = None
@@ -31,19 +35,19 @@ class LlmConfig(BaseModel):
     use_structured_outputs: bool = True
 
 
-class CvConfig(BaseModel):
+class CvConfig(StrictConfigModel):
     default_variant: str
     variants: list[str] = Field(default_factory=list)
 
 
-class ExportConfig(BaseModel):
+class ExportConfig(StrictConfigModel):
     markdown: bool = True
     html: bool = True
     pdf: bool = True
     docx: bool = True
 
 
-class GuardrailsConfig(BaseModel):
+class GuardrailsConfig(StrictConfigModel):
     allow_new_skills: bool = False
     allow_fake_metrics: bool = False
     require_fact_ids: bool = True
@@ -52,18 +56,18 @@ class GuardrailsConfig(BaseModel):
     british_english: bool = True
 
 
-class JobReaderConfig(BaseModel):
+class JobReaderConfig(StrictConfigModel):
     allow_url_input: bool = True
     allow_manual_text_input: bool = True
     min_extracted_text_chars: int = 1200
 
 
-class FutureIntegrationsConfig(BaseModel):
+class FutureIntegrationsConfig(StrictConfigModel):
     reed_api_enabled: bool = False
     auto_apply_enabled: bool = False
 
 
-class ProjectConfig(BaseModel):
+class ProjectConfig(StrictConfigModel):
     app: AppConfig
     workflow: WorkflowConfig
     llm: LlmConfig
@@ -83,11 +87,36 @@ def get_default_config_path() -> Path:
     profile_data_dir = Path(os.getenv("PROFILE_DATA_DIR", f"profiles/{profile_name}"))
 
     filename = "config.example.yaml" if profile_name == "example" else "config.yaml"
-    return get_project_root() / profile_data_dir / filename
+    return resolve_project_path(profile_data_dir / filename)
+
+
+def resolve_project_path(path: Path) -> Path:
+    if path.is_absolute():
+        return path
+
+    return get_project_root() / path
+
+
+def _normalise_unresolved_env_placeholders(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _normalise_unresolved_env_placeholders(nested_value)
+            for key, nested_value in value.items()
+        }
+
+    if isinstance(value, list):
+        return [_normalise_unresolved_env_placeholders(item) for item in value]
+
+    if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
+        return None
+
+    return value
 
 
 def load_profile_config(config_path: Path | None = None) -> ProjectConfig:
-    resolved_path = config_path or get_default_config_path()
+    resolved_path = (
+        resolve_project_path(config_path) if config_path else get_default_config_path()
+    )
 
     if not resolved_path.is_file():
         raise FileNotFoundError(f"Profile config file not found: {resolved_path}")
@@ -95,5 +124,6 @@ def load_profile_config(config_path: Path | None = None) -> ProjectConfig:
     raw_content = resolved_path.read_text(encoding="utf-8")
     expanded_content = os.path.expandvars(raw_content)
     loaded_data: dict[str, Any] = yaml.safe_load(expanded_content) or {}
+    normalised_data = _normalise_unresolved_env_placeholders(loaded_data)
 
-    return ProjectConfig.model_validate(loaded_data)
+    return ProjectConfig.model_validate(normalised_data)

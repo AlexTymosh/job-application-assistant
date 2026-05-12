@@ -13,13 +13,21 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 1 — backend skeleton.
+Stage 2 — SQLite foundation.
 
-Stage 0 repository foundation is substantially complete.
+Stage 0 repository foundation is complete.
 
-The current task is to add a minimal FastAPI application skeleton with config loading, profile path resolution, a health endpoint, a basic Jinja2 page, and tests.
+Stage 1 backend skeleton is complete:
+- FastAPI application factory exists;
+- health routes exist;
+- basic Jinja2 home page exists;
+- profile config loading exists;
+- profile path resolution exists;
+- Stage 1 tests exist.
 
-Do not add database models, OpenAI client code, CV tailoring logic, exporters, dashboard logic, LangGraph, or external integrations yet.
+The current task is to add the SQLite persistence foundation.
+
+Do not add OpenAI client code, CV tailoring logic, exporters, dashboard logic, LangGraph, or external integrations yet.
 
 ---
 
@@ -184,17 +192,22 @@ Use the term `cv`, not `resume`.
 
 ---
 
-### Stage 6 — Safe CV Tailoring
+## 6. Immediate Next Step
 
-Add:
+Create the Stage 2 SQLite foundation.
 
-- Summary tailoring;
-- Skills tailoring;
-- Experience tailoring;
-- Projects tailoring if relevant;
-- CV Change Log;
-- diff;
-- fact_id checks.
+Required:
+
+1. Add SQLAlchemy database session setup.
+2. Add initial ORM models.
+3. Add table creation helper for local development.
+4. Add repository classes for applications, events, and warnings.
+5. Add tests for database setup and basic repository operations.
+6. Keep the database layer independent of FastAPI route handlers.
+7. Do not add OpenAI client code.
+8. Do not add CV tailoring logic.
+9. Do not add exporters.
+10. Do not add dashboard functionality yet.
 
 ---
 
@@ -251,20 +264,20 @@ Add an application list showing:
 
 ## 6. Immediate Next Step
 
-Create the Stage 1 backend skeleton.
+Create the Stage 2 SQLite foundation.
 
 Required:
 
-1. Create the minimal `app/` package.
-2. Add `app/main.py` with an application factory.
-3. Add `app/api/routes_health.py`.
-4. Add `app/web/routes.py`.
-5. Add basic Jinja2 templates.
-6. Add `app/core/config.py` for profile config loading.
-7. Add `app/core/paths.py` for profile path resolution.
-8. Add tests for app startup, health endpoint, config loading, and path resolution.
-9. Add only the dependencies required for Stage 1 tests.
-10. Do not add database models, LLM client code, CV tailoring, exporters, or dashboard functionality.
+1. Add SQLAlchemy database session setup.
+2. Add initial ORM models.
+3. Add table creation helper for local development.
+4. Add repository classes for applications, events, and warnings.
+5. Add tests for database setup and basic repository operations.
+6. Keep the database layer independent of FastAPI route handlers.
+7. Do not add OpenAI client code.
+8. Do not add CV tailoring logic.
+9. Do not add exporters.
+10. Do not add dashboard functionality yet.
 
 ---
 
@@ -309,7 +322,6 @@ git check-ignore -v profiles/alex/cv/variants/backend_developer.md
 
 At the current stage, do not:
 
-- implement FastAPI;
 - write SQLAlchemy models;
 - write an OpenAI client;
 - write LLM prompts;
