@@ -68,6 +68,7 @@ ipython_config.py
 # Python environments
 .env
 .env.*
+!.env.example
 .envrc
 .venv/
 env/
@@ -78,6 +79,7 @@ venv.bak/
 __pypackages__/
 
 # uv
+.uv-cache/
 
 # pyenv
 
@@ -145,6 +147,11 @@ profiles/*/blacklist.txt
 profiles/*/cv/master.md
 profiles/*/cv/fact_bank.yaml
 profiles/*/cv/variants/*.md
+
+# Legacy/private resume path protection
+profiles/*/resume/master.md
+profiles/*/resume/fact_bank.yaml
+profiles/*/resume/variants/*.md
 
 # Private generated application data
 profiles/*/applications/

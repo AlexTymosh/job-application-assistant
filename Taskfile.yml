@@ -1,0 +1,45 @@
+version: "3"
+
+tasks:
+  install:
+    desc: Install project and development dependencies
+    cmds:
+      - uv sync --group dev
+
+  lock:
+    desc: Generate or update uv.lock
+    cmds:
+      - uv lock
+
+  format:
+    desc: Format and auto-fix Python files
+    cmds:
+      - uv run ruff check --fix .
+      - uv run ruff format .
+
+  lint:
+    desc: Run lint checks
+    cmds:
+      - uv run ruff check .
+
+  format-check:
+    desc: Check formatting without modifying files
+    cmds:
+      - uv run ruff format --check .
+
+  test:
+    desc: Run tests
+    cmds:
+      - uv run pytest
+
+  pre-commit:
+    desc: Run pre-commit on all files
+    cmds:
+      - uv run pre-commit run --all-files
+
+  check:
+    desc: Run all local verification checks
+    cmds:
+      - task: format-check
+      - task: lint
+      - task: test

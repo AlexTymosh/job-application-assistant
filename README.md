@@ -96,7 +96,7 @@ The first working release must include:
 9. Duplicate detection.
 10. CV version selection.
 11. Section-by-section Markdown CV adaptation.
-12. Resume Change Log.
+12. cv Change Log.
 13. Evidence Matrix.
 14. CV Match Report.
 15. Cover letter generation.
@@ -232,7 +232,7 @@ SQLite must store:
 
 - applications;
 - artifacts;
-- resume changes;
+- cv changes;
 - evidence items;
 - contacts;
 - events;
@@ -280,7 +280,7 @@ The Evidence Matrix is needed to protect against hallucinations and to allow man
 
 ---
 
-## 13. Resume Change Log
+## 13. cv Change Log
 
 Every CV change must have a record containing:
 
@@ -289,7 +289,7 @@ Every CV change must have a record containing:
 - after_text;
 - reason;
 - job_requirement_ids;
-- resume_fact_ids;
+- cv_fact_ids;
 - risk_level;
 - created_at.
 
@@ -341,7 +341,7 @@ If it is enabled, the user must see:
 
 Final PDF/DOCX documents are only created after approval.
 
-If Human Approval is disabled, the application may create artefacts immediately, but must still save the Resume Change Log and QA Report.
+If Human Approval is disabled, the application may create artefacts immediately, but must still save the cv Change Log and QA Report.
 
 ---
 
@@ -354,7 +354,7 @@ profiles/
 └── alex/
     ├── config.yaml
     ├── blacklist.txt
-    ├── resume/
+    ├── cv/
     │   ├── master.md
     │   ├── fact_bank.yaml
     │   └── variants/
@@ -403,8 +403,8 @@ local-job-application-assistant/
 │   │   ├── job_reader.py
 │   │   ├── job_extractor.py
 │   │   ├── preflight_checker.py
-│   │   ├── resume_selector.py
-│   │   ├── resume_tailor.py
+│   │   ├── cv_selector.py
+│   │   ├── cv_tailor.py
 │   │   ├── keyword_rules.py
 │   │   ├── qa_reviewer.py
 │   │   ├── match_report.py
@@ -414,7 +414,7 @@ local-job-application-assistant/
 │   │   ├── schemas.py
 │   │   ├── guardrails.py
 │   │   └── prompts/
-│   ├── resume/
+│   ├── cv/
 │   │   ├── markdown_loader.py
 │   │   ├── section_parser.py
 │   │   ├── fact_bank.py
@@ -452,8 +452,8 @@ Input
 → Job Extractor
 → Prompt Injection Detector
 → Preflight Checker
-→ Resume Selector
-→ Resume Tailor
+→ cv Selector
+→ cv Tailor
 → Evidence Matrix Builder
 → CV Match Report Builder
 → QA Reviewer
@@ -532,7 +532,7 @@ llm:
   temperature_qa: 0.0
   use_structured_outputs: true
 
-resume:
+cv:
   default_variant: "backend_developer"
   variants:
     - "backend_developer"
@@ -619,13 +619,13 @@ Application statuses are informational and are not used in the application busin
 - Structured Outputs;
 - prompt injection warning.
 
-### v0.4 — Resume tailoring
+### v0.4 — cv tailoring
 
 - Markdown CV loader;
 - section parser;
 - fact bank;
 - safe tailoring;
-- Resume Change Log.
+- cv Change Log.
 
 ### v0.5 — Reports
 
@@ -659,7 +659,7 @@ The first release is considered complete when the user is able to:
 7. Receive a cover letter.
 8. View the Evidence Matrix.
 9. View the CV Match Report.
-10. View the Resume Change Log.
+10. View the cv Change Log.
 11. Confirm the result via Human Approval, if the option is enabled.
 12. Download the CV as a PDF.
 13. Download the CV as a DOCX.

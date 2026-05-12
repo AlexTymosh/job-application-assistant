@@ -71,7 +71,7 @@ The first release is considered complete when the user is able to:
 7. Receive a cover letter.
 8. View the Evidence Matrix.
 9. View the CV Match Report.
-10. View the Resume Change Log.
+10. View the CV Change Log.
 11. Download the CV as a PDF.
 12. Download the CV as a DOCX.
 13. Find the application record in the SQLite-backed dashboard.
@@ -136,7 +136,7 @@ Primary tables:
 
 - `applications`
 - `artifacts`
-- `resume_changes`
+- `CV_changes`
 - `evidence_items`
 - `events`
 - `contacts`
@@ -190,7 +190,7 @@ Add:
 - Skills tailoring;
 - Experience tailoring;
 - Projects tailoring if relevant;
-- Resume Change Log;
+- CV Change Log;
 - diff;
 - fact_id checks.
 
@@ -249,12 +249,20 @@ Add an application list showing:
 
 ## 6. Immediate Next Step
 
-Fix the bootstrap before the first commit.
+Complete Stage 0 repository foundation.
 
 Required:
 
-1. Create `.python-version`.
-2. Create `uv.lock` via `uv lock`.
+1. Standardise all project paths and domain naming on `cv`, not `resume`.
+2. Create `.python-version`.
+3. Create `pyproject.toml`.
+4. Create `.pre-commit-config.yaml`.
+5. Create `Taskfile.yml`.
+6. Create `.github/workflows/ci.yml`.
+7. Add fake example profile files under `profiles/example/`.
+8. Add `tests/test_repository_bootstrap.py`.
+9. Generate `uv.lock` via `uv lock`.
+10. Run local checks before the first commit.
 
 ---
 
@@ -359,3 +367,12 @@ Stage 0 is complete when:
 - `uv.lock` is in the root;
 - `git status --short` contains no `AD` entries;
 - the first commit can be made without risk of private data leaking.
+- `.pre-commit-config.yaml` is in the root;
+- `Taskfile.yml` is in the root;
+- `.github/workflows/ci.yml` exists;
+- fake example profile files exist under `profiles/example/`;
+- no real private profile files are committed;
+- `uv run pytest` passes;
+- `uv run ruff check .` passes;
+- `uv run black --check .` passes;
+- `uv run isort --check-only --diff .` passes;

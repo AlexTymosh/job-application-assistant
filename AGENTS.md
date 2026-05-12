@@ -158,7 +158,7 @@ local-job-application-assistant/
 │   ├── db/
 │   ├── pipeline/
 │   ├── llm/
-│   ├── resume/
+│   ├── CV/
 │   ├── exporters/
 │   ├── web/
 │   └── future_integrations/
@@ -166,7 +166,7 @@ local-job-application-assistant/
 │   └── alex/
 │       ├── config.yaml
 │       ├── blacklist.txt
-│       ├── resume/
+│       ├── CV/
 │       │   ├── master.md
 │       │   ├── fact_bank.yaml
 │       │   └── variants/
@@ -231,8 +231,8 @@ Input
 → Job Extractor
 → Prompt Injection Detector
 → Preflight Checker
-→ Resume Selector
-→ Resume Tailor
+→ CV Selector
+→ CV Tailor
 → Evidence Matrix Builder
 → CV Match Report Builder
 → QA Reviewer
@@ -296,11 +296,11 @@ class ApplicationRunState(BaseModel):
     blacklist_hit: bool = False
     duplicate_hit: bool = False
 
-    selected_resume_variant: str | None = None
-    original_resume_markdown: str | None = None
-    tailored_resume_markdown: str | None = None
+    selected_cv_variant: str | None = None
+    original_cv_markdown: str | None = None
+    tailored_cv_markdown: str | None = None
 
-    resume_changes: list[ResumeChange] = []
+    cv_changes: list[CVChange] = []
     evidence_matrix: list[EvidenceItem] = []
     match_report: MatchReport | None = None
     qa_report: QAReport | None = None
@@ -389,7 +389,7 @@ SQLite must store:
 
 - applications;
 - artifacts;
-- resume_changes;
+- cv_changes;
 - evidence_items;
 - events;
 - contacts;
@@ -442,7 +442,7 @@ Permitted:
 - reading CV variants;
 - creating an adapted copy of the CV;
 - creating a diff;
-- creating a Resume Change Log;
+- creating a CV Change Log;
 - creating PDF/DOCX exports;
 - saving application artefacts.
 
@@ -519,7 +519,7 @@ facts:
 
 ---
 
-## 20. Resume Change Log
+## 20. CV Change Log
 
 Every CV change must have a record containing:
 
@@ -528,7 +528,7 @@ Every CV change must have a record containing:
 - after_text;
 - reason;
 - job_requirement_ids;
-- resume_fact_ids;
+- cv_fact_ids;
 - risk_level.
 
 If a change cannot be explained, it must not be made.
@@ -617,7 +617,7 @@ Structured schemas must be used for the following steps:
 - Evidence Matrix;
 - CV Match Report;
 - QA Report;
-- Resume Change Log.
+- CV Change Log.
 
 Free-form text is acceptable for:
 
@@ -731,7 +731,7 @@ If it is enabled, the user must see the following before the final export:
 - original text;
 - adapted text;
 - diff;
-- Resume Change Log;
+- cv Change Log;
 - Evidence Matrix;
 - CV Match Report;
 - QA warnings;
@@ -896,17 +896,37 @@ Before completing a task, the agent must report:
 
 ---
 
-## 37. Rules for the First Project Stage
+## 37. Rules for the Repository Foundation Stage
 
-At the first stage, only the following may be created:
+At the repository foundation stage, the agent may create or modify only repository-level foundation files:
 
-- `README.md`;
-- `AGENTS.md`;
-- `SESSION_NOTES.md`.
+- `README.md`
+- `AGENTS.md`
+- `SESSION_NOTES.md`
+- `.gitignore`
+- `.env.example`
+- `.python-version`
+- `pyproject.toml`
+- `uv.lock`
+- `.pre-commit-config.yaml`
+- `Taskfile.yml`
+- `.github/workflows/ci.yml`
+- `tests/test_repository_bootstrap.py`
+- fake example profile files under `profiles/example/`
 
-Backend code must not be created until separately confirmed.
+Backend application code must not be created until separately confirmed.
 
-If the user requests one of these documents, only the requested document must be created.
+The agent must not create:
+
+- `app/`
+- real `profiles/alex/` private data
+- real CV files
+- SQLAlchemy models
+- OpenAI client code
+- FastAPI routes
+- exporters
+- dashboard code
+- LangGraph orchestration
 
 ---
 
