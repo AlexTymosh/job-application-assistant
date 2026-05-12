@@ -9,9 +9,7 @@ The project is not an auto-apply bot and must not automatically submit applicati
 
 ## 0. Current Status
 
-The project has completed the repository foundation and the initial FastAPI backend skeleton.
-
-Current implemented parts:
+The project has completed:
 
 - repository bootstrap with `uv`;
 - CI and pre-commit checks;
@@ -20,9 +18,11 @@ Current implemented parts:
 - basic Jinja2 home page;
 - profile config loading;
 - profile path resolution;
-- bootstrap and Stage 1 tests.
+- SQLite persistence foundation;
+- initial SQLAlchemy models and repositories;
+- bootstrap, Stage 1, and database tests.
 
-The next stage is the SQLite persistence foundation.
+The next stage is job input foundation.
 
 
 ---
@@ -389,6 +389,24 @@ profiles/
 ```
 
 Without introducing full multi-user auth in the MVP.
+
+### Private Profile Data Location
+
+The public repository contains only fake example profile data under:
+
+profiles/example/
+
+Real private profile data should be stored outside the git repository, for example:
+
+`C:/Users/<user>/job-application-assistant-data/alex/`
+
+This reduces the risk of accidentally committing a real CV, blacklist, application history, generated artefacts, or SQLite database.
+
+The application must support both:
+
+- repository-local fake example profiles;
+- external private profile directories.
+
 
 ---
 
