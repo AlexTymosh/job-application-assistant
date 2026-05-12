@@ -129,7 +129,7 @@ The agent must not:
 
 The project's core stack:
 
-- Python 3.11+
+- Python 3.12
 - FastAPI
 - Jinja2
 - SQLite
@@ -158,7 +158,7 @@ local-job-application-assistant/
 │   ├── db/
 │   ├── pipeline/
 │   ├── llm/
-│   ├── CV/
+│   ├── cv/
 │   ├── exporters/
 │   ├── web/
 │   └── future_integrations/
@@ -166,7 +166,7 @@ local-job-application-assistant/
 │   └── alex/
 │       ├── config.yaml
 │       ├── blacklist.txt
-│       ├── CV/
+│       ├── cv/
 │       │   ├── master.md
 │       │   ├── fact_bank.yaml
 │       │   └── variants/
@@ -359,9 +359,9 @@ workflow:
 
 llm:
   provider: "openai"
-  model_extract: "gpt-5.4-nano"
-  model_tailor: "gpt-5.4-nano"
-  model_qa: "gpt-5.4-nano"
+  model_extract: "${OPENAI_MODEL_EXTRACT}"
+  model_tailor: "${OPENAI_MODEL_TAILOR}"
+  model_qa: "${OPENAI_MODEL_QA}"
   temperature_extract: 0.0
   temperature_tailor: 0.2
   temperature_qa: 0.0

@@ -98,3 +98,29 @@ def test_required_bootstrap_files_are_tracked_by_git() -> None:
     ]
 
     assert missing_from_git == []
+
+
+def test_documentation_does_not_use_uppercase_cv_paths() -> None:
+    docs_to_check = [
+        ROOT / "README.md",
+        ROOT / "AGENTS.md",
+        ROOT / "SESSION_NOTES.md",
+    ]
+
+    forbidden_fragments = [
+        "app/CV/",
+        "profiles/alex/CV/",
+        "profiles/example/CV/",
+    ]
+
+    violations = []
+
+    for document_path in docs_to_check:
+        content = document_path.read_text(encoding="utf-8")
+        for fragment in forbidden_fragments:
+            if fragment in content:
+                violations.append(
+                    f"{document_path.relative_to(ROOT)} contains {fragment}"
+                )
+
+    assert violations == []

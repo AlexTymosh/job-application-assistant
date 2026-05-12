@@ -138,7 +138,7 @@ These features may be added later once the core pipeline becomes stable.
 
 Planned stack:
 
-- Python 3.11+;
+- Python 3.12;
 - FastAPI;
 - Jinja2;
 - SQLite;
@@ -232,7 +232,7 @@ SQLite must store:
 
 - applications;
 - artifacts;
-- cv changes;
+- CV changes;
 - evidence items;
 - contacts;
 - events;
@@ -280,7 +280,7 @@ The Evidence Matrix is needed to protect against hallucinations and to allow man
 
 ---
 
-## 13. cv Change Log
+## 13. CV Change Log
 
 Every CV change must have a record containing:
 

@@ -13,11 +13,13 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 0 — repository foundation / documentation bootstrap.
+Stage 1 — backend skeleton.
 
-The current task is to prepare a clean public GitHub repository before backend development begins.
+Stage 0 repository foundation is substantially complete.
 
-Do not write backend code yet.
+The current task is to add a minimal FastAPI application skeleton with config loading, profile path resolution, a health endpoint, a basic Jinja2 page, and tests.
+
+Do not add database models, OpenAI client code, CV tailoring logic, exporters, dashboard logic, LangGraph, or external integrations yet.
 
 ---
 
@@ -249,20 +251,20 @@ Add an application list showing:
 
 ## 6. Immediate Next Step
 
-Complete Stage 0 repository foundation.
+Create the Stage 1 backend skeleton.
 
 Required:
 
-1. Standardise all project paths and domain naming on `cv`, not `resume`.
-2. Create `.python-version`.
-3. Create `pyproject.toml`.
-4. Create `.pre-commit-config.yaml`.
-5. Create `Taskfile.yml`.
-6. Create `.github/workflows/ci.yml`.
-7. Add fake example profile files under `profiles/example/`.
-8. Add `tests/test_repository_bootstrap.py`.
-9. Generate `uv.lock` via `uv lock`.
-10. Run local checks before the first commit.
+1. Create the minimal `app/` package.
+2. Add `app/main.py` with an application factory.
+3. Add `app/api/routes_health.py`.
+4. Add `app/web/routes.py`.
+5. Add basic Jinja2 templates.
+6. Add `app/core/config.py` for profile config loading.
+7. Add `app/core/paths.py` for profile path resolution.
+8. Add tests for app startup, health endpoint, config loading, and path resolution.
+9. Add only the dependencies required for Stage 1 tests.
+10. Do not add database models, LLM client code, CV tailoring, exporters, or dashboard functionality.
 
 ---
 
@@ -376,3 +378,22 @@ Stage 0 is complete when:
 - `uv run ruff check .` passes;
 - uv run ruff format --check . passes;
 - uv run ruff check . passes;
+
+---
+
+## 12. Definition of Done for Stage 1
+
+Stage 1 is complete when:
+
+- `app/main.py` exists;
+- the application can be created via `create_app()`;
+- a health route exists;
+- a basic Jinja2 home page exists;
+- profile config can be loaded from `profiles/example/config.example.yaml`;
+- profile paths are resolved without hardcoding `alex`;
+- no database models are added;
+- no OpenAI client code is added;
+- no real profile data is committed;
+- `uv run pytest` passes;
+- `uv run ruff check .` passes;
+- `uv run ruff format --check .` passes.
