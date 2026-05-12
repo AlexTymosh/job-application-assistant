@@ -76,3 +76,25 @@ def test_example_profile_uses_example_suffixes() -> None:
     ]
 
     assert unsafe_files == []
+
+
+def test_required_bootstrap_files_are_tracked_by_git() -> None:
+    result = subprocess.run(
+        ["git", "ls-files", "--", *REQUIRED_BOOTSTRAP_FILES],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    tracked_files = {
+        line.strip() for line in result.stdout.splitlines() if line.strip()
+    }
+
+    missing_from_git = [
+        relative_path
+        for relative_path in REQUIRED_BOOTSTRAP_FILES
+        if relative_path not in tracked_files
+    ]
+
+    assert missing_from_git == []
