@@ -6,6 +6,7 @@ The project helps the user analyse a job posting, select the most suitable CV ve
 
 The project is not an auto-apply bot and must not automatically submit applications to job postings.
 
+---
 
 ## 0. Current Status
 
@@ -20,10 +21,12 @@ The project has completed:
 - profile path resolution;
 - SQLite persistence foundation;
 - initial SQLAlchemy models and repositories;
+- SQLite session hardening;
+- SQLite foreign key enforcement;
+- external private profile directory support;
 - bootstrap, Stage 1, and database tests.
 
-The next stage is job input foundation.
-
+The next stage is the Alembic migration baseline, followed by the job input foundation.
 
 ---
 
@@ -100,7 +103,7 @@ The first working release must include:
 
 1. A local FastAPI application with a straightforward startup process.
 2. A simple Jinja2 web interface.
-3. A profile structure at `profiles/alex/`.
+3. Support for fake example profiles in the repository and real private profiles outside the repository.
 4. Job posting URL input.
 5. Manual job posting text input.
 6. Structured job data extraction via the OpenAI API.
@@ -156,6 +159,7 @@ Planned stack:
 - Jinja2;
 - SQLite;
 - SQLAlchemy 2.x;
+- Alembic;
 - Pydantic v2;
 - OpenAI API;
 - OpenAI Structured Outputs;
@@ -241,18 +245,21 @@ SQLite is the primary source of truth.
 
 CSV may be added later as an export format only.
 
-SQLite must store:
+The initial SQLite foundation stores:
 
 - applications;
 - artifacts;
+- application events;
+- application warnings;
+- statuses;
+- artefact paths.
+
+Future stages will add:
+
 - CV changes;
 - evidence items;
 - contacts;
-- events;
-- warnings;
-- statuses;
-- check results;
-- artefact paths.
+- check results.
 
 ---
 
@@ -360,10 +367,56 @@ If Human Approval is disabled, the application may create artefacts immediately,
 
 ## 16. Profiles
 
-Initial profile structure:
+The repository contains fake example profile data only:
 
 ```text
 profiles/
+└── example/
+    ├── config.example.yaml
+    ├── blacklist.example.txt
+    └── cv/
+        ├── master.example.md
+        ├── fact_bank.example.yaml
+        └── variants/
+            └── backend_developer.example.md
+```
+
+The code must not hardcode the name `alex` inside the business logic.
+
+In the future it must be possible to add multiple private profiles without introducing full multi-user auth in the MVP.
+
+### Private Profile Data Location
+
+The public repository contains only fake example profile data:
+
+```text
+profiles/example/
+```
+
+Real private profile data must be stored outside the git repository, for example:
+
+```text
+C:/Users/<user>/job-application-assistant-data/alex/
+```
+
+Recommended local environment:
+
+```env
+PROFILE_NAME=alex
+PROFILE_DATA_DIR=C:/Users/<user>/job-application-assistant-data/alex
+```
+
+This reduces the risk of accidentally committing a real CV, blacklist, application history, generated artefacts, or SQLite database.
+
+The application supports both:
+
+- repository-local fake example profiles;
+- external private profile directories.
+
+Reference private profile structure:
+
+```text
+job-application-assistant-data/
 └── alex/
     ├── config.yaml
     ├── blacklist.txt
@@ -379,41 +432,17 @@ profiles/
     └── applications.sqlite3
 ```
 
-The code must not hardcode the name `alex` inside the business logic.
-
-In the future it must be possible to add:
-
-```text
-profiles/
-└── lucy/
-```
-
-Without introducing full multi-user auth in the MVP.
-
-### Private Profile Data Location
-
-The public repository contains only fake example profile data under:
-
-profiles/example/
-
-Real private profile data should be stored outside the git repository, for example:
-
-`C:/Users/<user>/job-application-assistant-data/alex/`
-
-This reduces the risk of accidentally committing a real CV, blacklist, application history, generated artefacts, or SQLite database.
-
-The application must support both:
-
-- repository-local fake example profiles;
-- external private profile directories.
-
-
 ---
 
 ## 17. Future Project Structure
 
 ```text
 local-job-application-assistant/
+├── alembic/
+│   ├── env.py
+│   ├── README
+│   ├── script.py.mako
+│   └── versions/
 ├── app/
 │   ├── main.py
 │   ├── api/
@@ -425,9 +454,15 @@ local-job-application-assistant/
 │   │   ├── paths.py
 │   │   └── logging.py
 │   ├── db/
+│   │   ├── base.py
 │   │   ├── models.py
-│   │   ├── session.py
-│   │   └── repositories.py
+│   │   ├── repositories.py
+│   │   └── session.py
+│   ├── jobs/
+│   │   ├── hashing.py
+│   │   ├── input_models.py
+│   │   ├── normalisation.py
+│   │   └── service.py
 │   ├── pipeline/
 │   │   ├── state.py
 │   │   ├── orchestrator.py
@@ -462,9 +497,9 @@ local-job-application-assistant/
 │       ├── reed_client.py
 │       └── README.md
 ├── profiles/
-│   └── alex/
-├── docs/
+│   └── example/
 ├── tests/
+├── alembic.ini
 ├── pyproject.toml
 ├── README.md
 ├── AGENTS.md
@@ -483,7 +518,7 @@ Input
 → Job Extractor
 → Prompt Injection Detector
 → Preflight Checker
-→ cv Selector
+→ CV Selector
 → CV Tailor
 → Evidence Matrix Builder
 → CV Match Report Builder
@@ -540,12 +575,12 @@ Structured Outputs and JSON Schema must be used for structured responses.
 
 ## 21. Config
 
-Example future `profiles/alex/config.yaml`:
+Example private `config.yaml`:
 
 ```yaml
 app:
   profile_name: "alex"
-  data_dir: "profiles/alex"
+  data_dir: "C:/Users/<user>/job-application-assistant-data/alex"
 
 workflow:
   require_human_approval_before_export: true
@@ -555,9 +590,9 @@ workflow:
 
 llm:
   provider: "openai"
-  model_extract: "configured-in-env-or-config"
-  model_tailor: "configured-in-env-or-config"
-  model_qa: "configured-in-env-or-config"
+  model_extract: "${OPENAI_MODEL_EXTRACT}"
+  model_tailor: "${OPENAI_MODEL_TAILOR}"
+  model_qa: "${OPENAI_MODEL_QA}"
   temperature_extract: 0.0
   temperature_tailor: 0.2
   temperature_qa: 0.0
@@ -620,6 +655,7 @@ rejected
 ignored
 withdrawn
 ```
+
 Application statuses are informational and are not used in the application business logic in the MVP.
 
 ---

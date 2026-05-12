@@ -42,6 +42,13 @@ REQUIRED_PROJECT_FILES = [
     "app/db/session.py",
     "tests/test_db_models.py",
     "tests/test_repositories.py",
+    "alembic.ini",
+    "alembic/env.py",
+    "alembic/README",
+    "alembic/script.py.mako",
+    "alembic/versions/.gitkeep",
+    "alembic/versions/20260512_0001_initial_application_tables.py",
+    "tests/test_alembic_setup.py",
 ]
 
 
