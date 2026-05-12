@@ -35,6 +35,13 @@ REQUIRED_PROJECT_FILES = [
     "tests/test_config.py",
     "tests/test_health.py",
     "tests/test_paths.py",
+    "app/db/__init__.py",
+    "app/db/base.py",
+    "app/db/models.py",
+    "app/db/repositories.py",
+    "app/db/session.py",
+    "tests/test_db_models.py",
+    "tests/test_repositories.py",
 ]
 
 

@@ -13,7 +13,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 2 — SQLite foundation.
+Stage 3 — job input foundation.
 
 Stage 0 repository foundation is complete.
 
