@@ -1,13 +1,12 @@
 from pathlib import Path
 
-from app.preflight.service import PreflightService
-
 from app.db.repositories import ApplicationRepository
 from app.db.session import (
     create_all_tables,
     create_session_factory,
     create_sqlite_engine,
 )
+from app.preflight.service import PreflightService
 
 
 def test_preflight_service_detects_prompt_injection_blacklist_and_duplicate(
