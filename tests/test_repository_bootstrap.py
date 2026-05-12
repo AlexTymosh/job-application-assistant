@@ -69,6 +69,9 @@ REQUIRED_PROJECT_FILES = [
     "tests/test_preflight_service.py",
     "app/preflight/persistence.py",
     "tests/test_preflight_persistence.py",
+    "app/pipeline/__init__.py",
+    "app/pipeline/intake.py",
+    "tests/test_application_intake.py",
 ]
 
 

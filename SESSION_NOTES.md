@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 3.5 hardening — preflight warning persistence.
+Stage 3.6 — application intake orchestration.
 
 Completed:
 
@@ -23,13 +23,13 @@ Completed:
 - Stage 2 — SQLite persistence foundation;
 - Stage 2.5 — Alembic migration baseline;
 - Stage 3 — job input foundation;
-- Stage 3.5 — initial preflight foundation.
+- Stage 3.5 — preflight checks and warning persistence.
 
 Current task:
 
-- prevent duplicate detection from matching the current application;
-- persist preflight warnings as `application_warnings`;
-- update documentation to reflect that initial preflight foundation exists.
+- add a small orchestration layer that combines job input creation, preflight checks, and warning persistence in one transaction boundary;
+- keep FastAPI routes thin;
+- prepare the project for Stage 4 LLM extraction schemas.
 
 Do not add OpenAI client code, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, or external integrations yet.
 
@@ -283,16 +283,16 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Harden Stage 3.5 preflight foundation.
+Create Stage 3.6 application intake orchestration.
 
 Required:
 
-1. Add `exclude_application_id` support to duplicate detection.
-2. Add tests to ensure duplicate detection can ignore the current application.
-3. Add preflight warning persistence.
-4. Add tests for persisted prompt-injection, blacklist, and duplicate warnings.
-5. Update repository bootstrap tests with new files.
-6. Update README and SESSION_NOTES to reflect current project state.
+1. Add `app/pipeline/__init__.py`.
+2. Add `app/pipeline/intake.py`.
+3. Add `ApplicationIntakeService`.
+4. Add tests proving that job input, preflight checks, warning persistence, and duplicate detection work together.
+5. Update repository bootstrap tests with the new pipeline files.
+6. Update README and SESSION_NOTES to reflect the actual current state.
 7. Do not add OpenAI client code.
 8. Do not add URL scraping.
 9. Do not add CV loading.
@@ -436,24 +436,9 @@ Status: complete.
 
 ---
 
-## 13. Definition of Done — Stage 2
-
-Stage 2 is complete when:
-
-- SQLAlchemy base and mixins exist;
-- initial ORM models exist;
-- repository classes exist;
-- SQLite session helpers exist;
-- `session_scope()` supports commit and rollback;
-- SQLite foreign keys are enforced;
-- external profile directories are supported;
-- DB tests pass.
-
-Status: complete.
-
 ---
 
-## 15. Definition of Done — Stage 3
+## 14. Definition of Done — Stage 2.5
 
 Stage 2.5 is complete when:
 
@@ -468,13 +453,13 @@ Stage 2.5 is complete when:
 - `uv run alembic upgrade head` works for the example profile;
 - generated SQLite files are ignored by git.
 
-Status: current.
+Status: complete.
 
 ---
 
 ## 15. Definition of Done — Stage 3
 
-Status: hardening in progress.
+Stage 3 is complete when:
 
 - job input domain models exist;
 - manual job text validation exists;
@@ -486,8 +471,7 @@ Status: hardening in progress.
 - no URL scraping is added;
 - tests pass.
 
-Status: not started.
-
+Status: complete.
 
 ---
 
@@ -506,4 +490,21 @@ Stage 3.5 is complete when:
 - no URL scraping is added;
 - no CV loading or tailoring is added.
 
-Status: hardening in progress.
+Status: complete.
+
+---
+
+## 17. Definition of Done — Stage 3.6
+
+Stage 3.6 is complete when:
+
+- `ApplicationIntakeService` exists;
+- job input creation, preflight checks, and warning persistence are orchestrated together;
+- duplicate detection does not match the current application;
+- warnings are persisted for risky job input;
+- tests cover clean input, risky input, and duplicate input;
+- no OpenAI client code is added;
+- no URL scraping is added;
+- no CV loading or tailoring is added.
+
+Status: current.

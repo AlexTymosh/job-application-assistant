@@ -27,9 +27,11 @@ The project has completed:
 - Alembic migration baseline;
 - initial job input foundation;
 - preflight foundation for prompt-injection phrase checks, blacklist matching, and duplicate detection;
-- bootstrap, Stage 1, database, Alembic, job input, and preflight tests.
+- bootstrap, Stage 1, database, Alembic, job input, and preflight tests;
+- preflight warning persistence;
+- duplicate self-match protection.
 
-The next stage is preflight hardening and warning persistence, followed by LLM extraction foundation.
+The next stage is application intake orchestration, followed by LLM extraction schemas and a fake extraction client.
 
 ---
 
