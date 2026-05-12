@@ -67,6 +67,8 @@ REQUIRED_PROJECT_FILES = [
     "tests/test_duplicate_detection.py",
     "tests/test_prompt_injection.py",
     "tests/test_preflight_service.py",
+    "app/preflight/persistence.py",
+    "tests/test_preflight_persistence.py",
 ]
 
 

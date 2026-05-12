@@ -26,10 +26,10 @@ The project has completed:
 - external private profile directory support;
 - Alembic migration baseline;
 - initial job input foundation;
-- bootstrap, Stage 1, database, Alembic, and job input tests.
 - preflight foundation for prompt-injection phrase checks, blacklist matching, and duplicate detection;
+- bootstrap, Stage 1, database, Alembic, job input, and preflight tests.
 
-The next stage is LLM extraction foundation, after preflight checks are merged and tested.
+The next stage is preflight hardening and warning persistence, followed by LLM extraction foundation.
 
 ---
 

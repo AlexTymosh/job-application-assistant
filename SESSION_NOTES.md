@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 3.5 — preflight foundation.
+Stage 3.5 hardening — preflight warning persistence.
 
 Completed:
 
@@ -22,15 +22,14 @@ Completed:
 - Stage 1 — FastAPI backend skeleton;
 - Stage 2 — SQLite persistence foundation;
 - Stage 2.5 — Alembic migration baseline;
-- Stage 3 — job input foundation.
+- Stage 3 — job input foundation;
+- Stage 3.5 — initial preflight foundation.
 
 Current task:
 
-- add preflight checks for prompt injection phrases;
-- add blacklist loading and matching;
-- add duplicate detection by job text hash;
-- add preflight service;
-- add tests for preflight logic.
+- prevent duplicate detection from matching the current application;
+- persist preflight warnings as `application_warnings`;
+- update documentation to reflect that initial preflight foundation exists.
 
 Do not add OpenAI client code, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, or external integrations yet.
 
@@ -284,23 +283,22 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Complete Stage 3.5 — preflight foundation.
+Harden Stage 3.5 preflight foundation.
 
 Required:
 
-1. Add prompt-injection phrase detection.
-2. Add blacklist loading and matching.
-3. Add duplicate detection by job text hash.
-4. Add preflight service.
-5. Add tests for prompt injection, blacklist, duplicate detection, and preflight service.
-6. Update repository bootstrap tests with preflight files.
-7. Run local checks.
-8. Do not add OpenAI client code.
-9. Do not add URL scraping.
-10. Do not add CV loading.
-11. Do not add CV tailoring.
-12. Do not add exporters.
-13. Do not add dashboard functionality.
+1. Add `exclude_application_id` support to duplicate detection.
+2. Add tests to ensure duplicate detection can ignore the current application.
+3. Add preflight warning persistence.
+4. Add tests for persisted prompt-injection, blacklist, and duplicate warnings.
+5. Update repository bootstrap tests with new files.
+6. Update README and SESSION_NOTES to reflect current project state.
+7. Do not add OpenAI client code.
+8. Do not add URL scraping.
+9. Do not add CV loading.
+10. Do not add CV tailoring.
+11. Do not add exporters.
+12. Do not add dashboard functionality.
 
 ---
 
@@ -455,7 +453,7 @@ Status: complete.
 
 ---
 
-## 14. Definition of Done — Stage 2.5
+## 15. Definition of Done — Stage 3
 
 Stage 2.5 is complete when:
 
@@ -489,3 +487,23 @@ Status: hardening in progress.
 - tests pass.
 
 Status: not started.
+
+
+---
+
+## 16. Definition of Done — Stage 3.5
+
+Stage 3.5 is complete when:
+
+- prompt-injection phrase detection exists;
+- blacklist loading and matching exist;
+- duplicate detection by job text hash exists;
+- duplicate detection can exclude the current application;
+- preflight service exists;
+- preflight warning persistence exists;
+- tests cover prompt injection, blacklist, duplicate detection, preflight service, and warning persistence;
+- no OpenAI client code is added;
+- no URL scraping is added;
+- no CV loading or tailoring is added.
+
+Status: hardening in progress.

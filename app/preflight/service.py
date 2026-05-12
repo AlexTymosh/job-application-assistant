@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -36,12 +37,14 @@ class PreflightService:
         profile_name: str,
         job_text: str,
         job_text_hash: str | None,
+        exclude_application_id: UUID | None = None,
     ) -> PreflightResult:
         blacklist_entries = load_blacklist_entries(self._blacklist_path)
         duplicate = find_duplicate_by_job_text_hash(
             session=self._session,
             profile_name=profile_name,
             job_text_hash=job_text_hash,
+            exclude_application_id=exclude_application_id,
         )
 
         return PreflightResult(

@@ -102,3 +102,38 @@ def test_preflight_service_handles_missing_blacklist_file(
 
         assert result.has_warnings is False
         assert result.blacklist_matches == []
+
+
+def test_preflight_service_can_exclude_current_application_from_duplicate_check(
+    tmp_path: Path,
+) -> None:
+    database_file = tmp_path / "applications.sqlite3"
+    blacklist_path = tmp_path / "blacklist.txt"
+    blacklist_path.write_text("", encoding="utf-8")
+
+    engine = create_sqlite_engine(database_file)
+    create_all_tables(engine)
+    session_factory = create_session_factory(engine)
+
+    with session_factory() as session:
+        applications = ApplicationRepository(session)
+        application = applications.create(profile_name="example")
+        application.job_text_hash = "current_hash"
+        session.commit()
+        application_id = application.id
+
+    with session_factory() as session:
+        service = PreflightService(
+            session=session,
+            blacklist_path=blacklist_path,
+        )
+
+        result = service.check(
+            profile_name="example",
+            job_text="Python backend developer role with FastAPI and SQL.",
+            job_text_hash="current_hash",
+            exclude_application_id=application_id,
+        )
+
+        assert result.duplicate_application_id is None
+        assert result.has_warnings is False
