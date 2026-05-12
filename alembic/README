@@ -1,0 +1,13 @@
+Alembic migration environment for Local Job Application Assistant.
+
+The database URL is resolved from the active profile configuration.
+
+For fake local development:
+
+PROFILE_NAME=example
+PROFILE_DATA_DIR=profiles/example
+
+For real private usage, keep the profile outside the repository:
+
+PROFILE_NAME=alex
+PROFILE_DATA_DIR=C:/Users/<user>/job-application-assistant-data/alex
