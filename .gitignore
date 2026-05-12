@@ -148,6 +148,11 @@ profiles/*/cv/master.md
 profiles/*/cv/fact_bank.yaml
 profiles/*/cv/variants/*.md
 
+# Public fake example CV data
+!profiles/example/cv/master.example.md
+!profiles/example/cv/fact_bank.example.yaml
+!profiles/example/cv/variants/*.example.md
+
 # Legacy/private resume path protection
 profiles/*/resume/master.md
 profiles/*/resume/fact_bank.yaml
