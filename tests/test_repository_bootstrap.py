@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-REQUIRED_BOOTSTRAP_FILES = [
+REQUIRED_PROJECT_FILES = [
     ".gitignore",
     ".pre-commit-config.yaml",
     ".python-version",
@@ -21,6 +21,20 @@ REQUIRED_BOOTSTRAP_FILES = [
     "profiles/example/cv/master.example.md",
     "profiles/example/cv/fact_bank.example.yaml",
     "profiles/example/cv/variants/backend_developer.example.md",
+    "app/__init__.py",
+    "app/main.py",
+    "app/api/__init__.py",
+    "app/api/routes_health.py",
+    "app/core/__init__.py",
+    "app/core/config.py",
+    "app/core/paths.py",
+    "app/web/__init__.py",
+    "app/web/routes.py",
+    "app/web/templates/base.html",
+    "app/web/templates/index.html",
+    "tests/test_config.py",
+    "tests/test_health.py",
+    "tests/test_paths.py",
 ]
 
 
@@ -41,7 +55,7 @@ PRIVATE_PATHS_THAT_MUST_NOT_BE_TRACKED = [
 def test_required_bootstrap_files_exist() -> None:
     missing_files = [
         relative_path
-        for relative_path in REQUIRED_BOOTSTRAP_FILES
+        for relative_path in REQUIRED_PROJECT_FILES
         if not (ROOT / relative_path).is_file()
     ]
 
@@ -80,7 +94,7 @@ def test_example_profile_uses_example_suffixes() -> None:
 
 def test_required_bootstrap_files_are_tracked_by_git() -> None:
     result = subprocess.run(
-        ["git", "ls-files", "--", *REQUIRED_BOOTSTRAP_FILES],
+        ["git", "ls-files", "--", *REQUIRED_PROJECT_FILES],
         cwd=ROOT,
         check=True,
         capture_output=True,
@@ -93,7 +107,7 @@ def test_required_bootstrap_files_are_tracked_by_git() -> None:
 
     missing_from_git = [
         relative_path
-        for relative_path in REQUIRED_BOOTSTRAP_FILES
+        for relative_path in REQUIRED_PROJECT_FILES
         if relative_path not in tracked_files
     ]
 
