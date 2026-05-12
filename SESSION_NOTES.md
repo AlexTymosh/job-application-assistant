@@ -14,22 +14,25 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 2.5 — Alembic migration baseline and documentation cleanup.
+Stage 3 hardening — job input foundation.
 
 Completed:
 
 - Stage 0 — repository foundation;
 - Stage 1 — FastAPI backend skeleton;
 - Stage 2 — SQLite persistence foundation;
-- Stage 2 hardening — SQLite foreign keys, `session_scope()`, and external profile paths.
+- Stage 2 hardening — SQLite foreign keys, `session_scope()`, and external profile paths;
+- Stage 2.5 — Alembic migration baseline;
+- Stage 3 — initial job input foundation.
 
 Current task:
 
-- add a minimal Alembic migration environment;
-- add the initial migration for existing SQLite tables;
-- clean up documentation so the next session can safely start Stage 3.
+- harden job input validation;
+- keep generated artefact paths privacy-aware;
+- update documentation to reflect the actual implemented state;
+- ensure repository bootstrap tests include Stage 3 files.
 
-Do not add job input, OpenAI client code, CV tailoring logic, exporters, dashboard logic, LangGraph, scraping, or external integrations in this stage.
+Do not add OpenAI client code, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, scraping, or external integrations yet.
 
 ---
 
@@ -179,43 +182,13 @@ Deferred DB tables:
 
 ### Stage 2.5 — Alembic baseline
 
-Status: current.
-
-Required:
-
-- `alembic.ini`;
-- `alembic/env.py`;
-- `alembic/script.py.mako`;
-- `alembic/README`;
-- `alembic/versions/.gitkeep`;
-- initial migration for existing Stage 2 tables;
-- Alembic Taskfile commands;
-- tests for Alembic environment files.
-
-Outcome:
-
-- Alembic dependency is justified by a working migration baseline;
-- active profile database URL is resolved from profile config;
-- future DB changes can be introduced through migrations.
+Status: complete.
 
 ---
 
 ### Stage 3 — Job input foundation
 
-Status: next.
-
-Add:
-
-- job input domain models;
-- manual job text validation;
-- source URL field;
-- URL normalisation;
-- job text hashing;
-- service that creates an application record from manual job text;
-- raw job text artefact writing;
-- tests.
-
-Do not add URL scraping or OpenAI extraction yet.
+Status: implemented, hardening in progress.
 
 ---
 
@@ -311,21 +284,22 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Complete Stage 2.5 — Alembic migration baseline.
+Harden Stage 3 job input foundation.
 
 Required:
 
-1. Create `alembic.ini` in the repository root.
-2. Create `alembic/env.py`.
-3. Create `alembic/script.py.mako`.
-4. Create `alembic/README`.
-5. Create `alembic/versions/.gitkeep`.
-6. Create initial migration for the existing Stage 2 tables.
-7. Add Alembic commands to `Taskfile.yml`.
-8. Add `tests/test_alembic_setup.py`.
-9. Update `tests/test_repository_bootstrap.py` with Alembic files.
-10. Run local checks.
-11. Do not add Stage 3 job input code in the same change.
+1. Update `README.md` and `SESSION_NOTES.md` to say that Stage 3 initial job input foundation exists.
+2. Add Stage 3 files to `tests/test_repository_bootstrap.py`.
+3. Strengthen `JobInput` validation so whitespace-only text is rejected.
+4. Add tests for whitespace-only manual job text.
+5. Store raw job artefact paths in a privacy-aware relative format.
+6. Add tests for raw job artefact metadata.
+7. Do not add OpenAI client code.
+8. Do not add URL scraping.
+9. Do not add CV loading.
+10. Do not add CV tailoring logic.
+11. Do not add exporters.
+12. Do not add dashboard functionality yet.
 
 ---
 
@@ -501,7 +475,7 @@ Status: current.
 
 ## 15. Definition of Done — Stage 3
 
-Stage 3 is complete when:
+Status: hardening in progress.
 
 - job input domain models exist;
 - manual job text validation exists;

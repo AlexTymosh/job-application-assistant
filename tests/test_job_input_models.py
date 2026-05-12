@@ -38,3 +38,8 @@ def test_job_input_rejects_unknown_fields() -> None:
                 "unexpected": "value",
             }
         )
+
+
+def test_job_input_rejects_whitespace_only_manual_text() -> None:
+    with pytest.raises(ValidationError):
+        JobInput.model_validate({"manual_text": " " * 300})

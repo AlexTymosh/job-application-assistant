@@ -56,7 +56,7 @@ class JobInputService:
             self._artifacts.create(
                 application_id=application.id,
                 artifact_type="job_raw",
-                path=str(raw_job_path),
+                path=f"applications/{application.id}/job_raw.txt",
             )
 
         self._events.create(

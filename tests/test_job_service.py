@@ -1,5 +1,8 @@
 from pathlib import Path
 
+from sqlalchemy import select
+
+from app.db.models import Artifact
 from app.db.repositories import (
     ApplicationEventRepository,
     ApplicationRepository,
@@ -67,3 +70,9 @@ def test_job_input_service_creates_application_raw_text_artifact_and_event(
         assert stored_application.selected_cv_variant == "backend_developer"
         assert stored_application.job_text_hash is not None
         assert stored_application.normalized_url == "https://example.com/jobs/123"
+
+        artifact = session.scalars(select(Artifact)).one()
+
+        assert artifact.artifact_type == "job_raw"
+        assert artifact.path == f"applications/{application_id}/job_raw.txt"
+        assert str(tmp_path) not in artifact.path

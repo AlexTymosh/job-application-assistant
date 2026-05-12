@@ -49,6 +49,15 @@ REQUIRED_PROJECT_FILES = [
     "alembic/versions/.gitkeep",
     "alembic/versions/20260512_0001_initial_application_tables.py",
     "tests/test_alembic_setup.py",
+    "app/jobs/__init__.py",
+    "app/jobs/hashing.py",
+    "app/jobs/input_models.py",
+    "app/jobs/normalisation.py",
+    "app/jobs/service.py",
+    "tests/test_job_hashing.py",
+    "tests/test_job_input_models.py",
+    "tests/test_job_normalisation.py",
+    "tests/test_job_service.py",
 ]
 
 

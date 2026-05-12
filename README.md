@@ -24,9 +24,11 @@ The project has completed:
 - SQLite session hardening;
 - SQLite foreign key enforcement;
 - external private profile directory support;
-- bootstrap, Stage 1, and database tests.
+- Alembic migration baseline;
+- initial job input foundation;
+- bootstrap, Stage 1, database, Alembic, and job input tests.
 
-The next stage is the Alembic migration baseline, followed by the job input foundation.
+The next stage is Stage 3 hardening, followed by preflight checks: blacklist, duplicate detection, and prompt-injection warning foundation.
 
 ---
 
