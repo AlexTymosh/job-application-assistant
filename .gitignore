@@ -78,12 +78,9 @@ venv.bak/
 __pypackages__/
 
 # uv
-# uv.lock должен коммититься для воспроизводимости приложения.
-# НЕ добавлять uv.lock в ignore.
 
 # pyenv
-# .python-version должен коммититься для фиксации версии Python.
-# НЕ добавлять .python-version в ignore.
+
 
 # pip / pipenv / poetry / pdm / pixi leftovers
 .pdm-python
@@ -157,7 +154,6 @@ profiles/*/*.sqlite3-shm
 profiles/*/*.sqlite3-wal
 
 # Generated user documents
-# Важно: не игнорировать *.html глобально, потому что Jinja2 templates должны коммититься.
 profiles/*/applications/**/*.pdf
 profiles/*/applications/**/*.docx
 profiles/*/applications/**/*.html
