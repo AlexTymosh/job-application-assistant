@@ -1,13 +1,12 @@
 from pathlib import Path
 
-from app.preflight.duplicate_detection import find_duplicate_by_job_text_hash
-
 from app.db.repositories import ApplicationRepository
 from app.db.session import (
     create_all_tables,
     create_session_factory,
     create_sqlite_engine,
 )
+from app.preflight.duplicate_detection import find_duplicate_by_job_text_hash
 
 
 def test_find_duplicate_by_job_text_hash_returns_matching_application(
