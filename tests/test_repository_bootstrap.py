@@ -58,6 +58,15 @@ REQUIRED_PROJECT_FILES = [
     "tests/test_job_input_models.py",
     "tests/test_job_normalisation.py",
     "tests/test_job_service.py",
+    "app/preflight/__init__.py",
+    "app/preflight/blacklist.py",
+    "app/preflight/duplicate_detection.py",
+    "app/preflight/prompt_injection.py",
+    "app/preflight/service.py",
+    "tests/test_blacklist.py",
+    "tests/test_duplicate_detection.py",
+    "tests/test_prompt_injection.py",
+    "tests/test_preflight_service.py",
 ]
 
 
