@@ -325,6 +325,7 @@ Stage 8B adds PDF and DOCX export foundation:
 - Markdown remains the source of truth; HTML, PDF, and DOCX are artefacts.
 - `PdfExporter` uses ReportLab to render the same conservative Markdown subset to local PDF bytes.
 - `DocxExporter` uses python-docx to render the same conservative Markdown subset to local DOCX bytes.
+- The exporter runtime dependencies are declared in `pyproject.toml` and locked in `uv.lock`; dependency changes must be followed by `uv lock` and `uv sync --locked --group dev`.
 - WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows.
 - Exporters are isolated in `app/exporters/` and do not write files directly.
 - File writes go through `ArtifactWriter`, including `tailored_cv.pdf` and `tailored_cv.docx`.

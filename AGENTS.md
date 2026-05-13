@@ -1099,6 +1099,7 @@ Rules for Stage 8A and later export work:
 - Export code must not mutate master CV files or committed CV variants.
 - Export code must not add CV claims, rewrite sections, generate fake ATS scores, or call OpenAI.
 - Stage 8B implements PDF and DOCX export foundation through the artefact boundary.
+- Runtime dependency changes, including exporter dependencies, must update `uv.lock` with `uv lock` and must pass `uv sync --locked --group dev` before merge.
 - Tests must not require OpenAI API keys or network access.
 - Stage 8B does not add real OpenAI tailoring, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables.
 - v1.0 remains web-only through FastAPI/Jinja2.
