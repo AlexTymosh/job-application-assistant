@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 4 — LLM extraction schemas and fake extraction client.
+Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state.
 
 Completed:
 
@@ -24,14 +24,15 @@ Completed:
 - Stage 2.5 — Alembic migration baseline;
 - Stage 3 — job input foundation;
 - Stage 3.5 — preflight checks and warning persistence;
-- Stage 3.6 — application intake orchestration.
+- Stage 3.6 — application intake orchestration;
+- Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state.
 
 Current handoff state:
 
 - Stage 3.6 application intake orchestration is complete;
 - Foundation hardening for documentation, artefact writing boundaries, and Alembic migration verification is complete;
-- Stage 4 LLM extraction schemas and a fake extraction client are next;
-- the next implementation step should add Stage 4 schema and fake-client files with tests.
+- Stage 4 LLM extraction schemas, fake extraction client, serialisable pipeline state, and job extraction step are complete;
+- the next implementation step should add a real OpenAI structured extraction client and extraction artefact persistence, without CV loading, CV tailoring, exporters, dashboard logic, or LangGraph.
 
 Do not add real OpenAI API calls, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet.
 
@@ -139,7 +140,11 @@ Implemented job input, preflight, and intake foundation:
 - duplicate detection with current-application exclusion;
 - preflight warning persistence;
 - `ApplicationIntakeService` orchestration for job input creation, preflight checks, and warning persistence;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, and intake tests.
+- strict Stage 4 Pydantic extraction schemas;
+- deterministic fake extraction client for local tests and contract validation;
+- serialisable `ApplicationRunState`;
+- `JobExtractionStep` that extracts from manual job text without persistence or network calls;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, pipeline state, and job extraction step tests.
 
 ---
 
@@ -228,16 +233,20 @@ Status: complete.
 
 ### Stage 4 — LLM extraction schemas and fake extraction client
 
-Status: next.
+Status: complete.
 
-Add next:
+Implemented:
 
 - strict Pydantic extraction schemas;
-- fake extraction client;
+- deterministic fake extraction client;
+- serialisable pipeline state;
+- job extraction pipeline step;
 - schema validation tests;
-- fake extraction tests.
+- fake extraction client tests;
+- pipeline state tests;
+- job extraction step tests.
 
-Do not add the real OpenAI API client until Stage 4.5 or later.
+The fake extraction client is only for local tests and pipeline contract validation. It does not call OpenAI and does not require an API key.
 
 Deferred hardening note:
 
@@ -325,22 +334,21 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Create Stage 4 LLM extraction schemas and fake extraction client in the next PR.
+Create Stage 4.5 or Group 3 real OpenAI structured extraction client and extraction artefact persistence in the next PR.
 
 Required for the next PR:
 
-1. Add `app/llm/__init__.py`.
-2. Add `app/llm/schemas.py`.
-3. Add `app/llm/fake_client.py`.
-4. Add `app/llm/errors.py`.
-5. Add tests for schemas and fake extraction client.
-6. Do not call the real OpenAI API yet.
-7. Do not require a real API key in tests.
-8. Do not add CV loading.
-9. Do not add CV tailoring.
-10. Do not add exporters.
-11. Do not add dashboard functionality.
-12. Keep the app web-only through FastAPI/Jinja2. Do not add CLI.
+1. Keep the existing Stage 4 schemas as the contract for structured extraction.
+2. Add the real OpenAI client behind an isolated wrapper.
+3. Persist extracted job artefacts safely without storing absolute private profile paths in database metadata.
+4. Keep tests deterministic and mock the LLM integration.
+5. Do not require a real API key in unit tests.
+6. Do not add CV loading yet.
+7. Do not add CV tailoring yet.
+8. Do not add exporters yet.
+9. Do not add dashboard functionality yet.
+10. Do not add LangGraph yet.
+11. Keep the app web-only through FastAPI/Jinja2. Do not add CLI commands.
 
 ---
 
