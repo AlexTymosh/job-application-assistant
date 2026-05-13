@@ -1004,7 +1004,7 @@ cloud SaaS
 
 ## 41. Stage 5 CV Loading Foundation
 
-Stage 5 is the current CV loading foundation. It adds a read-only `app/cv/` layer for Markdown CV files, required section marker validation, fact bank validation, and CV variant selection. The correct package marker is `app/cv/__init__.py`.
+Stage 5 is the completed CV loading foundation. It adds a read-only `app/cv/` layer for Markdown CV files, required section marker validation, fact bank validation, and CV variant selection. The correct package marker is `app/cv/__init__.py`.
 
 Rules for Stage 5 and later CV loading work:
 
@@ -1019,4 +1019,20 @@ Rules for Stage 5 and later CV loading work:
 - No CV tailoring is implemented in Stage 5 or in the Stage 5 corrective task.
 - No OpenAI call is added in Stage 5 or in the Stage 5 corrective task.
 - No exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added in the Stage 5 corrective task.
-- The next stage after Stage 5 should be safe CV tailoring schemas and a fake tailoring pipeline, unless the user chooses to insert a small hardening PR first.
+- Stage 6 safe CV tailoring contract and fake tailoring pipeline are implemented.
+---
+
+## 42. Stage 6 Safe CV Tailoring Contract
+
+Stage 6 is implemented. It adds strict safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline step.
+
+Rules for Stage 6 and later tailoring work:
+
+- Stage 6 does not add real OpenAI tailoring.
+- Stage 6 does not mutate the master CV or CV variant files.
+- Stage 6 does not write tailored CV artefacts to disk.
+- Stage 6 does not add exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations.
+- The fake tailoring client must use only verified claimable facts from the fact bank.
+- The rule remains: no `fact_id` means no claim.
+- Tailoring must remain independent of FastAPI routes.
+- The next stage should be reports foundation or real tailoring client integration, depending on user decision.

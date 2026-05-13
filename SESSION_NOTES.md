@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 5 — CV loading foundation.
+Stage 6 — safe CV tailoring contract and fake tailoring pipeline.
 
 Completed:
 
@@ -27,7 +27,7 @@ Completed:
 - Stage 3.6 — application intake orchestration;
 - Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state;
 - Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence;
-- Stage 5 — CV loading foundation.
+- Stage 6 — safe CV tailoring contract and fake tailoring pipeline.
 
 Current handoff state:
 
@@ -36,9 +36,10 @@ Current handoff state:
 - Stage 4 LLM extraction schemas, fake extraction client, serialisable pipeline state, and job extraction step are complete;
 - Stage 4.5 real OpenAI structured extraction client wrapper and extraction artefact persistence are complete;
 - Stage 5 CV loading foundation is complete with read-only Markdown CV loading, section marker validation, fact bank validation, and CV variant selection;
-- the next implementation step should add safe CV tailoring schemas and a fake tailoring pipeline, unless the user chooses to insert a small hardening PR first.
+- Stage 6 safe CV tailoring contract and fake tailoring pipeline are implemented;
+- the next implementation step should be reports foundation or real tailoring client integration, depending on user decision.
 
-Do not add real CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet. Tests must not perform real OpenAI API calls or require a real API key.
+Stage 6 adds safe tailoring schemas, fake deterministic tailoring, diff support, and a pipeline contract. Do not add real OpenAI tailoring yet. Do not mutate the master CV. Do not write tailored CV artefacts to disk. Do not add exporters, dashboard functionality, LangGraph, URL scraping, CLI commands, or external integrations yet. Tests must not perform real OpenAI API calls or require a real API key.
 
 ---
 
@@ -159,7 +160,12 @@ Implemented job input, preflight, and intake foundation:
 - CV variant selector;
 - correct CV package marker at `app/cv/__init__.py`;
 - Stage 5 tests;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, and Stage 5 CV foundation tests.
+- strict safe CV tailoring schemas;
+- deterministic fake CV tailoring client that only uses verified claimable facts;
+- Markdown diff helpers;
+- in-memory CV tailoring pipeline step;
+- Stage 6 tests;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, and Stage 6 safe tailoring tests.
 
 ---
 
@@ -324,17 +330,22 @@ Stage 5 and the Stage 5 corrective task do not implement CV tailoring, OpenAI ca
 
 ---
 
-### Stage 6 — Safe CV tailoring
+### Stage 6 — Safe CV tailoring contract and fake pipeline
 
-Add later:
+Status: complete.
 
-- Summary tailoring;
-- Skills tailoring;
-- Experience tailoring;
-- Projects tailoring if relevant;
-- CV Change Log;
-- diff;
-- fact ID checks.
+Implemented:
+
+- strict Pydantic tailoring schemas;
+- conservative deterministic fake summary tailoring;
+- fact ID checks with the rule: no `fact_id` means no claim;
+- warnings for requirements that cannot be linked to claimable verified facts;
+- Markdown unified diff helpers;
+- in-memory pipeline step that updates `ApplicationRunState`;
+- no real OpenAI tailoring;
+- no master CV mutation;
+- no tailored CV artefact writing;
+- no exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations.
 
 ---
 
@@ -389,19 +400,19 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Create safe CV tailoring schemas and a fake tailoring pipeline in the next PR, unless the user chooses to insert a small hardening PR first.
+Choose the next implementation direction: reports foundation or real tailoring client integration.
 
 Required for the next PR:
 
-1. Keep CV tailoring independent of FastAPI routes.
+1. Keep tailoring and reporting independent of FastAPI routes.
 2. Keep the master CV read-only and create adapted copies only.
-3. Require fact IDs for significant CV changes.
-4. Do not add real OpenAI tailoring calls until the fake tailoring contract is tested.
-5. Do not add exporters yet.
+3. Require fact IDs for significant CV changes: no `fact_id` means no claim.
+4. If real tailoring is selected, keep OpenAI calls isolated behind a dedicated wrapper and test with fake SDK objects.
+5. Do not add exporters unless explicitly selected as the next stage.
 6. Do not add dashboard functionality yet.
 7. Do not add LangGraph yet.
-8. Keep OpenAI calls isolated behind dedicated wrappers; tests must mock OpenAI and must not require a real API key.
-9. Keep artefacts persisted through the artefact boundary with relative database paths only.
+8. Tests must not require a real API key.
+9. Keep artefacts persisted through the artefact boundary with relative database paths only when artefact persistence is introduced.
 10. Keep the app web-only through FastAPI/Jinja2. Do not add CLI commands.
 
 ---

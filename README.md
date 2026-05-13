@@ -21,7 +21,8 @@ The project has completed:
 - Stage 3.6 — application intake orchestration;
 - Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state;
 - Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence;
-- Stage 5 — CV loading foundation.
+- Stage 5 — CV loading foundation;
+- Stage 6 — safe CV tailoring contract and fake tailoring pipeline.
 
 The current implementation includes:
 
@@ -57,10 +58,14 @@ The current implementation includes:
 - required CV section marker parsing and validation;
 - fact bank loading and validation, including duplicate fact ID rejection, empty fact bank rejection, and trimming of surrounding whitespace in fact text fields;
 - CV variant selection that validates the selected variant exists and has valid required sections;
+- strict safe CV tailoring schemas and validation rules;
+- deterministic fake CV tailoring client that uses only verified fact bank facts;
+- in-memory CV tailoring pipeline step that records original Markdown, tailored Markdown, CV changes, and tailoring warning codes without writing artefacts;
+- unified diff helpers for Markdown strings;
 - the correct CV package marker at `app/cv/__init__.py`;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, and Stage 5 CV foundation tests.
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, and Stage 6 safe tailoring tests.
 
-Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. The fake client remains available for local tests and pipeline contract validation. OpenAI integration tests use mocked SDK objects and must not perform real API calls or require `OPENAI_API_KEY`. No CV tailoring, OpenAI calls, exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added in Stage 5 or in the Stage 5 corrective task.
+Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 6 does not add real OpenAI tailoring, does not modify the master CV, and does not write tailored CV artefacts to disk. No exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added in Stage 6. The rule remains: no `fact_id` means no claim.
 
 The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement.
 
@@ -224,7 +229,7 @@ All adapted CV versions must be saved separately in the folder of the specific a
 
 ## 8. CV Sections
 
-Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate the master CV or any variant file. No CV tailoring is implemented in Stage 5 or in the Stage 5 corrective task. No OpenAI calls, exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added in this stage.
+Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate the master CV or any variant file. Stage 6 adds only the safe tailoring contract, deterministic fake tailoring, diff support, and an in-memory pipeline step. It does not add real OpenAI tailoring, does not mutate the master CV, and does not write tailored CV artefacts to disk. No exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added in Stage 6.
 
 The Markdown CV must contain stable section markers:
 
@@ -717,7 +722,8 @@ The first release is web-only through FastAPI/Jinja2. CLI commands are intention
 
 ### Upcoming stages
 
-- Stage 6 — Safe CV tailoring schemas and fake tailoring pipeline, unless the user chooses to insert a small hardening PR first.
+- Stage 6 — Safe CV tailoring schemas and fake tailoring pipeline: complete.
+- Next stage — reports foundation or real tailoring client integration, depending on user decision.
 - Stage 7 — Reports.
 - Stage 8 — Human approval.
 - Stage 9 — Exporters.
