@@ -36,6 +36,8 @@ The application must help the user:
 
 The project is not an auto-apply bot and must not automatically submit applications.
 
+The first release is web-only through FastAPI/Jinja2. CLI commands are not required for v1.0.
+
 ---
 
 ## 2. Instruction Priority
@@ -315,10 +317,16 @@ This is not the final schema, but the agent must preserve the idea of explicit s
 
 ## 13. User Profiles
 
-Initial profile:
+The repository must commit fake example profile data only:
 
 ```text
-profiles/alex/
+profiles/example/
+```
+
+Real private profiles must live outside the repository, for example:
+
+```text
+C:/Users/<user>/job-application-assistant-data/alex/
 ```
 
 The code must not hardcode `alex` inside the business logic.
@@ -764,11 +772,13 @@ FastAPI routes must not contain export logic directly.
 
 ## 31. Application Artefacts
 
-Each application must have a dedicated directory:
+Each application must have a dedicated directory under the active profile data directory. For real private profiles, that directory must be outside the repository, for example:
 
 ```text
-profiles/alex/applications/<application_id>/
+C:/Users/<user>/job-application-assistant-data/alex/applications/<application_id>/
 ```
+
+The committed `profiles/example/` tree is for fake examples only.
 
 Reference artefacts:
 
@@ -919,7 +929,7 @@ Backend application code must not be created until separately confirmed.
 The agent must not create:
 
 - `app/`
-- real `profiles/alex/` private data
+- real private profile data under `profiles/alex/` or any other repository path
 - real CV files
 - SQLAlchemy models
 - OpenAI client code

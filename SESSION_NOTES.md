@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 3.6 — application intake orchestration.
+Stage 4 — LLM extraction schemas and fake extraction client.
 
 Completed:
 
@@ -23,15 +23,16 @@ Completed:
 - Stage 2 — SQLite persistence foundation;
 - Stage 2.5 — Alembic migration baseline;
 - Stage 3 — job input foundation;
-- Stage 3.5 — preflight checks and warning persistence.
+- Stage 3.5 — preflight checks and warning persistence;
+- Stage 3.6 — application intake orchestration.
 
-Current task:
+Current task for this PR:
 
-- add a small orchestration layer that combines job input creation, preflight checks, and warning persistence in one transaction boundary;
-- keep FastAPI routes thin;
-- prepare the project for Stage 4 LLM extraction schemas.
+- synchronise documentation with the implemented intake layer;
+- lightly harden intake test coverage if a clear gap exists;
+- prepare the project for the next PR, which will implement Stage 4 schemas and a fake extraction client.
 
-Do not add OpenAI client code, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, or external integrations yet.
+Do not implement Stage 4 in this PR. Do not add OpenAI client code, real API calls, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet.
 
 ---
 
@@ -118,6 +119,26 @@ Implemented SQLite foundation:
 - SQLite foreign key enforcement;
 - tests for models, repositories, session scope, and external profile paths.
 
+Implemented Alembic baseline:
+
+- Alembic configuration;
+- initial migration for the current SQLite tables;
+- migration setup tests.
+
+Implemented job input, preflight, and intake foundation:
+
+- strict job input validation;
+- URL normalisation;
+- job text hashing;
+- raw manual job text artefact writing;
+- privacy-aware artefact path metadata;
+- prompt-injection phrase checks;
+- blacklist loading and matching;
+- duplicate detection with current-application exclusion;
+- preflight warning persistence;
+- `ApplicationIntakeService` orchestration for job input creation, preflight checks, and warning persistence;
+- bootstrap, Stage 1, database, Alembic, job input, preflight, and intake tests.
+
 ---
 
 ## 5. Project Plan
@@ -187,19 +208,34 @@ Status: complete.
 
 ### Stage 3 — Job input foundation
 
-Status: implemented, hardening in progress.
+Status: complete.
 
 ---
 
-### Stage 4 — LLM extraction
+### Stage 3.5 — Preflight checks and warning persistence
 
-Add later:
+Status: complete.
 
-- OpenAI client wrapper;
-- Structured Outputs;
-- extracted job schema;
-- prompt injection detector;
-- saving `extracted_job.json`.
+---
+
+### Stage 3.6 — Application intake orchestration
+
+Status: complete.
+
+---
+
+### Stage 4 — LLM extraction schemas and fake extraction client
+
+Status: next.
+
+Add next:
+
+- strict Pydantic extraction schemas;
+- fake extraction client;
+- schema validation tests;
+- fake extraction tests.
+
+Do not add the real OpenAI API client until Stage 4.5 or later.
 
 ---
 
@@ -283,22 +319,22 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Create Stage 3.6 application intake orchestration.
+Create Stage 4 LLM extraction schemas and fake extraction client in the next PR.
 
-Required:
+Required for the next PR:
 
-1. Add `app/pipeline/__init__.py`.
-2. Add `app/pipeline/intake.py`.
-3. Add `ApplicationIntakeService`.
-4. Add tests proving that job input, preflight checks, warning persistence, and duplicate detection work together.
-5. Update repository bootstrap tests with the new pipeline files.
-6. Update README and SESSION_NOTES to reflect the actual current state.
-7. Do not add OpenAI client code.
-8. Do not add URL scraping.
-9. Do not add CV loading.
-10. Do not add CV tailoring.
-11. Do not add exporters.
-12. Do not add dashboard functionality.
+1. Add `app/llm/__init__.py`.
+2. Add `app/llm/schemas.py`.
+3. Add `app/llm/fake_client.py`.
+4. Add `app/llm/errors.py`.
+5. Add tests for schemas and fake extraction client.
+6. Do not call the real OpenAI API yet.
+7. Do not require a real API key in tests.
+8. Do not add CV loading.
+9. Do not add CV tailoring.
+10. Do not add exporters.
+11. Do not add dashboard functionality.
+12. Keep the app web-only through FastAPI/Jinja2. Do not add CLI.
 
 ---
 
@@ -350,15 +386,16 @@ The output of `git status --short` must not contain real private files, `.env`, 
 
 Do not:
 
-- add job input code;
+- call the real OpenAI API;
+- require a real API key in tests;
 - add URL scraping;
-- add OpenAI client code;
-- write LLM prompts;
+- add real LLM prompts;
 - add CV loading;
 - add CV tailoring;
 - write a PDF exporter;
 - write a DOCX exporter;
 - build a dashboard;
+- add CLI commands;
 - add LangGraph;
 - add Telegram;
 - add WhatsApp;
@@ -507,4 +544,22 @@ Stage 3.6 is complete when:
 - no URL scraping is added;
 - no CV loading or tailoring is added.
 
-Status: current.
+Status: complete.
+
+---
+
+## 18. Definition of Done — Stage 4
+
+Stage 4 is complete when:
+
+- `app/llm/schemas.py` exists;
+- extraction schemas are strict Pydantic models;
+- a fake extraction client exists;
+- fake extraction can produce a valid extracted job object from sample job text;
+- tests cover schema validation and fake extraction;
+- no real OpenAI API call is made;
+- no real API key is required;
+- no CV loading or tailoring is added;
+- no exporters or dashboard functionality are added.
+
+Status: next.

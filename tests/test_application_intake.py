@@ -2,7 +2,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from app.db.models import ApplicationWarning
+from app.db.models import ApplicationWarning, Artifact
 from app.db.repositories import ApplicationRepository
 from app.db.session import (
     create_all_tables,
@@ -144,3 +144,57 @@ def test_application_intake_detects_existing_duplicate_without_self_match(
         ).all()
 
         assert {warning.code for warning in warnings} == {"possible_duplicate"}
+
+
+def test_application_intake_clean_input_has_no_warnings_and_safe_artifact_path(
+    tmp_path: Path,
+) -> None:
+    database_file = tmp_path / "applications.sqlite3"
+    applications_dir = tmp_path / "private-profile" / "applications"
+    blacklist_path = tmp_path / "blacklist.txt"
+    blacklist_path.write_text("bad company\n", encoding="utf-8")
+
+    engine = create_sqlite_engine(database_file)
+    create_all_tables(engine)
+    session_factory = create_session_factory(engine)
+
+    manual_text = (
+        "Senior Python developer role building APIs with FastAPI and SQL. "
+        "The team values testing, maintainability, and clear communication. "
+    ) * 5
+
+    with session_scope(session_factory) as session:
+        service = ApplicationIntakeService(
+            session=session,
+            blacklist_path=blacklist_path,
+            applications_dir=applications_dir,
+        )
+
+        result = service.create_application_from_job_input(
+            profile_name="example",
+            selected_cv_variant="backend_developer",
+            job_input=JobInput.model_validate({"manual_text": manual_text}),
+        )
+
+        application_id = result.application.id
+
+        assert result.preflight.has_warnings is False
+
+    raw_job_path = applications_dir / str(application_id) / "job_raw.txt"
+
+    assert raw_job_path.is_file()
+    assert raw_job_path.read_text(encoding="utf-8") == manual_text
+
+    with session_factory() as session:
+        stored_warnings = session.scalars(
+            select(ApplicationWarning).where(
+                ApplicationWarning.application_id == application_id
+            )
+        ).all()
+        artifact = session.scalars(
+            select(Artifact).where(Artifact.application_id == application_id)
+        ).one()
+
+        assert stored_warnings == []
+        assert artifact.path == f"applications/{application_id}/job_raw.txt"
+        assert str(tmp_path) not in artifact.path
