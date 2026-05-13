@@ -81,3 +81,53 @@ def test_artifact_writer_creates_tailored_cv_html_with_final_newline(
         == "applications/77777777-7777-7777-7777-777777777777/tailored_cv.html"
     )
     assert str(tmp_path) not in written_artifact.relative_path
+
+
+def test_artifact_writer_creates_tailored_cv_pdf_and_preserves_bytes(
+    tmp_path: Path,
+) -> None:
+    application_id = UUID("88888888-8888-8888-8888-888888888888")
+    applications_dir = tmp_path / "private-profile" / "applications"
+    pdf_bytes = b"%PDF-1.4 fake test bytes"
+
+    writer = ArtifactWriter(applications_dir=applications_dir)
+
+    written_artifact = writer.write_tailored_cv_pdf(
+        application_id=application_id,
+        pdf_bytes=pdf_bytes,
+    )
+
+    assert written_artifact.absolute_path == (
+        applications_dir / str(application_id) / "tailored_cv.pdf"
+    )
+    assert written_artifact.absolute_path.read_bytes() == pdf_bytes
+    assert (
+        written_artifact.relative_path
+        == "applications/88888888-8888-8888-8888-888888888888/tailored_cv.pdf"
+    )
+    assert str(tmp_path) not in written_artifact.relative_path
+
+
+def test_artifact_writer_creates_tailored_cv_docx_and_preserves_bytes(
+    tmp_path: Path,
+) -> None:
+    application_id = UUID("99999999-9999-9999-9999-999999999999")
+    applications_dir = tmp_path / "private-profile" / "applications"
+    docx_bytes = b"PK fake test bytes"
+
+    writer = ArtifactWriter(applications_dir=applications_dir)
+
+    written_artifact = writer.write_tailored_cv_docx(
+        application_id=application_id,
+        docx_bytes=docx_bytes,
+    )
+
+    assert written_artifact.absolute_path == (
+        applications_dir / str(application_id) / "tailored_cv.docx"
+    )
+    assert written_artifact.absolute_path.read_bytes() == docx_bytes
+    assert (
+        written_artifact.relative_path
+        == "applications/99999999-9999-9999-9999-999999999999/tailored_cv.docx"
+    )
+    assert str(tmp_path) not in written_artifact.relative_path

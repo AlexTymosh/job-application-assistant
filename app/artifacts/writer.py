@@ -11,10 +11,14 @@ from app.artifacts.paths import (
     build_extracted_job_relative_path,
     build_raw_job_text_path,
     build_raw_job_text_relative_path,
+    build_tailored_cv_docx_path,
+    build_tailored_cv_docx_relative_path,
     build_tailored_cv_html_path,
     build_tailored_cv_html_relative_path,
     build_tailored_cv_markdown_path,
     build_tailored_cv_markdown_relative_path,
+    build_tailored_cv_pdf_path,
+    build_tailored_cv_pdf_relative_path,
 )
 
 
@@ -115,6 +119,46 @@ class ArtifactWriter:
         return WrittenArtifact(
             absolute_path=absolute_path,
             relative_path=build_tailored_cv_html_relative_path(
+                application_id=application_id,
+            ),
+        )
+
+    def write_tailored_cv_pdf(
+        self,
+        *,
+        application_id: UUID,
+        pdf_bytes: bytes,
+    ) -> WrittenArtifact:
+        self.create_application_dir(application_id=application_id)
+        absolute_path = build_tailored_cv_pdf_path(
+            applications_dir=self._applications_dir,
+            application_id=application_id,
+        )
+        absolute_path.write_bytes(pdf_bytes)
+
+        return WrittenArtifact(
+            absolute_path=absolute_path,
+            relative_path=build_tailored_cv_pdf_relative_path(
+                application_id=application_id,
+            ),
+        )
+
+    def write_tailored_cv_docx(
+        self,
+        *,
+        application_id: UUID,
+        docx_bytes: bytes,
+    ) -> WrittenArtifact:
+        self.create_application_dir(application_id=application_id)
+        absolute_path = build_tailored_cv_docx_path(
+            applications_dir=self._applications_dir,
+            application_id=application_id,
+        )
+        absolute_path.write_bytes(docx_bytes)
+
+        return WrittenArtifact(
+            absolute_path=absolute_path,
+            relative_path=build_tailored_cv_docx_relative_path(
                 application_id=application_id,
             ),
         )

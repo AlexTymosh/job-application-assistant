@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 8A complete — Markdown and HTML export foundation is implemented. The next recommended stage is Stage 8B — PDF and DOCX export foundation, unless the user decides to add human approval hardening first.
+Stage 8B complete — PDF and DOCX export foundation is implemented through the existing artefact boundary. The next recommended stage is release hardening or human approval hardening, depending on the user decision.
 
 Completed:
 
@@ -31,7 +31,8 @@ Completed:
 - Stage 6 — safe CV tailoring contract and fake tailoring pipeline;
 - Stage 7 — reports foundation;
 - Group 7 — web intake, review, and dashboard foundation;
-- Stage 8A — Markdown and HTML export foundation.
+- Stage 8A — Markdown and HTML export foundation;
+- Stage 8B — PDF and DOCX export foundation.
 
 Current handoff state:
 
@@ -44,9 +45,10 @@ Current handoff state:
 - Stage 7 reports foundation is implemented with in-memory Evidence Matrix and CV Match Report builders;
 - Group 7 web intake, application detail, read-only review, and dashboard pages are implemented;
 - Stage 8A Markdown and HTML export foundation is implemented;
-- the next implementation step should be Stage 8B — PDF and DOCX export foundation, unless the user decides to add human approval hardening first.
+- Stage 8B PDF and DOCX export foundation is implemented;
+- the next implementation step should be release hardening or human approval hardening, depending on the user decision.
 
-Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html`. Markdown remains the source of truth; Markdown and HTML exports are artefacts. Stage 8A does not implement PDF export, DOCX export, real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, or new database tables. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
+Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<application_id>/tailored_cv.pdf` and `applications/<application_id>/tailored_cv.docx`. Markdown remains the source of truth; HTML, PDF, and DOCX exports are artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables. v1.0 remains web-only through FastAPI/Jinja2. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
 
 ---
 
@@ -178,12 +180,14 @@ Implemented job input, preflight, and intake foundation:
 - report fields on serialisable `ApplicationRunState`;
 - Stage 7 tests;
 - isolated Markdown and HTML exporters in `app/exporters/`;
-- tailored CV Markdown and HTML artefact path builders;
-- tailored CV Markdown and HTML writing through `ArtifactWriter`;
+- isolated PDF and DOCX exporters in `app/exporters/`;
+- tailored CV Markdown, HTML, PDF, and DOCX artefact path builders;
+- tailored CV Markdown, HTML, PDF, and DOCX writing through `ArtifactWriter`;
 - Markdown and HTML export persistence helper in `app/pipeline/export_markdown_html.py`;
-- privacy-safe relative database paths for `tailored_cv.md` and `tailored_cv.html`;
-- Stage 8A tests;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, Stage 7 reports tests, and Stage 8A export tests.
+- PDF and DOCX export persistence helper in `app/pipeline/export_pdf_docx.py`;
+- privacy-safe relative database paths for `tailored_cv.md`, `tailored_cv.html`, `tailored_cv.pdf`, and `tailored_cv.docx`;
+- Stage 8A and Stage 8B tests;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, Stage 7 reports tests, and Stage 8A/8B export tests.
 
 ---
 
@@ -433,12 +437,34 @@ Markdown remains the source of truth. Markdown and HTML exports are artefacts. F
 
 ### Stage 8B — PDF and DOCX export foundation
 
-Add later:
+Status: complete.
 
-- PDF export;
-- DOCX export;
-- exporter tests;
-- artefact persistence through the existing artefact boundary.
+Implemented:
+
+- `PdfExporter` using ReportLab for local deterministic PDF bytes;
+- `DocxExporter` using python-docx for local deterministic DOCX bytes;
+- WeasyPrint is intentionally not used because of Windows native dependency complexity;
+- tailored CV PDF and DOCX path builders;
+- `ArtifactWriter.write_tailored_cv_pdf()` and `ArtifactWriter.write_tailored_cv_docx()`;
+- export persistence helper that writes both artefacts and creates `ArtifactRepository` rows;
+- database artefact paths remain relative, for example `applications/<application_id>/tailored_cv.pdf` and `applications/<application_id>/tailored_cv.docx`;
+- tests for exporters, artefact paths, artefact writer methods, and SQLite artefact persistence inside an explicit transaction.
+
+Not implemented in Stage 8B:
+
+- real OpenAI calls;
+- real OpenAI tailoring;
+- URL scraping;
+- LangGraph;
+- CLI commands;
+- FastAPI export routes;
+- dashboard functionality;
+- authentication;
+- cloud deployment;
+- new database tables or Alembic migrations;
+- mutation of master CV files or committed CV variants.
+
+Markdown remains the source of truth. HTML, PDF, and DOCX exports are artefacts. File writes go through `ArtifactWriter`, exporters are isolated in `app/exporters/`, and v1.0 remains web-only through FastAPI/Jinja2.
 
 ---
 
@@ -456,17 +482,14 @@ Add later:
 
 ### Stage 9 — Export
 
-Partially complete via Stage 8A:
+Partially complete via Stage 8A and Stage 8B:
 
 - Markdown export is implemented;
-- HTML export is implemented.
+- HTML export is implemented;
+- PDF export is implemented with ReportLab;
+- DOCX export is implemented with python-docx.
 
-Add later:
-
-- PDF export;
-- DOCX export.
-
-Markdown remains the source of truth.
+Markdown remains the source of truth. HTML, PDF, and DOCX are artefacts.
 
 ---
 
@@ -484,7 +507,7 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Recommended next implementation direction: Stage 8B — PDF and DOCX export foundation, unless the user decides to add human approval hardening first.
+Recommended next implementation direction: release hardening or human approval hardening, depending on the user decision.
 
 Required for the next PR:
 
@@ -492,7 +515,7 @@ Required for the next PR:
 2. Keep the master CV read-only and create adapted copies only.
 3. Require fact IDs for significant CV changes: no `fact_id` means no claim.
 4. Keep writes behind the existing artefact boundary and store privacy-safe relative paths only.
-5. If PDF/DOCX export is selected, do not rewrite the Stage 8A Markdown and HTML contracts unnecessarily.
+5. Do not rewrite the Stage 8A Markdown and HTML contracts unnecessarily when hardening Stage 8B PDF and DOCX export.
 6. Do not add dashboard functionality unless explicitly requested.
 7. Do not add LangGraph yet.
 8. Tests must not require a real API key.
@@ -553,7 +576,7 @@ Do not:
 - require a real API key in tests;
 - add CV tailoring;
 - modify CV files automatically;
-- add PDF or DOCX exporters without an explicit Stage 8B task;
+- rewrite PDF or DOCX exporters without an explicit hardening task;
 - add dashboard functionality;
 - add LangGraph;
 - add CLI commands;
@@ -853,7 +876,6 @@ Stage 8A is complete when:
 - `ArtifactWriter` writes `tailored_cv.md` and `tailored_cv.html` through the existing artefact boundary;
 - database artefact rows store only privacy-safe relative paths;
 - export persistence is independent of FastAPI routes;
-- no PDF export or DOCX export is implemented;
 - no real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, new database tables, or Alembic migrations are added;
 - tests pass.
 
