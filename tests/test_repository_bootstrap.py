@@ -12,6 +12,9 @@ REQUIRED_PROJECT_FILES = [
     "LICENSE",
     "README.md",
     "SESSION_NOTES.md",
+    "docs/release-checklist.md",
+    "docs/manual-smoke-test.md",
+    "docs/local-profile-setup.md",
     "Taskfile.yml",
     "pyproject.toml",
     ".github/workflows/ci.yml",
@@ -247,3 +250,54 @@ def test_documentation_does_not_use_uppercase_cv_paths() -> None:
                 )
 
     assert violations == []
+
+
+def test_release_documentation_is_safe_and_actionable() -> None:
+    release_doc_paths = [
+        ROOT / "docs" / "release-checklist.md",
+        ROOT / "docs" / "manual-smoke-test.md",
+        ROOT / "docs" / "local-profile-setup.md",
+    ]
+
+    combined_content = "\n".join(
+        path.read_text(encoding="utf-8") for path in release_doc_paths
+    )
+    lower_content = combined_content.lower()
+
+    forbidden_fragments = [
+        "sk-",
+        "@gmail.com",
+        "@outlook.com",
+        "@hotmail.com",
+        "c:/users/alex/",
+        "c:\\users\\alex\\",
+    ]
+
+    violations = [
+        fragment for fragment in forbidden_fragments if fragment in lower_content
+    ]
+
+    assert violations == []
+    assert "external" in lower_content
+    assert "outside the repository" in lower_content
+    assert "uv sync --locked --group dev" in combined_content
+    assert "tests must not call the real openai api" in lower_content
+
+
+def test_generated_sqlite_files_are_ignored_by_git() -> None:
+    ignored_paths = [
+        "profiles/example/applications.sqlite3",
+        "profiles/alex/applications.sqlite3",
+    ]
+
+    result = subprocess.run(
+        ["git", "check-ignore", "-v", *ignored_paths],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    ignored = {line.rsplit("\t", maxsplit=1)[-1] for line in result.stdout.splitlines()}
+
+    assert ignored == set(ignored_paths)

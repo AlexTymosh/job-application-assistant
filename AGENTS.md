@@ -1104,3 +1104,24 @@ Rules for Stage 8A and later export work:
 - Stage 8B does not add real OpenAI tailoring, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables.
 - v1.0 remains web-only through FastAPI/Jinja2.
 - The next recommended stage is release hardening or human approval hardening, depending on the user decision.
+
+---
+## 46. Release Hardening Rules
+
+Release hardening is an implemented repository stage for the first local web-only release.
+
+Rules for release hardening and later release work:
+
+- Release documentation must stay in sync with the code, supported commands, dependency workflow, and current v1.0 scope.
+- After every code change, update `AGENTS.md`, `README.md`, and `SESSION_NOTES.md` when the release status, instructions, or handoff state changes.
+- Dependency changes require `uv lock` and `uv sync --locked --group dev` before merge. If package index access is blocked, the limitation must be documented and the locked validation must be rerun in CI or another environment with package index access.
+- Generated artefacts and SQLite files must never be committed.
+- Release documentation must use fake data only.
+- Tests must not call the real OpenAI API and must not require `OPENAI_API_KEY`.
+- v1.0 remains web-only through FastAPI/Jinja2.
+- Real private profile data must live outside the repository.
+- `.env`, API keys, real profile config, real blacklist files, real CV files, generated databases, and generated application artefacts must not be committed.
+- The release checklist, manual smoke test, and local profile setup guide must be updated when install, migration, startup, smoke-test, or privacy workflows change.
+- Manual smoke testing must verify that UI artefact paths are privacy-safe relative paths, not absolute private filesystem paths.
+
+Status: release hardening documentation and release validation tests are implemented.
