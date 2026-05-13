@@ -11,6 +11,10 @@ from app.artifacts.paths import (
     build_extracted_job_relative_path,
     build_raw_job_text_path,
     build_raw_job_text_relative_path,
+    build_tailored_cv_html_path,
+    build_tailored_cv_html_relative_path,
+    build_tailored_cv_markdown_path,
+    build_tailored_cv_markdown_relative_path,
 )
 
 
@@ -74,3 +78,49 @@ class ArtifactWriter:
                 application_id=application_id,
             ),
         )
+
+    def write_tailored_cv_markdown(
+        self,
+        *,
+        application_id: UUID,
+        markdown: str,
+    ) -> WrittenArtifact:
+        self.create_application_dir(application_id=application_id)
+        absolute_path = build_tailored_cv_markdown_path(
+            applications_dir=self._applications_dir,
+            application_id=application_id,
+        )
+        absolute_path.write_text(_ensure_final_newline(markdown), encoding="utf-8")
+
+        return WrittenArtifact(
+            absolute_path=absolute_path,
+            relative_path=build_tailored_cv_markdown_relative_path(
+                application_id=application_id,
+            ),
+        )
+
+    def write_tailored_cv_html(
+        self,
+        *,
+        application_id: UUID,
+        html: str,
+    ) -> WrittenArtifact:
+        self.create_application_dir(application_id=application_id)
+        absolute_path = build_tailored_cv_html_path(
+            applications_dir=self._applications_dir,
+            application_id=application_id,
+        )
+        absolute_path.write_text(_ensure_final_newline(html), encoding="utf-8")
+
+        return WrittenArtifact(
+            absolute_path=absolute_path,
+            relative_path=build_tailored_cv_html_relative_path(
+                application_id=application_id,
+            ),
+        )
+
+
+def _ensure_final_newline(content: str) -> str:
+    if content.endswith("\n"):
+        return content
+    return f"{content}\n"

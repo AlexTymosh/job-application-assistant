@@ -23,7 +23,8 @@ The project has completed:
 - Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence;
 - Stage 5 — CV loading foundation;
 - Stage 6 — safe CV tailoring contract and fake tailoring pipeline;
-- Stage 7 — reports foundation.
+- Stage 7 — reports foundation;
+- Stage 8A — Markdown and HTML export foundation.
 
 The current implementation includes:
 
@@ -67,10 +68,14 @@ The current implementation includes:
 - missing skills, keyword coverage, requirement coverage, and risk-of-overclaiming report models;
 - report builders that are deterministic, do not call OpenAI, do not mutate CV files, and do not write report artefacts to disk;
 - an explicit no-fake-ATS-score warning in CV Match Reports;
+- isolated Markdown and HTML exporters in `app/exporters/`;
+- tailored CV Markdown and HTML artefact writing through `ArtifactWriter`;
+- privacy-safe `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html` database artefact paths;
+- Markdown and HTML export persistence that is independent of FastAPI routes and does not call OpenAI;
 - the correct CV package marker at `app/cv/__init__.py`;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, and Stage 7 reports tests.
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, Stage 7 reports tests, and Stage 8A export tests.
 
-Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 7 adds strict in-memory report models plus deterministic Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`. Stage 7 reports include missing skills, keyword coverage, requirement coverage, and risk of overclaiming, but do not create a fake ATS score or any 0-100 score. Stage 7 does not add report artefact persistence, exporters, dashboard functionality, FastAPI routes, Jinja2 pages, LangGraph, CLI commands, URL scraping, external integrations, or real OpenAI tailoring. The rule remains: no `fact_id` means no claim.
+Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 7 adds strict in-memory report models plus deterministic Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`. Stage 8A adds Markdown and HTML export foundation. Markdown remains the source of truth. Markdown and HTML exports are artefacts written through `ArtifactWriter`, with database rows storing privacy-safe relative paths only. Stage 8A does not implement PDF export, DOCX export, real OpenAI calls, real OpenAI tailoring, CV file mutation, CLI commands, URL scraping, LangGraph, authentication, or cloud deployment. The rule remains: no `fact_id` means no claim.
 
 The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement.
 
@@ -302,7 +307,24 @@ Report artefact persistence and export are not added in Stage 7. Reports remain 
 
 ---
 
-## 11. SQLite
+## 11. Markdown and HTML Export Foundation
+
+Stage 8A adds Markdown and HTML export foundation:
+
+- Markdown remains the source of truth.
+- `MarkdownExporter` validates non-empty tailored CV Markdown and normalises the final newline without rewriting meaningful CV content.
+- `HtmlExporter` renders a conservative Markdown subset to a complete, safe, standalone HTML document.
+- Raw HTML from Markdown input is escaped by default.
+- Exporters are isolated in `app/exporters/` and do not depend on FastAPI `Request`, `Response`, Jinja2 route objects, web templates, OpenAI clients, or network resources.
+- File writes go through `ArtifactWriter`; exporters do not write files directly.
+- Database artefact records store privacy-safe relative paths such as `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html`.
+- Markdown and HTML exports are artefacts; master CV files and committed CV variants are not mutated.
+
+PDF and DOCX export are not implemented in Stage 8A. No CLI commands are added, and v1.0 remains web-only through FastAPI/Jinja2.
+
+---
+
+## 12. SQLite
 
 SQLite is the primary source of truth.
 
@@ -326,7 +348,7 @@ Future stages will add:
 
 ---
 
-## 12. CV Match Report
+## 13. CV Match Report
 
 The project must not use a fake "ATS score 0–100" as its primary metric.
 
@@ -345,7 +367,7 @@ The purpose of the report is not to imitate closed ATS algorithms, but to show t
 
 ---
 
-## 13. Evidence Matrix
+## 14. Evidence Matrix
 
 The Evidence Matrix must link job posting requirements to verified facts from the CV/fact bank. The fact bank is the source of verified facts for future CV tailoring and must reject malformed facts, duplicate fact IDs, and empty fact banks. Fact text fields are normalised by trimming surrounding whitespace.
 
@@ -363,7 +385,7 @@ The Evidence Matrix is needed to protect against hallucinations and to allow man
 
 ---
 
-## 14. CV Change Log
+## 15. CV Change Log
 
 Every CV change must have a record containing:
 
@@ -380,7 +402,7 @@ This makes it possible to understand exactly what the LLM changed and why.
 
 ---
 
-## 15. Prompt Injection Protection
+## 16. Prompt Injection Protection
 
 The job posting text is treated as untrusted input.
 
@@ -408,7 +430,7 @@ The presence of a warning must not always halt the pipeline. Behaviour must be c
 
 ---
 
-## 16. Human Approval Step
+## 17. Human Approval Step
 
 The Human Approval Step must be optional.
 
@@ -428,7 +450,7 @@ If Human Approval is disabled, the application may create artefacts immediately,
 
 ---
 
-## 17. Profiles
+## 18. Profiles
 
 The repository contains fake example profile data only:
 
@@ -742,13 +764,14 @@ The first release is web-only through FastAPI/Jinja2. CLI commands are intention
 - Stage 6 — Safe CV tailoring schemas and fake tailoring pipeline: complete.
 - Stage 7 — Reports foundation: complete.
 - Group 7 — Web intake, review, and dashboard foundation: complete.
+- Stage 8A — Markdown and HTML export foundation: complete.
 
 ### Upcoming stages
 
-- Next stage — Export foundation or report artefact persistence, depending on user decision.
-- Stage 8 — Human approval or export foundation, depending on the selected roadmap order.
-- Stage 9 — Exporters if not completed earlier.
-- Stage 10 — Dashboard hardening and analytics beyond the current basic dashboard.
+- Next recommended stage — Stage 8B: PDF and DOCX export foundation, unless the user chooses Human Approval hardening first.
+- Human Approval hardening — optional next step before Stage 8B if the user wants a stricter approval gate before final exports.
+- Report artefact persistence — deferred until explicitly selected.
+- Dashboard hardening and analytics beyond the current basic dashboard — deferred.
 
 
 ---

@@ -5,6 +5,10 @@ from app.artifacts.paths import (
     build_application_artifact_dir,
     build_raw_job_text_path,
     build_raw_job_text_relative_path,
+    build_tailored_cv_html_path,
+    build_tailored_cv_html_relative_path,
+    build_tailored_cv_markdown_path,
+    build_tailored_cv_markdown_relative_path,
 )
 
 
@@ -33,5 +37,47 @@ def test_raw_job_text_paths_are_stable_and_privacy_safe() -> None:
     )
     assert (
         relative_path == "applications/22222222-2222-2222-2222-222222222222/job_raw.txt"
+    )
+    assert "/private/profile" not in relative_path
+
+
+def test_tailored_cv_markdown_paths_are_stable_and_privacy_safe() -> None:
+    application_id = UUID("44444444-4444-4444-4444-444444444444")
+    applications_dir = Path("/private/profile/applications")
+
+    absolute_path = build_tailored_cv_markdown_path(
+        applications_dir=applications_dir,
+        application_id=application_id,
+    )
+    relative_path = build_tailored_cv_markdown_relative_path(
+        application_id=application_id,
+    )
+
+    assert absolute_path == Path(
+        "/private/profile/applications/44444444-4444-4444-4444-444444444444/tailored_cv.md"
+    )
+    assert (
+        relative_path
+        == "applications/44444444-4444-4444-4444-444444444444/tailored_cv.md"
+    )
+    assert "/private/profile" not in relative_path
+
+
+def test_tailored_cv_html_paths_are_stable_and_privacy_safe() -> None:
+    application_id = UUID("55555555-5555-5555-5555-555555555555")
+    applications_dir = Path("/private/profile/applications")
+
+    absolute_path = build_tailored_cv_html_path(
+        applications_dir=applications_dir,
+        application_id=application_id,
+    )
+    relative_path = build_tailored_cv_html_relative_path(application_id=application_id)
+
+    assert absolute_path == Path(
+        "/private/profile/applications/55555555-5555-5555-5555-555555555555/tailored_cv.html"
+    )
+    assert (
+        relative_path
+        == "applications/55555555-5555-5555-5555-555555555555/tailored_cv.html"
     )
     assert "/private/profile" not in relative_path
