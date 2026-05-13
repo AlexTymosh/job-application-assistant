@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence.
+Stage 5 — CV loading foundation.
 
 Completed:
 
@@ -26,7 +26,8 @@ Completed:
 - Stage 3.5 — preflight checks and warning persistence;
 - Stage 3.6 — application intake orchestration;
 - Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state;
-- Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence.
+- Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence;
+- Stage 5 — CV loading foundation.
 
 Current handoff state:
 
@@ -34,9 +35,10 @@ Current handoff state:
 - Foundation hardening for documentation, artefact writing boundaries, and Alembic migration verification is complete;
 - Stage 4 LLM extraction schemas, fake extraction client, serialisable pipeline state, and job extraction step are complete;
 - Stage 4.5 real OpenAI structured extraction client wrapper and extraction artefact persistence are complete;
-- the next implementation step should add Stage 5 CV loading foundation without CV tailoring, exporters, dashboard logic, or LangGraph.
+- Stage 5 CV loading foundation is complete with read-only Markdown CV loading, section marker validation, fact bank validation, and CV variant selection;
+- the next implementation step should add safe CV tailoring schemas and a fake tailoring pipeline, unless the user chooses to insert a small hardening PR first.
 
-Do not add CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet. Tests must not perform real OpenAI API calls or require a real API key.
+Do not add real CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet. Tests must not perform real OpenAI API calls or require a real API key.
 
 ---
 
@@ -151,7 +153,13 @@ Implemented job input, preflight, and intake foundation:
 - extracted job artefact persistence via the artefact writer and artifact repository boundaries;
 - privacy-safe relative extracted job artefact paths;
 - deterministic OpenAI client contract tests that use fake SDK objects and require no API key;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, and job extraction step tests.
+- Markdown CV loader;
+- CV section parser;
+- fact bank loader and validation, including empty fact bank rejection and trimming of surrounding whitespace in fact text fields;
+- CV variant selector;
+- correct CV package marker at `app/cv/__init__.py`;
+- Stage 5 tests;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, and Stage 5 CV foundation tests.
 
 ---
 
@@ -160,6 +168,7 @@ Implemented job input, preflight, and intake foundation:
 ### Stage 0 — Repository foundation
 
 Status: complete.
+
 
 Outcome:
 
@@ -290,20 +299,28 @@ Not implemented in Stage 4.5:
 
 ---
 
-### Stage 5 — CV loading
+### Stage 5 — CV loading foundation
 
-Status: next.
+Status: complete.
 
-Add later:
+Implemented:
 
-- Markdown CV loader;
-- CV section parser;
-- fact bank loader;
-- variant selector;
-- manual override;
-- validation of section markers.
+- read-only Markdown CV loader;
+- required CV section parser;
+- required section marker validation for summary, skills, experience, and projects;
+- missing marker, duplicate marker, and invalid marker order detection;
+- fact bank loader and validation;
+- duplicate fact ID rejection;
+- empty fact bank rejection;
+- fact text field normalisation by trimming surrounding whitespace;
+- CV variant selector;
+- correct CV package marker at `app/cv/__init__.py`;
+- selected variant existence validation;
+- selected variant section validation;
+- Stage 5 tests using temporary files and the fake example profile;
+- Stage 5 corrective fixes restore the correct `app/cv/__init__.py` package marker, reject empty fact banks, and trim fact text fields without adding product features.
 
-Use the term `cv`, not `resume`.
+Stage 5 and the Stage 5 corrective task do not implement CV tailoring, OpenAI calls, exporters, dashboard functionality, LangGraph, URL scraping, CLI commands, database migrations, or external integrations. CV loading reads Markdown files only and is read-only. The master CV must not be modified automatically. The fact bank is the source of verified facts. Use the term `cv`, not `resume`.
 
 ---
 
@@ -372,21 +389,20 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Create Stage 5 CV loading foundation in the next PR.
+Create safe CV tailoring schemas and a fake tailoring pipeline in the next PR, unless the user chooses to insert a small hardening PR first.
 
 Required for the next PR:
 
-1. Keep Markdown CV loading independent of FastAPI routes.
-2. Read only fake example CV files in the repository.
-3. Do not modify master CV files automatically.
-4. Add section parser and fact bank loading tests if CV loading is implemented.
-5. Do not add CV tailoring yet.
-6. Do not add exporters yet.
-7. Do not add dashboard functionality yet.
-8. Do not add LangGraph yet.
-9. Keep OpenAI calls isolated behind `app/llm/openai_client.py`; tests must mock OpenAI and must not require a real API key.
-10. Keep extracted job artefacts persisted through the artefact boundary with relative database paths only.
-11. Keep the app web-only through FastAPI/Jinja2. Do not add CLI commands.
+1. Keep CV tailoring independent of FastAPI routes.
+2. Keep the master CV read-only and create adapted copies only.
+3. Require fact IDs for significant CV changes.
+4. Do not add real OpenAI tailoring calls until the fake tailoring contract is tested.
+5. Do not add exporters yet.
+6. Do not add dashboard functionality yet.
+7. Do not add LangGraph yet.
+8. Keep OpenAI calls isolated behind dedicated wrappers; tests must mock OpenAI and must not require a real API key.
+9. Keep artefacts persisted through the artefact boundary with relative database paths only.
+10. Keep the app web-only through FastAPI/Jinja2. Do not add CLI commands.
 
 ---
 
@@ -440,22 +456,17 @@ Do not:
 
 - call the real OpenAI API;
 - require a real API key in tests;
-- add URL scraping;
-- add real LLM prompts;
-- add CV loading;
 - add CV tailoring;
-- write a PDF exporter;
-- write a DOCX exporter;
-- build a dashboard;
-- add CLI commands;
+- modify CV files automatically;
+- add exporters;
+- add dashboard functionality;
 - add LangGraph;
-- add Telegram;
-- add WhatsApp;
-- add Reed API;
+- add CLI commands;
+- add URL scraping;
+- add external integrations;
+- add real LLM prompts;
 - add auto-apply;
-- add LinkedIn automation;
-- add Docker;
-- add PyInstaller.
+- add LinkedIn automation.
 
 ---
 
@@ -646,5 +657,29 @@ Stage 4.5 is complete when:
 - the database stores a relative `applications/<application_id>/extracted_job.json` artefact path;
 - no database migration is required;
 - no CV loading, CV tailoring, exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations are added.
+
+Status: complete.
+
+---
+
+## 18.6. Definition of Done — Stage 5
+
+Stage 5 is complete when:
+
+- `app/cv/models.py` exists;
+- `app/cv/__init__.py` exists as the correct package marker;
+- Markdown CV loader exists;
+- required section parser exists;
+- fact bank loader exists;
+- duplicate fact IDs are rejected;
+- empty fact banks are rejected;
+- fact text fields are trimmed;
+- CV variant selector exists;
+- master CV is read-only;
+- example profile CV files are used in tests;
+- no CV tailoring is added;
+- no OpenAI calls are added;
+- no exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added;
+- tests pass.
 
 Status: complete.
