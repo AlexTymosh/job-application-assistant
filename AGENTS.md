@@ -1074,7 +1074,7 @@ Rules for Group 7 and later web work:
 - Database artefact records must continue to store privacy-safe relative paths only.
 - No authentication, LangGraph, CLI commands, cloud deployment, URL scraping, or export functionality is added by this stage.
 - If database commit fails after filesystem artefact writing, there may be an orphaned local artefact; do not add a full cleanup worker unless a later task explicitly requests that persistence hardening.
-- Stage 8A Markdown and HTML export foundation is implemented; the next recommended stage is Stage 8B — PDF and DOCX export foundation, unless human approval hardening is selected first.
+- Stage 8A Markdown and HTML export foundation and Stage 8B PDF and DOCX export foundation are implemented; the next recommended stage is release hardening or human approval hardening, depending on the user decision.
 
 
 ---
@@ -1086,14 +1086,20 @@ Stage 8A is implemented. It adds Markdown and HTML export foundation for tailore
 Rules for Stage 8A and later export work:
 
 - Markdown remains the source of truth.
-- Markdown and HTML exports are artefacts, not replacements for the source CV files.
+- Markdown, HTML, PDF, and DOCX exports are artefacts, not replacements for the source CV files.
+- PDF export uses ReportLab.
+- DOCX export uses python-docx.
+- WeasyPrint is not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows.
 - Exporters are isolated in `app/exporters/` and must remain independently testable.
 - Exporters must not depend on FastAPI `Request`, `Response`, Jinja2 route objects, web templates, database sessions, or OpenAI clients.
+- Routes must not write export files directly.
 - File writes must go through `ArtifactWriter`.
-- Database artefact paths must remain privacy-safe relative paths, for example `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html`.
+- Database rows must store relative paths only.
+- Database artefact paths must remain privacy-safe relative paths, for example `applications/<application_id>/tailored_cv.md`, `applications/<application_id>/tailored_cv.html`, `applications/<application_id>/tailored_cv.pdf`, and `applications/<application_id>/tailored_cv.docx`.
 - Export code must not mutate master CV files or committed CV variants.
 - Export code must not add CV claims, rewrite sections, generate fake ATS scores, or call OpenAI.
-- Stage 8A does not implement PDF export or DOCX export.
-- Stage 8A does not add real OpenAI tailoring, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, or new database tables.
+- Stage 8B implements PDF and DOCX export foundation through the artefact boundary.
+- Tests must not require OpenAI API keys or network access.
+- Stage 8B does not add real OpenAI tailoring, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables.
 - v1.0 remains web-only through FastAPI/Jinja2.
-- The next recommended stage is Stage 8B — PDF and DOCX export foundation, unless the user decides to add human approval hardening first.
+- The next recommended stage is release hardening or human approval hardening, depending on the user decision.
