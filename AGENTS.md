@@ -136,6 +136,7 @@ The project's core stack:
 - Jinja2
 - SQLite
 - SQLAlchemy 2.x
+- Alembic
 - Pydantic v2
 - OpenAI API
 - OpenAI Structured Outputs
@@ -149,7 +150,7 @@ Any deviation from this stack must be explicitly justified.
 
 ## 8. Preferred Repository Structure
 
-Reference structure:
+Reference repository structure:
 
 ```text
 local-job-application-assistant/
@@ -165,19 +166,14 @@ local-job-application-assistant/
 │   ├── web/
 │   └── future_integrations/
 ├── profiles/
-│   └── alex/
-│       ├── config.yaml
-│       ├── blacklist.txt
-│       ├── cv/
-│       │   ├── master.md
-│       │   ├── fact_bank.yaml
-│       │   └── variants/
-│       │       ├── backend_developer.md
-│       │       ├── software_engineer.md
-│       │       └── automation_engineer.md
-│       ├── prompts/
-│       ├── applications/
-│       └── applications.sqlite3
+│   └── example/
+│       ├── config.example.yaml
+│       ├── blacklist.example.txt
+│       └── cv/
+│           ├── master.example.md
+│           ├── fact_bank.example.yaml
+│           └── variants/
+│               └── backend_developer.example.md
 ├── docs/
 ├── tests/
 ├── pyproject.toml
@@ -185,6 +181,14 @@ local-job-application-assistant/
 ├── AGENTS.md
 └── SESSION_NOTES.md
 ```
+
+The committed `profiles/example/` tree is for fake example data only. Real private profiles must live outside the repository, for example:
+
+```text
+C:/Users/<user>/job-application-assistant-data/alex/
+```
+
+Do not present or create `profiles/alex/` as a committed repository path.
 
 The agent is not required to create the entire structure at once. Only create what is needed for the current task.
 

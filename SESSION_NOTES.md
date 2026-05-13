@@ -26,13 +26,13 @@ Completed:
 - Stage 3.5 — preflight checks and warning persistence;
 - Stage 3.6 — application intake orchestration.
 
-Current task for this PR:
+Current handoff state:
 
-- synchronise documentation with the implemented intake layer;
-- lightly harden intake test coverage if a clear gap exists;
-- prepare the project for the next PR, which will implement Stage 4 schemas and a fake extraction client.
+- Stage 3.6 application intake orchestration is complete;
+- Stage 4 LLM extraction schemas and a fake extraction client are next;
+- the next implementation step should add Stage 4 schema and fake-client files with tests.
 
-Do not implement Stage 4 in this PR. Do not add OpenAI client code, real API calls, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet.
+Do not add real OpenAI API calls, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet.
 
 ---
 
@@ -472,6 +472,21 @@ Stage 1 is complete when:
 Status: complete.
 
 ---
+
+## 13. Definition of Done — Stage 2
+
+Stage 2 is complete when:
+
+- SQLAlchemy `Base` exists;
+- UUID primary key and timestamp mixins exist;
+- initial application, artifact, event, and warning models exist;
+- repository classes exist for the initial tables;
+- SQLite engine and session helpers exist;
+- `session_scope()` commits successful work and rolls back failed work;
+- SQLite foreign key enforcement is enabled;
+- tests cover models, repositories, session handling, and external profile paths.
+
+Status: complete.
 
 ---
 
