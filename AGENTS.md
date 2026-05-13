@@ -36,6 +36,8 @@ The application must help the user:
 
 The project is not an auto-apply bot and must not automatically submit applications.
 
+The first release is web-only through FastAPI/Jinja2. CLI commands are not required for v1.0.
+
 ---
 
 ## 2. Instruction Priority
@@ -134,6 +136,7 @@ The project's core stack:
 - Jinja2
 - SQLite
 - SQLAlchemy 2.x
+- Alembic
 - Pydantic v2
 - OpenAI API
 - OpenAI Structured Outputs
@@ -147,7 +150,7 @@ Any deviation from this stack must be explicitly justified.
 
 ## 8. Preferred Repository Structure
 
-Reference structure:
+Reference repository structure:
 
 ```text
 local-job-application-assistant/
@@ -163,19 +166,14 @@ local-job-application-assistant/
 │   ├── web/
 │   └── future_integrations/
 ├── profiles/
-│   └── alex/
-│       ├── config.yaml
-│       ├── blacklist.txt
-│       ├── cv/
-│       │   ├── master.md
-│       │   ├── fact_bank.yaml
-│       │   └── variants/
-│       │       ├── backend_developer.md
-│       │       ├── software_engineer.md
-│       │       └── automation_engineer.md
-│       ├── prompts/
-│       ├── applications/
-│       └── applications.sqlite3
+│   └── example/
+│       ├── config.example.yaml
+│       ├── blacklist.example.txt
+│       └── cv/
+│           ├── master.example.md
+│           ├── fact_bank.example.yaml
+│           └── variants/
+│               └── backend_developer.example.md
 ├── docs/
 ├── tests/
 ├── pyproject.toml
@@ -183,6 +181,14 @@ local-job-application-assistant/
 ├── AGENTS.md
 └── SESSION_NOTES.md
 ```
+
+The committed `profiles/example/` tree is for fake example data only. Real private profiles must live outside the repository, for example:
+
+```text
+C:/Users/<user>/job-application-assistant-data/alex/
+```
+
+Do not present or create `profiles/alex/` as a committed repository path.
 
 The agent is not required to create the entire structure at once. Only create what is needed for the current task.
 
@@ -315,10 +321,16 @@ This is not the final schema, but the agent must preserve the idea of explicit s
 
 ## 13. User Profiles
 
-Initial profile:
+The repository must commit fake example profile data only:
 
 ```text
-profiles/alex/
+profiles/example/
+```
+
+Real private profiles must live outside the repository, for example:
+
+```text
+C:/Users/<user>/job-application-assistant-data/alex/
 ```
 
 The code must not hardcode `alex` inside the business logic.
@@ -764,11 +776,13 @@ FastAPI routes must not contain export logic directly.
 
 ## 31. Application Artefacts
 
-Each application must have a dedicated directory:
+Each application must have a dedicated directory under the active profile data directory. For real private profiles, that directory must be outside the repository, for example:
 
 ```text
-profiles/alex/applications/<application_id>/
+C:/Users/<user>/job-application-assistant-data/alex/applications/<application_id>/
 ```
+
+The committed `profiles/example/` tree is for fake examples only.
 
 Reference artefacts:
 
@@ -919,7 +933,7 @@ Backend application code must not be created until separately confirmed.
 The agent must not create:
 
 - `app/`
-- real `profiles/alex/` private data
+- real private profile data under `profiles/alex/` or any other repository path
 - real CV files
 - SQLAlchemy models
 - OpenAI client code

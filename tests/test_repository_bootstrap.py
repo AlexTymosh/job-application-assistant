@@ -86,6 +86,7 @@ PRIVATE_PATHS_THAT_MUST_NOT_BE_TRACKED = [
     "profiles/alex/resume/master.md",
     "profiles/alex/resume/fact_bank.yaml",
     "profiles/alex/resume/variants/backend_developer.md",
+    "profiles/example/applications.sqlite3",
 ]
 
 

@@ -27,11 +27,14 @@ The project has completed:
 - Alembic migration baseline;
 - initial job input foundation;
 - preflight foundation for prompt-injection phrase checks, blacklist matching, and duplicate detection;
-- bootstrap, Stage 1, database, Alembic, job input, and preflight tests;
 - preflight warning persistence;
-- duplicate self-match protection.
+- duplicate self-match protection;
+- application intake orchestration;
+- bootstrap, Stage 1, database, Alembic, job input, preflight, and intake tests.
 
-The next stage is application intake orchestration, followed by LLM extraction schemas and a fake extraction client.
+The next stage is Stage 4 — LLM extraction schemas and a fake extraction client.
+
+The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement.
 
 ---
 
@@ -667,44 +670,28 @@ Application statuses are informational and are not used in the application busin
 
 ## 23. Release Plan
 
-### v0.1 — Documentation foundation
+The first release is web-only through FastAPI/Jinja2. CLI commands are intentionally outside the v1.0 plan.
 
-- README.md;
-- AGENTS.md;
-- SESSION_NOTES.md;
-- architecture sign-off;
-- MVP scope sign-off.
+### Completed foundation stages
 
-### v0.2 — Backend skeleton
+- Stage 0 — Repository foundation: complete.
+- Stage 1 — FastAPI backend skeleton: complete.
+- Stage 2 — SQLite persistence foundation: complete.
+- Stage 2.5 — Alembic migration baseline: complete.
+- Stage 3 — Job input foundation: complete.
+- Stage 3.5 — Preflight checks and warning persistence: complete.
+- Stage 3.6 — Application intake orchestration: complete.
 
-- FastAPI app;
-- Jinja2 templates;
-- config loader;
-- SQLite connection;
-- basic pages.
+### Upcoming stages
 
-### v0.3 — Job input and extraction
-
-- URL input;
-- manual text input;
-- OpenAI extraction;
-- Structured Outputs;
-- prompt injection warning.
-
-### v0.4 — CV Tailoring
-
-- Markdown CV loader;
-- section parser;
-- fact bank;
-- safe tailoring;
-- CV Change Log.
-
-### v0.5 — Reports
-
-- Evidence Matrix;
-- CV Match Report;
-- QA Report;
-- warnings.
+- Stage 4 — LLM extraction schemas and fake client: next.
+- Stage 4.5 or later — Real OpenAI Structured Outputs client.
+- Stage 5 — CV loading.
+- Stage 6 — Safe CV tailoring.
+- Stage 7 — Reports.
+- Stage 8 — Human approval.
+- Stage 9 — Exporters.
+- Stage 10 — Dashboard.
 
 ### v1.0 — First release
 
