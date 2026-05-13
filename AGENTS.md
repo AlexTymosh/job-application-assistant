@@ -1055,3 +1055,23 @@ Rules for Stage 7 and later reports work:
 - Report builders must remain independent of FastAPI routes, Jinja2 templates, CLI commands, dashboard functionality, exporters, LangGraph, URL scraping, and external integrations.
 - Report models must remain serialisable and must not depend on filesystem paths, database sessions, or web framework objects.
 - The next stage should be Human Approval foundation or report artefact persistence, depending on user decision.
+
+---
+
+## 44. Web Intake, Review, and Dashboard Foundation
+
+Group 7 web intake, review, and dashboard foundation is implemented. It adds thin FastAPI routes and minimal Jinja2 pages for manual application intake, application detail review, a read-only review surface, and a dashboard.
+
+Rules for Group 7 and later web work:
+
+- Web routes must remain thin and must use service, pipeline, and repository layers for business logic.
+- Web intake uses `ApplicationIntakeService` for manual job input and preflight warning persistence.
+- Manual job text is required by the web intake form at this stage; URL scraping is not implemented.
+- The application initialises a SQLite engine and session factory in `app.state`; production startup must not call `create_all_tables` because Alembic owns schema management.
+- Web routes must not call OpenAI, run CV tailoring, run report builders, or run exporters.
+- The review page is a read-only surface showing existing metadata, warnings, events, and artefact paths; it must not generate missing artefacts.
+- Dashboard rows must show relative artefact counts and warning counts without exposing absolute private profile paths.
+- Database artefact records must continue to store privacy-safe relative paths only.
+- No authentication, LangGraph, CLI commands, cloud deployment, URL scraping, or export functionality is added by this stage.
+- If database commit fails after filesystem artefact writing, there may be an orphaned local artefact; do not add a full cleanup worker unless a later task explicitly requests that persistence hardening.
+- The next recommended stage is export foundation or report artefact persistence, depending on user decision.

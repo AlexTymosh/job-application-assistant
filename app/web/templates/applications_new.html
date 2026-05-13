@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>New Application</h1>
+
+  <p>Paste the job posting text to create a local application intake record.</p>
+  <p>URL scraping is not enabled in this stage; the source URL is stored only as metadata.</p>
+
+  {% if errors %}
+    <section aria-label="Validation errors">
+      <h2>Validation errors</h2>
+      <ul>
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <form method="post" action="/applications">
+    <p>
+      <label for="source_url">Source URL (optional)</label><br>
+      <input id="source_url" name="source_url" type="url" value="{{ form_values.get('source_url', '') }}">
+    </p>
+
+    <p>
+      <label for="selected_cv_variant">CV variant</label><br>
+      <select id="selected_cv_variant" name="selected_cv_variant">
+        {% set selected_variant = form_values.get('selected_cv_variant', default_cv_variant) %}
+        {% for variant in cv_variants %}
+          <option value="{{ variant }}" {% if variant == selected_variant %}selected{% endif %}>{{ variant }}</option>
+        {% endfor %}
+        {% if default_cv_variant not in cv_variants %}
+          <option value="{{ default_cv_variant }}" selected>{{ default_cv_variant }}</option>
+        {% endif %}
+      </select>
+    </p>
+
+    <p>
+      <label for="manual_text">Manual job text</label><br>
+      <textarea id="manual_text" name="manual_text" rows="16" cols="90" required>{{ form_values.get('manual_text', '') }}</textarea>
+    </p>
+
+    <button type="submit">Create application</button>
+  </form>
+{% endblock %}

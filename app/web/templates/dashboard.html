@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Dashboard</h1>
+
+  {% if applications %}
+    <table>
+      <thead>
+        <tr>
+          <th>Created</th>
+          <th>Company</th>
+          <th>Job title</th>
+          <th>Status</th>
+          <th>CV variant</th>
+          <th>Warnings</th>
+          <th>Artifacts</th>
+          <th>Links</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for application in applications %}
+          <tr>
+            <td>{{ application.created_at }}</td>
+            <td>{{ application.company_name or "Not available" }}</td>
+            <td>{{ application.job_title or "Not available" }}</td>
+            <td>{{ application.status }}</td>
+            <td>{{ application.selected_cv_variant or "Not selected" }}</td>
+            <td>{{ application.warnings | length }}</td>
+            <td>{{ application.artifacts | length }}</td>
+            <td>
+              <a href="/applications/{{ application.id }}">Detail</a>
+              <a href="/applications/{{ application.id }}/review">Review</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No applications have been created yet.</p>
+    <p><a href="/applications/new">Create the first application</a></p>
+  {% endif %}
+{% endblock %}

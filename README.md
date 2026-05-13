@@ -234,7 +234,7 @@ All adapted CV versions must be saved separately in the folder of the specific a
 
 ## 8. CV Sections
 
-Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate the master CV or any variant file. Stage 6 adds only the safe tailoring contract, deterministic fake tailoring, diff support, and an in-memory pipeline step. It does not add real OpenAI tailoring, does not mutate the master CV, and does not write tailored CV artefacts to disk. Stage 7 report builders are also in-memory and read-only: they link extracted job requirements to verified fact bank facts, calculate coverage and overclaiming risk, and explicitly avoid fake ATS scores. No exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added in Stage 7.
+Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate the master CV or any variant file. Stage 6 adds only the safe tailoring contract, deterministic fake tailoring, diff support, and an in-memory pipeline step. It does not add real OpenAI tailoring, does not mutate the master CV, and does not write tailored CV artefacts to disk. Stage 7 report builders are also in-memory and read-only: they link extracted job requirements to verified fact bank facts, calculate coverage and overclaiming risk, and explicitly avoid fake ATS scores. Group 7 adds web intake, application detail, a read-only review surface, and a dashboard. No exporters, LangGraph, CLI commands, URL scraping, authentication, cloud deployment, or external integrations are added in Group 7.
 
 The Markdown CV must contain stable section markers:
 
@@ -741,13 +741,32 @@ The first release is web-only through FastAPI/Jinja2. CLI commands are intention
 - Stage 5 — CV loading foundation: complete.
 - Stage 6 — Safe CV tailoring schemas and fake tailoring pipeline: complete.
 - Stage 7 — Reports foundation: complete.
+- Group 7 — Web intake, review, and dashboard foundation: complete.
 
 ### Upcoming stages
 
-- Next stage — Human Approval foundation or report artefact persistence, depending on user decision.
-- Stage 8 — Human approval.
-- Stage 9 — Exporters.
-- Stage 10 — Dashboard.
+- Next stage — Export foundation or report artefact persistence, depending on user decision.
+- Stage 8 — Human approval or export foundation, depending on the selected roadmap order.
+- Stage 9 — Exporters if not completed earlier.
+- Stage 10 — Dashboard hardening and analytics beyond the current basic dashboard.
+
+
+---
+
+## 24.1. Current Web Pages
+
+The current FastAPI/Jinja2 web vertical slice includes:
+
+- `/` — home page with navigation links;
+- `/applications/new` — manual job intake form with optional source URL metadata and CV variant selection;
+- `POST /applications` — creates an application record through `ApplicationIntakeService`, writes the raw job text artefact through the existing artefact boundary, persists preflight warnings, and redirects to the detail page;
+- `/applications/{application_id}` — application detail page with metadata, status, source URL, normalised URL, selected CV variant, job text hash presence, warnings, events, and privacy-safe relative artefact paths;
+- `/applications/{application_id}/review` — read-only review surface that shows existing records and clearly states that it does not generate extraction, tailoring, OpenAI calls, reports, or exports;
+- `/dashboard` — newest-first application list with status, CV variant, warning count, artefact count, and links to detail and review pages.
+
+The web routes do not call OpenAI, do not run CV tailoring, do not scrape URLs, and do not run Markdown/HTML/PDF/DOCX exporters. The production application initialises a SQLite session factory in `app.state`, but Alembic remains responsible for schema creation and migrations. Tests may create temporary tables explicitly.
+
+Known limitation: if the raw job text artefact is written successfully but the later database commit fails, a local orphan artefact can remain. This is acceptable for the current local-only stage and should be revisited during persistence hardening rather than solved with an overbuilt outbox in this task.
 
 ### v1.0 — First release
 

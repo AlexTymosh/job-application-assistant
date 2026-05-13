@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 8 candidate — Human Approval foundation or report artefact persistence. Stage 7 reports foundation is complete.
+Group 7 complete — web intake, application detail, read-only review, and dashboard pages are implemented. The next recommended stage is export foundation or report artefact persistence, depending on user decision.
 
 Completed:
 
@@ -29,7 +29,8 @@ Completed:
 - Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence;
 - Stage 5 — CV loading foundation;
 - Stage 6 — safe CV tailoring contract and fake tailoring pipeline;
-- Stage 7 — reports foundation.
+- Stage 7 — reports foundation;
+- Group 7 — web intake, review, and dashboard foundation.
 
 Current handoff state:
 
@@ -40,9 +41,10 @@ Current handoff state:
 - Stage 5 CV loading foundation is complete with read-only Markdown CV loading, section marker validation, fact bank validation, and CV variant selection;
 - Stage 6 safe CV tailoring contract and fake tailoring pipeline are implemented;
 - Stage 7 reports foundation is implemented with in-memory Evidence Matrix and CV Match Report builders;
-- the next implementation step should be Human Approval foundation or report artefact persistence, depending on user decision.
+- Group 7 web intake, application detail, read-only review, and dashboard pages are implemented;
+- the next implementation step should be export foundation or report artefact persistence, depending on user decision.
 
-Stage 7 adds strict in-memory report models, deterministic Evidence Matrix building, deterministic CV Match Report building, missing skills, keyword coverage, requirement coverage, and overclaiming-risk reporting. Reports are based on `ExtractedJob` and `FactBank`; they do not create fake ATS scores, do not call OpenAI, do not mutate CV files, and do not write report artefacts to disk. Do not add real OpenAI tailoring, exporters, dashboard functionality, LangGraph, URL scraping, CLI commands, or external integrations yet. Tests must not perform real OpenAI API calls or require a real API key.
+Stage 7 adds strict in-memory report models, deterministic Evidence Matrix building, deterministic CV Match Report building, missing skills, keyword coverage, requirement coverage, and overclaiming-risk reporting. Reports are based on `ExtractedJob` and `FactBank`; they do not create fake ATS scores, do not call OpenAI, do not mutate CV files, and do not write report artefacts to disk. Do not add real OpenAI tailoring, exporters, LangGraph, URL scraping, CLI commands, authentication, cloud deployment, or external integrations yet. Dashboard pages now exist, but they are read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
 
 ---
 
@@ -757,5 +759,26 @@ Stage 7 is complete when:
 - report fields on `ApplicationRunState` remain serialisable;
 - no report artefacts are written to disk;
 - tests pass.
+
+Status: complete.
+
+
+---
+
+## 18.9. Definition of Done — Group 7 Web Intake, Review, and Dashboard
+
+Group 7 is complete when:
+
+- the application initialises `app.state.profile_paths`, `app.state.engine`, and `app.state.session_factory`;
+- production app startup does not call `create_all_tables`;
+- a route/session dependency opens a SQLAlchemy session, commits successful requests, rolls back failed requests, and closes the session;
+- `/applications/new` renders a manual job intake form;
+- `POST /applications` validates form input with `JobInput`, uses `ApplicationIntakeService`, persists the application record, raw job artefact metadata, events, and warnings, then redirects to application detail;
+- `/applications/{application_id}` renders application metadata, warnings, events, and relative artefact paths;
+- `/applications/{application_id}/review` renders a read-only review surface and does not run extraction, OpenAI, tailoring, reports, or exporters;
+- `/dashboard` lists applications newest first with warning and artefact counts, detail links, and review links;
+- empty dashboard state is rendered;
+- tests cover intake, detail, review, dashboard, validation failure, 404 behaviour, and relative artefact paths;
+- no real OpenAI calls, URL scraping, CV tailoring execution, exporters, authentication, CLI commands, LangGraph, or cloud deployment are added.
 
 Status: complete.

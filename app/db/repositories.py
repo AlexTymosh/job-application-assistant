@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import (
     Application,
@@ -45,6 +45,32 @@ class ApplicationRepository:
 
     def get(self, application_id: UUID) -> Application | None:
         return self._session.get(Application, application_id)
+
+    def get_with_related(self, application_id: UUID) -> Application | None:
+        statement = (
+            select(Application)
+            .where(Application.id == application_id)
+            .options(
+                selectinload(Application.artifacts),
+                selectinload(Application.events),
+                selectinload(Application.warnings),
+            )
+        )
+
+        return self._session.scalars(statement).one_or_none()
+
+    def list_dashboard_by_profile(self, profile_name: str) -> list[Application]:
+        statement = (
+            select(Application)
+            .where(Application.profile_name == profile_name)
+            .options(
+                selectinload(Application.artifacts),
+                selectinload(Application.warnings),
+            )
+            .order_by(Application.created_at.desc())
+        )
+
+        return list(self._session.scalars(statement).all())
 
     def list_by_profile(self, profile_name: str) -> list[Application]:
         statement = (

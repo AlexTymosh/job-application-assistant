@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Application Review</h1>
+
+  <p>This page is a read-only review surface. It does not run extraction, tailoring, OpenAI calls, or exporters.</p>
+
+  <section>
+    <h2>Application metadata</h2>
+    <dl>
+      <dt>Application ID</dt>
+      <dd>{{ application.id }}</dd>
+
+      <dt>Profile</dt>
+      <dd>{{ application.profile_name }}</dd>
+
+      <dt>Status</dt>
+      <dd>{{ application.status }}</dd>
+
+      <dt>Selected CV variant</dt>
+      <dd>{{ application.selected_cv_variant or "Not selected" }}</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Warnings</h2>
+    {% if warnings %}
+      <ul>
+        {% for warning in warnings %}
+          <li><strong>{{ warning.code }}</strong>: {{ warning.message }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No warnings recorded.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Events</h2>
+    {% if events %}
+      <ol>
+        {% for event in events %}
+          <li>{{ event.occurred_at }} — {{ event.event_type }}</li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p>No events recorded.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Artifacts</h2>
+    {% if artifacts %}
+      <ul>
+        {% for artifact in artifacts %}
+          <li><strong>{{ artifact.artifact_type }}</strong>: <code>{{ artifact.path }}</code></li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No artifacts recorded.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Generated review materials</h2>
+    <dl>
+      <dt>Extracted job</dt>
+      <dd>
+        {% if extracted_job_artifact %}
+          Available at <code>{{ extracted_job_artifact.path }}</code>
+        {% else %}
+          Not available yet.
+        {% endif %}
+      </dd>
+
+      <dt>Tailored CV</dt>
+      <dd>
+        {% if tailored_cv_artifact %}
+          Available at <code>{{ tailored_cv_artifact.path }}</code>
+        {% else %}
+          Not available yet.
+        {% endif %}
+      </dd>
+
+      <dt>CV Match Report</dt>
+      <dd>
+        {% if match_report_artifact %}
+          Available at <code>{{ match_report_artifact.path }}</code>
+        {% else %}
+          Not available yet.
+        {% endif %}
+      </dd>
+    </dl>
+  </section>
+{% endblock %}
