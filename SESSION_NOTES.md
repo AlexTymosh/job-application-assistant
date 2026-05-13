@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state.
+Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence.
 
 Completed:
 
@@ -25,16 +25,18 @@ Completed:
 - Stage 3 — job input foundation;
 - Stage 3.5 — preflight checks and warning persistence;
 - Stage 3.6 — application intake orchestration;
-- Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state.
+- Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state;
+- Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence.
 
 Current handoff state:
 
 - Stage 3.6 application intake orchestration is complete;
 - Foundation hardening for documentation, artefact writing boundaries, and Alembic migration verification is complete;
 - Stage 4 LLM extraction schemas, fake extraction client, serialisable pipeline state, and job extraction step are complete;
-- the next implementation step should add a real OpenAI structured extraction client and extraction artefact persistence, without CV loading, CV tailoring, exporters, dashboard logic, or LangGraph.
+- Stage 4.5 real OpenAI structured extraction client wrapper and extraction artefact persistence are complete;
+- the next implementation step should add Stage 5 CV loading foundation without CV tailoring, exporters, dashboard logic, or LangGraph.
 
-Do not add real OpenAI API calls, CV loading, CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet.
+Do not add CV tailoring logic, exporters, dashboard logic, LangGraph, URL scraping, CLI commands, or external integrations yet. Tests must not perform real OpenAI API calls or require a real API key.
 
 ---
 
@@ -144,7 +146,12 @@ Implemented job input, preflight, and intake foundation:
 - deterministic fake extraction client for local tests and contract validation;
 - serialisable `ApplicationRunState`;
 - `JobExtractionStep` that extracts from manual job text without persistence or network calls;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, pipeline state, and job extraction step tests.
+- isolated `OpenAIJobExtractionClient` wrapper in `app/llm/openai_client.py`;
+- OpenAI job extraction prompt in `app/llm/prompts/job_extraction.md`;
+- extracted job artefact persistence via the artefact writer and artifact repository boundaries;
+- privacy-safe relative extracted job artefact paths;
+- deterministic OpenAI client contract tests that use fake SDK objects and require no API key;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, and job extraction step tests.
 
 ---
 
@@ -254,7 +261,38 @@ Deferred hardening note:
 
 ---
 
+### Stage 4.5 — Real OpenAI structured extraction and extracted job artefact persistence
+
+Status: complete.
+
+Implemented:
+
+- real OpenAI Structured Outputs extraction client wrapper isolated behind `app/llm/openai_client.py`;
+- existing `ExtractedJob` Pydantic schema remains the structured output contract;
+- OpenAI SDK objects do not leave the client wrapper;
+- refusal, SDK failure, missing parsed output, and validation failures are converted to project-level exceptions;
+- concise prompt file that treats job postings as untrusted data and forbids CV tailoring, cover letters, invented fields, and ATS scores;
+- extracted job JSON persistence through `ArtifactWriter` and `ArtifactRepository`;
+- database artefact paths remain relative, for example `applications/<application_id>/extracted_job.json`;
+- mocked OpenAI client tests that do not call the real API and do not require `OPENAI_API_KEY`;
+- extraction persistence tests that prove the JSON file and database artefact row are created inside an explicit transaction boundary.
+
+Not implemented in Stage 4.5:
+
+- CV loading;
+- CV tailoring;
+- exporters;
+- dashboard functionality;
+- URL scraping;
+- CLI commands;
+- LangGraph;
+- external integrations.
+
+---
+
 ### Stage 5 — CV loading
+
+Status: next.
 
 Add later:
 
@@ -334,20 +372,20 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Create Stage 4.5 or Group 3 real OpenAI structured extraction client and extraction artefact persistence in the next PR.
+Create Stage 5 CV loading foundation in the next PR.
 
 Required for the next PR:
 
-1. Keep the existing Stage 4 schemas as the contract for structured extraction.
-2. Add the real OpenAI client behind an isolated wrapper.
-3. Persist extracted job artefacts safely without storing absolute private profile paths in database metadata.
-4. Keep tests deterministic and mock the LLM integration.
-5. Do not require a real API key in unit tests.
-6. Do not add CV loading yet.
-7. Do not add CV tailoring yet.
-8. Do not add exporters yet.
-9. Do not add dashboard functionality yet.
-10. Do not add LangGraph yet.
+1. Keep Markdown CV loading independent of FastAPI routes.
+2. Read only fake example CV files in the repository.
+3. Do not modify master CV files automatically.
+4. Add section parser and fact bank loading tests if CV loading is implemented.
+5. Do not add CV tailoring yet.
+6. Do not add exporters yet.
+7. Do not add dashboard functionality yet.
+8. Do not add LangGraph yet.
+9. Keep OpenAI calls isolated behind `app/llm/openai_client.py`; tests must mock OpenAI and must not require a real API key.
+10. Keep extracted job artefacts persisted through the artefact boundary with relative database paths only.
 11. Keep the app web-only through FastAPI/Jinja2. Do not add CLI commands.
 
 ---
@@ -591,4 +629,22 @@ Stage 4 is complete when:
 - no CV loading or tailoring is added;
 - no exporters or dashboard functionality are added.
 
-Status: next.
+Status: complete.
+
+---
+
+## 18.5. Definition of Done — Stage 4.5
+
+Stage 4.5 is complete when:
+
+- `app/llm/openai_client.py` exists;
+- the real OpenAI client wrapper uses the existing `ExtractedJob` schema as the structured output contract;
+- OpenAI SDK objects and SDK-specific exceptions are isolated behind the wrapper;
+- tests use fake SDK objects and do not call the real OpenAI API;
+- tests do not require `OPENAI_API_KEY`;
+- `extracted_job.json` is written through the artefact boundary;
+- the database stores a relative `applications/<application_id>/extracted_job.json` artefact path;
+- no database migration is required;
+- no CV loading, CV tailoring, exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations are added.
+
+Status: complete.

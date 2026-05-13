@@ -19,7 +19,8 @@ The project has completed:
 - Stage 3 — job input foundation;
 - Stage 3.5 — preflight checks and warning persistence;
 - Stage 3.6 — application intake orchestration;
-- Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state.
+- Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state;
+- Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence.
 
 The current implementation includes:
 
@@ -46,9 +47,14 @@ The current implementation includes:
 - a deterministic fake extraction client for local tests and pipeline contract validation;
 - serialisable `ApplicationRunState` for future pipeline orchestration;
 - a `JobExtractionStep` that uses manual job text and does not persist or call network services;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, pipeline state, and job extraction step tests.
+- an isolated OpenAI Structured Outputs extraction client in `app/llm/openai_client.py`;
+- a dedicated job extraction prompt that treats job postings as untrusted data;
+- extracted job artefact persistence through the artefact writer boundary;
+- privacy-safe `applications/<application_id>/extracted_job.json` database paths that do not store absolute private profile paths;
+- mocked OpenAI contract tests that do not call the real API and do not require `OPENAI_API_KEY`;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, and job extraction step tests.
 
-Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. The fake client is only for local tests and pipeline contract validation; real OpenAI structured extraction is not implemented yet.
+Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. The fake client remains available for local tests and pipeline contract validation. OpenAI integration tests use mocked SDK objects and must not perform real API calls or require `OPENAI_API_KEY`.
 
 The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement.
 
@@ -581,7 +587,7 @@ async def run(state: ApplicationRunState) -> ApplicationRunState:
 
 The OpenAI API is used for:
 
-- extracting structured job data;
+- extracting structured job data through the isolated `OpenAIJobExtractionClient` wrapper;
 - analysing requirements;
 - adapting CV sections;
 - building the Evidence Matrix;
@@ -591,9 +597,9 @@ The OpenAI API is used for:
 
 The model must be configurable via `config.yaml` or environment variables.
 
-The API key must not be committed to the repository.
+The API key must not be committed to the repository. Tests must mock OpenAI clients, must not call the real API, and must not require `OPENAI_API_KEY`.
 
-Structured Outputs and JSON Schema must be used for structured responses.
+Structured Outputs and JSON Schema must be used for structured responses. Extracted job artefacts are stored as relative paths such as `applications/<application_id>/extracted_job.json`, not absolute private profile paths.
 
 ---
 
@@ -697,11 +703,11 @@ The first release is web-only through FastAPI/Jinja2. CLI commands are intention
 - Stage 3 — Job input foundation: complete.
 - Stage 3.5 — Preflight checks and warning persistence: complete.
 - Stage 3.6 — Application intake orchestration: complete.
+- Stage 4 — LLM extraction schemas and fake client: complete.
+- Stage 4.5 — Real OpenAI Structured Outputs client and extracted job artefact persistence: complete.
 
 ### Upcoming stages
 
-- Stage 4 — LLM extraction schemas and fake client: next.
-- Stage 4.5 or later — Real OpenAI Structured Outputs client.
 - Stage 5 — CV loading.
 - Stage 6 — Safe CV tailoring.
 - Stage 7 — Reports.

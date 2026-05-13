@@ -218,6 +218,7 @@ Rules:
 
 - route handlers must not contain business logic;
 - route handlers must not call the OpenAI API directly;
+- route handlers must not instantiate or use `OpenAIJobExtractionClient` directly;
 - route handlers must not modify the CV directly;
 - route handlers must not create PDF/DOCX files directly;
 - business logic must live in the service/pipeline layers;
@@ -604,11 +605,12 @@ If a numerical indicator is added later, it must be supplementary and must not b
 
 ## 23. LLM Rules
 
-The LLM must be used via a dedicated wrapper.
+The LLM must be used via a dedicated wrapper. Stage 4.5 provides `OpenAIJobExtractionClient` in `app/llm/openai_client.py` for structured job extraction. OpenAI SDK objects and SDK-specific exceptions must not leak into pipeline, route, database, or artefact code.
 
 Prohibited:
 
 - calling the OpenAI API directly from route handlers;
+- calling the OpenAI API directly from tests;
 - hardcoding the model in the business logic;
 - hardcoding the API key;
 - sending more personal data to the LLM than is necessary for a specific step;
@@ -800,7 +802,7 @@ match_report.json
 diff.patch
 ```
 
-The agent must not overwrite existing artefacts without good reason.
+The agent must not overwrite existing artefacts without good reason. Database artefact metadata must store privacy-safe relative paths such as `applications/<application_id>/extracted_job.json`, not absolute private profile paths.
 
 ---
 
@@ -823,7 +825,7 @@ Minimum areas to test:
 - exporter interface;
 - pipeline step contract.
 
-Tests must not require a real OpenAI API key.
+Tests must not require a real OpenAI API key. OpenAI integrations must be tested with fake or mocked SDK clients, and unit tests must not perform real network calls to OpenAI.
 
 The LLM must be mockable.
 

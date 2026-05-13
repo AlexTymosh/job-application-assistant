@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
 from app.artifacts.paths import (
     build_application_artifact_dir,
+    build_extracted_job_path,
+    build_extracted_job_relative_path,
     build_raw_job_text_path,
     build_raw_job_text_relative_path,
 )
@@ -45,6 +48,29 @@ class ArtifactWriter:
         return WrittenArtifact(
             absolute_path=absolute_path,
             relative_path=build_raw_job_text_relative_path(
+                application_id=application_id,
+            ),
+        )
+
+    def write_extracted_job(
+        self,
+        *,
+        application_id: UUID,
+        extracted_job_data: dict[str, object],
+    ) -> WrittenArtifact:
+        self.create_application_dir(application_id=application_id)
+        absolute_path = build_extracted_job_path(
+            applications_dir=self._applications_dir,
+            application_id=application_id,
+        )
+        absolute_path.write_text(
+            json.dumps(extracted_job_data, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        return WrittenArtifact(
+            absolute_path=absolute_path,
+            relative_path=build_extracted_job_relative_path(
                 application_id=application_id,
             ),
         )
