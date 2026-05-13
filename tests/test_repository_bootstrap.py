@@ -105,7 +105,6 @@ REQUIRED_PROJECT_FILES = [
     "app/cv/selector.py",
     "app/cv/diff.py",
     "app/reports/__init__.py",
-    "app/reports/init.py",
     "app/reports/models.py",
     "app/reports/evidence_matrix.py",
     "app/reports/match_report.py",

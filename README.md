@@ -326,7 +326,7 @@ Future stages will add:
 
 ---
 
-## 11. CV Match Report
+## 12. CV Match Report
 
 The project must not use a fake "ATS score 0–100" as its primary metric.
 
@@ -345,7 +345,7 @@ The purpose of the report is not to imitate closed ATS algorithms, but to show t
 
 ---
 
-## 12. Evidence Matrix
+## 13. Evidence Matrix
 
 The Evidence Matrix must link job posting requirements to verified facts from the CV/fact bank. The fact bank is the source of verified facts for future CV tailoring and must reject malformed facts, duplicate fact IDs, and empty fact banks. Fact text fields are normalised by trimming surrounding whitespace.
 
@@ -363,7 +363,7 @@ The Evidence Matrix is needed to protect against hallucinations and to allow man
 
 ---
 
-## 13. CV Change Log
+## 14. CV Change Log
 
 Every CV change must have a record containing:
 
@@ -380,7 +380,7 @@ This makes it possible to understand exactly what the LLM changed and why.
 
 ---
 
-## 14. Prompt Injection Protection
+## 15. Prompt Injection Protection
 
 The job posting text is treated as untrusted input.
 
@@ -408,7 +408,7 @@ The presence of a warning must not always halt the pipeline. Behaviour must be c
 
 ---
 
-## 15. Human Approval Step
+## 16. Human Approval Step
 
 The Human Approval Step must be optional.
 
@@ -428,7 +428,7 @@ If Human Approval is disabled, the application may create artefacts immediately,
 
 ---
 
-## 16. Profiles
+## 17. Profiles
 
 The repository contains fake example profile data only:
 
@@ -497,7 +497,7 @@ job-application-assistant-data/
 
 ---
 
-## 17. Future Project Structure
+## 18. Future Project Structure
 
 ```text
 local-job-application-assistant/
@@ -571,7 +571,7 @@ local-job-application-assistant/
 
 ---
 
-## 18. Pipeline
+## 19. Pipeline
 
 Planned pipeline:
 
@@ -593,7 +593,7 @@ Input
 
 ---
 
-## 19. LangGraph-Ready Approach
+## 20. LangGraph-Ready Approach
 
 LangGraph is not used in the MVP.
 
@@ -616,7 +616,7 @@ async def run(state: ApplicationRunState) -> ApplicationRunState:
 
 ---
 
-## 20. OpenAI API
+## 21. OpenAI API
 
 The OpenAI API is used for:
 
@@ -636,7 +636,7 @@ Structured Outputs and JSON Schema must be used for structured responses. Extrac
 
 ---
 
-## 21. Config
+## 22. Config
 
 Example private `config.yaml`:
 
@@ -694,7 +694,7 @@ future_integrations:
 
 ---
 
-## 22. Application Statuses
+## 23. Application Statuses
 
 Planned statuses:
 
@@ -723,7 +723,7 @@ Application statuses are informational and are not used in the application busin
 
 ---
 
-## 23. Release Plan
+## 24. Release Plan
 
 The first release is web-only through FastAPI/Jinja2. CLI commands are intentionally outside the v1.0 plan.
 
@@ -761,7 +761,7 @@ The first release is web-only through FastAPI/Jinja2. CLI commands are intention
 
 ---
 
-## 24. Definition of Done for the First Release
+## 25. Definition of Done for the First Release
 
 The first release is considered complete when the user is able to:
 
