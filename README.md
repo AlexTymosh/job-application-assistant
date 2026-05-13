@@ -18,7 +18,8 @@ The project has completed:
 - Stage 2.5 — Alembic migration baseline;
 - Stage 3 — job input foundation;
 - Stage 3.5 — preflight checks and warning persistence;
-- Stage 3.6 — application intake orchestration.
+- Stage 3.6 — application intake orchestration;
+- Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state.
 
 The current implementation includes:
 
@@ -41,9 +42,13 @@ The current implementation includes:
 - preflight warning persistence;
 - duplicate self-match protection;
 - application intake orchestration through `ApplicationIntakeService`;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, and intake tests.
+- strict Stage 4 Pydantic schemas for structured job extraction;
+- a deterministic fake extraction client for local tests and pipeline contract validation;
+- serialisable `ApplicationRunState` for future pipeline orchestration;
+- a `JobExtractionStep` that uses manual job text and does not persist or call network services;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, pipeline state, and job extraction step tests.
 
-Application intake orchestration already exists. The next stage is Stage 4 — LLM extraction schemas and a fake extraction client.
+Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. The fake client is only for local tests and pipeline contract validation; real OpenAI structured extraction is not implemented yet.
 
 The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement.
 
