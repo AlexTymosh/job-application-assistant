@@ -12,6 +12,16 @@ The project is not an auto-apply bot and must not automatically submit applicati
 
 The project has completed:
 
+- Stage 0 — repository foundation;
+- Stage 1 — FastAPI backend skeleton;
+- Stage 2 — SQLite persistence foundation;
+- Stage 2.5 — Alembic migration baseline;
+- Stage 3 — job input foundation;
+- Stage 3.5 — preflight checks and warning persistence;
+- Stage 3.6 — application intake orchestration.
+
+The current implementation includes:
+
 - repository bootstrap with `uv`;
 - CI and pre-commit checks;
 - minimal FastAPI application factory;
@@ -24,15 +34,16 @@ The project has completed:
 - SQLite session hardening;
 - SQLite foreign key enforcement;
 - external private profile directory support;
-- Alembic migration baseline;
+- Alembic migration baseline with an integration test that upgrades a temporary profile database to `head`;
 - initial job input foundation;
+- privacy-aware raw job artefact path handling through an artefact writer boundary;
 - preflight foundation for prompt-injection phrase checks, blacklist matching, and duplicate detection;
 - preflight warning persistence;
 - duplicate self-match protection;
-- application intake orchestration;
-- bootstrap, Stage 1, database, Alembic, job input, preflight, and intake tests.
+- application intake orchestration through `ApplicationIntakeService`;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, and intake tests.
 
-The next stage is Stage 4 — LLM extraction schemas and a fake extraction client.
+Application intake orchestration already exists. The next stage is Stage 4 — LLM extraction schemas and a fake extraction client.
 
 The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement.
 

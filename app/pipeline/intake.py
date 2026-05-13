@@ -5,6 +5,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
+from app.artifacts.writer import ArtifactWriter
 from app.db.models import Application
 from app.db.repositories import (
     ApplicationEventRepository,
@@ -34,7 +35,7 @@ class ApplicationIntakeService:
     ) -> None:
         self._session = session
         self._blacklist_path = blacklist_path
-        self._applications_dir = applications_dir
+        self._artifact_writer = ArtifactWriter(applications_dir=applications_dir)
 
     def create_application_from_job_input(
         self,
@@ -52,7 +53,7 @@ class ApplicationIntakeService:
             applications=applications,
             artifacts=artifacts,
             events=events,
-            applications_dir=self._applications_dir,
+            artifact_writer=self._artifact_writer,
         )
 
         application = job_input_service.create_from_input(

@@ -72,6 +72,12 @@ REQUIRED_PROJECT_FILES = [
     "app/pipeline/__init__.py",
     "app/pipeline/intake.py",
     "tests/test_application_intake.py",
+    "app/artifacts/__init__.py",
+    "app/artifacts/paths.py",
+    "app/artifacts/writer.py",
+    "tests/test_artifact_paths.py",
+    "tests/test_artifact_writer.py",
+    "tests/test_alembic_migrations.py",
 ]
 
 

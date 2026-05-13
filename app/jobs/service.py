@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
-
+from app.artifacts.writer import ArtifactWriter
 from app.db.models import Application
 from app.db.repositories import (
     ApplicationEventRepository,
@@ -19,12 +18,12 @@ class JobInputService:
         applications: ApplicationRepository,
         artifacts: ArtifactRepository,
         events: ApplicationEventRepository,
-        applications_dir: Path,
+        artifact_writer: ArtifactWriter,
     ) -> None:
         self._applications = applications
         self._artifacts = artifacts
         self._events = events
-        self._applications_dir = applications_dir
+        self._artifact_writer = artifact_writer
 
     def create_from_input(
         self,
@@ -46,17 +45,16 @@ class JobInputService:
         application.normalized_url = normalise_url(source_url)
         application.job_text_hash = job_text_hash
 
-        application_dir = self._applications_dir / str(application.id)
-        application_dir.mkdir(parents=True, exist_ok=True)
-
         if manual_text:
-            raw_job_path = application_dir / "job_raw.txt"
-            raw_job_path.write_text(manual_text, encoding="utf-8")
+            written_artifact = self._artifact_writer.write_raw_job_text(
+                application_id=application.id,
+                raw_text=manual_text,
+            )
 
             self._artifacts.create(
                 application_id=application.id,
                 artifact_type="job_raw",
-                path=f"applications/{application.id}/job_raw.txt",
+                path=written_artifact.relative_path,
             )
 
         self._events.create(
