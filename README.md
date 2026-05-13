@@ -20,7 +20,8 @@ The project has completed:
 - Stage 3.5 — preflight checks and warning persistence;
 - Stage 3.6 — application intake orchestration;
 - Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state;
-- Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence.
+- Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence;
+- Stage 5 — CV loading foundation.
 
 The current implementation includes:
 
@@ -52,9 +53,13 @@ The current implementation includes:
 - extracted job artefact persistence through the artefact writer boundary;
 - privacy-safe `applications/<application_id>/extracted_job.json` database paths that do not store absolute private profile paths;
 - mocked OpenAI contract tests that do not call the real API and do not require `OPENAI_API_KEY`;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, and job extraction step tests.
+- read-only Markdown CV loading;
+- required CV section marker parsing and validation;
+- fact bank loading and validation, including duplicate fact ID rejection;
+- CV variant selection that validates the selected variant exists and has valid required sections;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, and Stage 5 CV foundation tests.
 
-Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. The fake client remains available for local tests and pipeline contract validation. OpenAI integration tests use mocked SDK objects and must not perform real API calls or require `OPENAI_API_KEY`.
+Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection. The fake client remains available for local tests and pipeline contract validation. OpenAI integration tests use mocked SDK objects and must not perform real API calls or require `OPENAI_API_KEY`. No CV tailoring, OpenAI calls, exporters, or dashboard functionality are added in Stage 5.
 
 The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement.
 
@@ -218,6 +223,8 @@ All adapted CV versions must be saved separately in the folder of the specific a
 
 ## 8. CV Sections
 
+Stage 5 CV loading reads Markdown files only and is read-only. It validates that the selected CV variant exists, parses required section markers, and does not mutate the master CV or any variant file. No CV tailoring is implemented in Stage 5. No OpenAI call, exporter, or dashboard functionality is added in this stage.
+
 The Markdown CV must contain stable section markers:
 
 ```md
@@ -314,7 +321,7 @@ The purpose of the report is not to imitate closed ATS algorithms, but to show t
 
 ## 12. Evidence Matrix
 
-The Evidence Matrix must link job posting requirements to verified facts from the CV/fact bank.
+The Evidence Matrix must link job posting requirements to verified facts from the CV/fact bank. The fact bank is the source of verified facts for future CV tailoring and must reject malformed or duplicate fact records.
 
 Example:
 
@@ -705,11 +712,11 @@ The first release is web-only through FastAPI/Jinja2. CLI commands are intention
 - Stage 3.6 — Application intake orchestration: complete.
 - Stage 4 — LLM extraction schemas and fake client: complete.
 - Stage 4.5 — Real OpenAI Structured Outputs client and extracted job artefact persistence: complete.
+- Stage 5 — CV loading foundation: complete.
 
 ### Upcoming stages
 
-- Stage 5 — CV loading.
-- Stage 6 — Safe CV tailoring.
+- Stage 6 — Safe CV tailoring schemas and fake tailoring pipeline, unless the user chooses to insert a small hardening PR first.
 - Stage 7 — Reports.
 - Stage 8 — Human approval.
 - Stage 9 — Exporters.
