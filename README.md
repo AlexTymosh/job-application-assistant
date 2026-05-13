@@ -8,6 +8,35 @@ The project is not an auto-apply bot and must not automatically submit applicati
 
 ---
 
+## Quickstart
+
+Use the committed fake example profile for public release verification:
+
+```powershell
+$env:PROFILE_NAME = "example"
+$env:PROFILE_DATA_DIR = "profiles/example"
+uv sync --locked --group dev
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload
+```
+
+Open the local web app at <http://127.0.0.1:8000/> and the dashboard at <http://127.0.0.1:8000/dashboard>.
+
+Run automated checks with:
+
+```powershell
+uv run ruff format --check .
+uv run ruff check .
+uv run pytest
+uv run pre-commit run --all-files
+```
+
+For the full release gate, use [`docs/release-checklist.md`](docs/release-checklist.md). For a Windows PowerShell smoke test, use [`docs/manual-smoke-test.md`](docs/manual-smoke-test.md). For private profile setup, use [`docs/local-profile-setup.md`](docs/local-profile-setup.md).
+
+Tests must not call the real OpenAI API and must not require `OPENAI_API_KEY`.
+
+---
+
 ## 0. Current Status
 
 The project has completed:
@@ -24,7 +53,9 @@ The project has completed:
 - Stage 5 — CV loading foundation;
 - Stage 6 — safe CV tailoring contract and fake tailoring pipeline;
 - Stage 7 — reports foundation;
-- Stage 8A — Markdown and HTML export foundation.
+- Stage 8A — Markdown and HTML export foundation;
+- Stage 8B — PDF and DOCX export foundation;
+- release hardening documentation and release validation tests.
 
 The current implementation includes:
 
@@ -72,12 +103,14 @@ The current implementation includes:
 - tailored CV Markdown, HTML, PDF, and DOCX artefact writing through `ArtifactWriter`;
 - privacy-safe `applications/<application_id>/tailored_cv.md`, `applications/<application_id>/tailored_cv.html`, `applications/<application_id>/tailored_cv.pdf`, and `applications/<application_id>/tailored_cv.docx` database artefact paths;
 - Markdown, HTML, PDF, and DOCX export persistence that is independent of FastAPI routes and does not call OpenAI;
+- release checklist, manual smoke test, and local private profile setup documentation;
+- bootstrap tests that require release documentation and check release documentation for sensitive-data guardrails;
 - the correct CV package marker at `app/cv/__init__.py`;
 - bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, Stage 7 reports tests, and Stage 8A and Stage 8B export tests.
 
 Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 7 adds strict in-memory report models plus deterministic Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`. Stage 8A adds Markdown and HTML export foundation. Stage 8B adds PDF and DOCX export foundation with ReportLab and python-docx. Markdown remains the source of truth. HTML, PDF, and DOCX exports are artefacts written through `ArtifactWriter`, with database rows storing privacy-safe relative paths only. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, FastAPI export routes, or new database tables. The rule remains: no `fact_id` means no claim.
 
-The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement.
+The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement. Real private profile data must live outside the repository, while `profiles/example/` remains fake public data only.
 
 ---
 
@@ -148,9 +181,34 @@ Job posting URL or text
 
 ---
 
-## 4. MVP
+## 4. Current v1.0 Scope
 
-The first working release must include:
+The current local web-only v1.0 scope is:
+
+- FastAPI/Jinja2 web intake, dashboard, detail, and read-only review pages;
+- manual job text intake;
+- SQLite persistence managed by Alembic;
+- fake example profile support plus external private profile support;
+- prompt-injection, blacklist, and duplicate warning persistence;
+- structured extraction schemas and an isolated OpenAI wrapper with tests using fake clients only;
+- read-only Markdown CV loading and fact bank validation;
+- deterministic fake tailoring and deterministic in-memory reports;
+- Markdown, HTML, PDF, and DOCX exporter foundations through the artefact boundary;
+- release documentation for local setup, smoke testing, and private profile safety.
+
+Not implemented in this release:
+
+- auto-apply or application submission;
+- LinkedIn, Telegram, WhatsApp, or email automation;
+- cloud deployment or multi-user authentication;
+- LangGraph orchestration;
+- URL scraping beyond the current manual-text-first foundation;
+- CLI commands as a product interface;
+- fake ATS scoring.
+
+## 5. MVP Target
+
+The first working release target includes:
 
 1. A local FastAPI application with a straightforward startup process.
 2. A simple Jinja2 web interface.

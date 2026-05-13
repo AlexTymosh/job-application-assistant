@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 8B complete — PDF and DOCX export foundation is implemented through the existing artefact boundary. The next recommended stage is release hardening or human approval hardening, depending on the user decision.
+Release hardening is the current stage for the first local web-only release. Stages through Stage 8B are complete. The next stage after release hardening should be either human approval hardening or final release candidate validation, depending on the user decision.
 
 Completed:
 
@@ -34,6 +34,15 @@ Completed:
 - Stage 8A — Markdown and HTML export foundation;
 - Stage 8B — PDF and DOCX export foundation.
 
+Current release hardening task state:
+
+- add a release checklist for install, dependency validation, migrations, local startup, dashboard verification, manual intake, warnings, artefacts, exporters, privacy checks, and final release gates;
+- add a Windows PowerShell manual smoke-test guide;
+- add a local private profile setup guide that keeps real data outside the repository;
+- add release validation tests for required release docs, documentation safety, external private profile guidance, locked `uv` workflow guidance, and real OpenAI test prohibition;
+- keep v1.0 web-only through FastAPI/Jinja2;
+- do not add product features, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, auto-apply, or new database tables.
+
 Current handoff state:
 
 - Stage 3.6 application intake orchestration is complete;
@@ -46,10 +55,15 @@ Current handoff state:
 - Group 7 web intake, application detail, read-only review, and dashboard pages are implemented;
 - Stage 8A Markdown and HTML export foundation is implemented;
 - Stage 8B PDF and DOCX export foundation is implemented;
-- the PDF/DOCX exporter dependency lock blocker has been resolved: `pyproject.toml` and `uv.lock` include ReportLab, python-docx, and their locked transitive dependencies;
-- the next implementation step should be release hardening or human approval hardening, depending on the user decision.
+- release hardening documentation and release validation tests are being added;
+- the next implementation step should be human approval hardening or final release candidate validation, depending on the user decision.
 
 Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<application_id>/tailored_cv.pdf` and `applications/<application_id>/tailored_cv.docx`. Markdown remains the source of truth; HTML, PDF, and DOCX exports are artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables. v1.0 remains web-only through FastAPI/Jinja2. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
+
+Known limitations and validation requirements:
+
+- Filesystem artefact writes and database transactions are not fully atomic. File writing is isolated behind `ArtifactWriter`, and database artefact paths remain privacy-safe relative paths.
+- Full locked dependency validation must be run in an environment with package index access. If `uv sync --locked --group dev` cannot download packages in the current environment, CI or a local environment with package index access must rerun it before release.
 
 ---
 
