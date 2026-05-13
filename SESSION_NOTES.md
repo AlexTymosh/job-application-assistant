@@ -29,6 +29,7 @@ Completed:
 Current handoff state:
 
 - Stage 3.6 application intake orchestration is complete;
+- Foundation hardening for documentation, artefact writing boundaries, and Alembic migration verification is complete;
 - Stage 4 LLM extraction schemas and a fake extraction client are next;
 - the next implementation step should add Stage 4 schema and fake-client files with tests.
 
@@ -123,21 +124,22 @@ Implemented Alembic baseline:
 
 - Alembic configuration;
 - initial migration for the current SQLite tables;
-- migration setup tests.
+- migration setup tests;
+- integration test coverage proving that migrations create the expected SQLite schema in a temporary profile database.
 
 Implemented job input, preflight, and intake foundation:
 
 - strict job input validation;
 - URL normalisation;
 - job text hashing;
-- raw manual job text artefact writing;
-- privacy-aware artefact path metadata;
+- raw manual job text artefact writing through `ArtifactWriter`;
+- privacy-aware artefact path metadata that avoids storing absolute private paths;
 - prompt-injection phrase checks;
 - blacklist loading and matching;
 - duplicate detection with current-application exclusion;
 - preflight warning persistence;
 - `ApplicationIntakeService` orchestration for job input creation, preflight checks, and warning persistence;
-- bootstrap, Stage 1, database, Alembic, job input, preflight, and intake tests.
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, and intake tests.
 
 ---
 
@@ -236,6 +238,10 @@ Add next:
 - fake extraction tests.
 
 Do not add the real OpenAI API client until Stage 4.5 or later.
+
+Deferred hardening note:
+
+- Raw job text file writes and database writes are still not fully atomic across the filesystem and SQLite. The current boundary keeps file writing isolated and privacy-safe, but a later stage should add explicit cleanup or recovery if a database commit fails after a file has been written.
 
 ---
 

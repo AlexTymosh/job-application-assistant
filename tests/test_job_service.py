@@ -2,6 +2,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.artifacts.writer import ArtifactWriter
 from app.db.models import Artifact
 from app.db.repositories import (
     ApplicationEventRepository,
@@ -38,7 +39,7 @@ def test_job_input_service_creates_application_raw_text_artifact_and_event(
             applications=applications,
             artifacts=artifacts,
             events=events,
-            applications_dir=applications_dir,
+            artifact_writer=ArtifactWriter(applications_dir=applications_dir),
         )
 
         application = service.create_from_input(
