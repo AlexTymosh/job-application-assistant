@@ -100,3 +100,48 @@ def test_tailoring_fields_are_serialisable_and_deserialisable() -> None:
     assert dumped["cv_changes"][0]["risk_level"] == "low"
     assert restored.cv_changes[0].cv_fact_ids == ["fact_python_001"]
     assert restored.tailoring_warning_codes == ["no_relevant_requirement"]
+
+
+def test_report_fields_are_serialisable_and_deserialisable() -> None:
+    from app.reports.models import (
+        CoverageLevel,
+        CvMatchReport,
+        EvidenceMatrixItem,
+        ReportRiskLevel,
+    )
+
+    evidence_item = EvidenceMatrixItem(
+        requirement_id="req_python",
+        requirement_text="Work with Python.",
+        requirement_priority=RequirementPriority.MUST_HAVE,
+        coverage=CoverageLevel.FULL,
+        fact_ids=["fact_python_001"],
+        matched_fact_names=["Python"],
+        risk_level=ReportRiskLevel.LOW,
+        comment="Covered by verified fact bank facts.",
+    )
+    report = CvMatchReport(
+        application_id="app-1",
+        overall_summary="Requirements are covered by verified evidence.",
+        must_have_total=1,
+        must_have_covered=1,
+        nice_to_have_total=0,
+        nice_to_have_covered=0,
+        evidence_matrix=[evidence_item],
+        risk_level=ReportRiskLevel.LOW,
+        warnings=["No ATS score is provided."],
+    )
+    state = ApplicationRunState(
+        application_id="app-1",
+        profile_name="example",
+        evidence_matrix=[evidence_item],
+        match_report=report,
+    )
+
+    dumped = state.model_dump(mode="json")
+    restored = ApplicationRunState.model_validate(dumped)
+
+    assert dumped["evidence_matrix"][0]["coverage"] == "full"
+    assert dumped["match_report"]["risk_level"] == "low"
+    assert restored.match_report is not None
+    assert restored.match_report.evidence_matrix[0].fact_ids == ["fact_python_001"]

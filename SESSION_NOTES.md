@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Stage 6 — safe CV tailoring contract and fake tailoring pipeline.
+Stage 8 candidate — Human Approval foundation or report artefact persistence. Stage 7 reports foundation is complete.
 
 Completed:
 
@@ -27,7 +27,9 @@ Completed:
 - Stage 3.6 — application intake orchestration;
 - Stage 4 — LLM extraction schemas, fake extraction client, and serialisable pipeline state;
 - Stage 4.5 — real OpenAI structured job extraction client and extracted job artefact persistence;
-- Stage 6 — safe CV tailoring contract and fake tailoring pipeline.
+- Stage 5 — CV loading foundation;
+- Stage 6 — safe CV tailoring contract and fake tailoring pipeline;
+- Stage 7 — reports foundation.
 
 Current handoff state:
 
@@ -37,9 +39,10 @@ Current handoff state:
 - Stage 4.5 real OpenAI structured extraction client wrapper and extraction artefact persistence are complete;
 - Stage 5 CV loading foundation is complete with read-only Markdown CV loading, section marker validation, fact bank validation, and CV variant selection;
 - Stage 6 safe CV tailoring contract and fake tailoring pipeline are implemented;
-- the next implementation step should be reports foundation or real tailoring client integration, depending on user decision.
+- Stage 7 reports foundation is implemented with in-memory Evidence Matrix and CV Match Report builders;
+- the next implementation step should be Human Approval foundation or report artefact persistence, depending on user decision.
 
-Stage 6 adds safe tailoring schemas, fake deterministic tailoring, diff support, and a pipeline contract. Do not add real OpenAI tailoring yet. Do not mutate the master CV. Do not write tailored CV artefacts to disk. Do not add exporters, dashboard functionality, LangGraph, URL scraping, CLI commands, or external integrations yet. Tests must not perform real OpenAI API calls or require a real API key.
+Stage 7 adds strict in-memory report models, deterministic Evidence Matrix building, deterministic CV Match Report building, missing skills, keyword coverage, requirement coverage, and overclaiming-risk reporting. Reports are based on `ExtractedJob` and `FactBank`; they do not create fake ATS scores, do not call OpenAI, do not mutate CV files, and do not write report artefacts to disk. Do not add real OpenAI tailoring, exporters, dashboard functionality, LangGraph, URL scraping, CLI commands, or external integrations yet. Tests must not perform real OpenAI API calls or require a real API key.
 
 ---
 
@@ -165,7 +168,12 @@ Implemented job input, preflight, and intake foundation:
 - Markdown diff helpers;
 - in-memory CV tailoring pipeline step;
 - Stage 6 tests;
-- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, and Stage 6 safe tailoring tests.
+- strict reports models;
+- deterministic Evidence Matrix builder;
+- deterministic CV Match Report builder;
+- report fields on serialisable `ApplicationRunState`;
+- Stage 7 tests;
+- bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, and Stage 7 reports tests.
 
 ---
 
@@ -349,15 +357,34 @@ Implemented:
 
 ---
 
-### Stage 7 — Reports and QA
+### Stage 7 — Reports foundation
 
-Add later:
+Status: complete.
 
-- Evidence Matrix;
-- CV Match Report;
-- Missing Skills;
-- Risk of Overclaiming;
-- QA Report.
+Implemented:
+
+- strict serialisable report models;
+- in-memory Evidence Matrix builder;
+- in-memory CV Match Report builder;
+- Missing Skills list;
+- Risk of Overclaiming levels;
+- Keyword coverage;
+- Requirement coverage;
+- explicit no-fake-ATS-score warning.
+
+Not implemented in Stage 7:
+
+- QA Report;
+- report artefact persistence;
+- exporters;
+- dashboard functionality;
+- FastAPI routes;
+- Jinja2 pages;
+- real OpenAI tailoring;
+- LangGraph;
+- CLI commands;
+- URL scraping;
+- external integrations.
 
 ---
 
@@ -400,14 +427,14 @@ Add later:
 
 ## 6. Immediate Next Step
 
-Choose the next implementation direction: reports foundation or real tailoring client integration.
+Choose the next implementation direction: Human Approval foundation or report artefact persistence.
 
 Required for the next PR:
 
 1. Keep tailoring and reporting independent of FastAPI routes.
 2. Keep the master CV read-only and create adapted copies only.
 3. Require fact IDs for significant CV changes: no `fact_id` means no claim.
-4. If real tailoring is selected, keep OpenAI calls isolated behind a dedicated wrapper and test with fake SDK objects.
+4. If report artefact persistence is selected, keep writes behind the existing artefact boundary and store privacy-safe relative paths only.
 5. Do not add exporters unless explicitly selected as the next stage.
 6. Do not add dashboard functionality yet.
 7. Do not add LangGraph yet.
@@ -476,6 +503,7 @@ Do not:
 - add URL scraping;
 - add external integrations;
 - add real LLM prompts;
+- add fake ATS scores or 0-100 simulated ATS rankings;
 - add auto-apply;
 - add LinkedIn automation.
 
@@ -691,6 +719,43 @@ Stage 5 is complete when:
 - no CV tailoring is added;
 - no OpenAI calls are added;
 - no exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added;
+- tests pass.
+
+Status: complete.
+
+
+---
+
+## 18.7. Definition of Done — Stage 6
+
+Stage 6 is complete when:
+
+- strict safe CV tailoring schemas exist;
+- deterministic fake tailoring uses only claimable fact bank facts;
+- every significant replacement references fact IDs;
+- Markdown diff helpers exist;
+- in-memory CV tailoring pipeline step exists;
+- master CV files and variant files are not mutated;
+- no tailored CV artefacts are written to disk;
+- no real OpenAI tailoring, exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations are added;
+- tests pass.
+
+Status: complete.
+
+---
+
+## 18.8. Definition of Done — Stage 7
+
+Stage 7 is complete when:
+
+- `app/reports/models.py` exists with strict serialisable report models;
+- Evidence Matrix items link extracted requirements to claimable verified facts only;
+- `do_not_claim` facts are not cited as usable evidence;
+- CV Match Reports include requirement coverage, keyword coverage, missing skills, and overclaiming risk;
+- no fake ATS score or 0-100 simulated ATS ranking is generated;
+- report builders are deterministic and independent of FastAPI, database sessions, filesystem paths, OpenAI calls, exporters, and dashboard code;
+- report fields on `ApplicationRunState` remain serialisable;
+- no report artefacts are written to disk;
 - tests pass.
 
 Status: complete.

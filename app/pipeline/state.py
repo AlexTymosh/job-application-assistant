@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.llm.schemas import ExtractedJob
 from app.llm.tailoring_schemas import CvChange
+from app.reports.models import CvMatchReport, EvidenceMatrixItem
 
 
 class ApplicationRunState(BaseModel):
@@ -20,6 +21,8 @@ class ApplicationRunState(BaseModel):
     tailored_cv_markdown: str | None = None
     cv_changes: list[CvChange] = Field(default_factory=list)
     tailoring_warning_codes: list[str] = Field(default_factory=list)
+    evidence_matrix: list[EvidenceMatrixItem] = Field(default_factory=list)
+    match_report: CvMatchReport | None = None
     warning_codes: list[str] = Field(default_factory=list)
     artifact_paths: list[str] = Field(default_factory=list)
     status: str = "draft"
