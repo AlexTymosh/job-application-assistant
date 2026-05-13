@@ -28,13 +28,17 @@ def test_pdf_exporter_handles_headings_bullet_lists_and_paragraphs() -> None:
     assert len(pdf) > 500
 
 
-def test_pdf_exporter_treats_raw_html_and_script_like_input_as_text() -> None:
+def test_pdf_exporter_treats_raw_html_and_script_like_input_as_text(
+    tmp_path: Path,
+) -> None:
     markdown = "# <script>alert('x')</script>\n\n<script src=\"https://example.invalid/x.js\"></script>"
+    before = set(tmp_path.iterdir())
 
     pdf = PdfExporter().export(markdown, title="<Tailored>")
 
+    assert isinstance(pdf, bytes)
     assert pdf.startswith(b"%PDF")
-    assert b"https://example.invalid/x.js" not in pdf
+    assert set(tmp_path.iterdir()) == before
 
 
 def test_pdf_exporter_does_not_write_files_directly(tmp_path: Path) -> None:
