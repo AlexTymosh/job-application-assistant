@@ -121,7 +121,6 @@ REQUIRED_PROJECT_FILES = [
     "app/reports/models.py",
     "app/reports/evidence_matrix.py",
     "app/reports/match_report.py",
-    "app/exporters/init.py",
     "app/exporters/markdown_exporter.py",
     "app/exporters/html_exporter.py",
     "app/pipeline/export_markdown_html.py",

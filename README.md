@@ -764,13 +764,14 @@ The first release is web-only through FastAPI/Jinja2. CLI commands are intention
 - Stage 6 — Safe CV tailoring schemas and fake tailoring pipeline: complete.
 - Stage 7 — Reports foundation: complete.
 - Group 7 — Web intake, review, and dashboard foundation: complete.
+- Stage 8A — Markdown and HTML export foundation: complete.
 
 ### Upcoming stages
 
-- Next stage — Export foundation or report artefact persistence, depending on user decision.
-- Stage 8 — Human approval or export foundation, depending on the selected roadmap order.
-- Stage 9 — Exporters if not completed earlier.
-- Stage 10 — Dashboard hardening and analytics beyond the current basic dashboard.
+- Next recommended stage — Stage 8B: PDF and DOCX export foundation, unless the user chooses Human Approval hardening first.
+- Human Approval hardening — optional next step before Stage 8B if the user wants a stricter approval gate before final exports.
+- Report artefact persistence — deferred until explicitly selected.
+- Dashboard hardening and analytics beyond the current basic dashboard — deferred.
 
 
 ---
