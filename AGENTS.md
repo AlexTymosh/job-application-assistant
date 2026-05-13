@@ -999,3 +999,24 @@ LinkedIn automation tool
 fake ATS scorer
 cloud SaaS
 ```
+
+---
+
+## 41. Stage 5 CV Loading Foundation
+
+Stage 5 is the current CV loading foundation. It adds a read-only `app/cv/` layer for Markdown CV files, required section marker validation, fact bank validation, and CV variant selection. The correct package marker is `app/cv/__init__.py`.
+
+Rules for Stage 5 and later CV loading work:
+
+- CV loading reads Markdown files only.
+- CV loading is read-only and must not mutate master CV files, variant files, or fact bank files.
+- The master CV must not be modified automatically.
+- The fact bank is the source of verified facts for future CV tailoring.
+- Fact bank loading must reject duplicate fact IDs, malformed facts, and empty fact banks.
+- Fact bank text fields must be normalised by trimming surrounding whitespace.
+- Variant selection must validate that the selected variant exists and has valid required section markers.
+- Real private profiles must remain outside the repository; committed `profiles/example/` files must stay fake.
+- No CV tailoring is implemented in Stage 5 or in the Stage 5 corrective task.
+- No OpenAI call is added in Stage 5 or in the Stage 5 corrective task.
+- No exporters, dashboard functionality, LangGraph, CLI commands, URL scraping, or external integrations are added in the Stage 5 corrective task.
+- The next stage after Stage 5 should be safe CV tailoring schemas and a fake tailoring pipeline, unless the user chooses to insert a small hardening PR first.
