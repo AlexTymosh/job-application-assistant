@@ -1035,4 +1035,23 @@ Rules for Stage 6 and later tailoring work:
 - The fake tailoring client must use only verified claimable facts from the fact bank.
 - The rule remains: no `fact_id` means no claim.
 - Tailoring must remain independent of FastAPI routes.
-- The next stage should be reports foundation or real tailoring client integration, depending on user decision.
+- Stage 7 reports foundation is implemented; the next stage should be Human Approval foundation or report artefact persistence, depending on user decision.
+
+---
+
+## 43. Stage 7 Reports Foundation
+
+Stage 7 is implemented. It adds strict in-memory report models, deterministic Evidence Matrix building, and deterministic CV Match Report building.
+
+Rules for Stage 7 and later reports work:
+
+- Reports must not create a fake ATS score, a 0-100 score, or a simulated closed ATS ranking.
+- Reports must link extracted job requirements to verified facts from the fact bank wherever evidence is claimed.
+- Evidence Matrix items must not cite `do_not_claim` facts as usable evidence or include their fact IDs in evidence claims.
+- Report builders must be deterministic, independently testable, and free from fuzzy matching libraries unless a later task explicitly approves a new approach.
+- Report builders must not call OpenAI or any other LLM provider.
+- Report builders must not mutate master CV files, CV variant files, or fact bank files.
+- Report builders must not write report artefacts to disk or database unless a later stage explicitly requests report artefact persistence.
+- Report builders must remain independent of FastAPI routes, Jinja2 templates, CLI commands, dashboard functionality, exporters, LangGraph, URL scraping, and external integrations.
+- Report models must remain serialisable and must not depend on filesystem paths, database sessions, or web framework objects.
+- The next stage should be Human Approval foundation or report artefact persistence, depending on user decision.
