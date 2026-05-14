@@ -27,11 +27,9 @@ def test_review_page_displays_read_only_review_information(tmp_path: Path) -> No
     assert "Internal UUID" not in response.text
     assert "Technical details" in response.text
     assert "Database UUID" in response.text
-    assert "read-only review surface" in response.text
-    assert (
-        "does not run extraction, tailoring, OpenAI calls, or exporters"
-        in response.text
-    )
+    assert "can trigger the local release pipeline" in response.text
+    assert "does not auto-apply or submit applications" in response.text
+    assert "Run local fake pipeline" in response.text
     assert "prompt_injection_phrase" in response.text
     assert "job_raw" in response.text
     assert "Not available yet." in response.text

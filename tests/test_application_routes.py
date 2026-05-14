@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -9,18 +10,30 @@ from app.db.session import create_all_tables
 from app.main import create_app
 
 
-def build_test_client(tmp_path: Path) -> TestClient:
+def build_test_client(
+    tmp_path: Path,
+    *,
+    require_human_approval_before_export: bool | None = None,
+) -> TestClient:
     base_config = load_profile_config()
     profile_dir = tmp_path / "example"
     profile_dir.mkdir(parents=True)
+    source_cv_dir = Path("profiles/example/cv")
+    shutil.copytree(source_cv_dir, profile_dir / "cv")
     (profile_dir / "blacklist.example.txt").write_text(
         "BlockedCorp\n", encoding="utf-8"
     )
 
-    config = ProjectConfig.model_validate(
-        base_config.model_dump()
-        | {"app": {"profile_name": "example", "data_dir": profile_dir}}
-    )
+    config_data = base_config.model_dump()
+    config_data["app"] = {"profile_name": "example", "data_dir": profile_dir}
+    if require_human_approval_before_export is not None:
+        config_data["workflow"] = config_data["workflow"] | {
+            "require_human_approval_before_export": (
+                require_human_approval_before_export
+            )
+        }
+
+    config = ProjectConfig.model_validate(config_data)
     app = create_app(config)
     create_all_tables(app.state.engine)
     return TestClient(app)

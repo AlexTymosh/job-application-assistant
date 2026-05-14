@@ -164,6 +164,8 @@ Submit the form and open the application detail page.
 - Confirm the internal UUID is not shown as normal application metadata on detail or review pages.
 - Confirm absolute private paths are not shown in the UI or stored in database artefact records.
 - Confirm generated application artefacts live under the active profile data directory.
+- Confirm the **Run local fake pipeline** action creates extracted-job, Evidence Matrix, CV Match Report, Markdown, and HTML review artefacts without requiring `OPENAI_API_KEY` when approval is required. Confirm PDF/DOCX artefacts are created only when `workflow.require_human_approval_before_export` is disabled or after a future approval workflow exists.
+- Confirm artefact download links serve only relative-path artefacts belonging to the current application.
 
 ## Exporter verification
 
@@ -183,6 +185,7 @@ Run:
 git status --short
 git check-ignore -v .env
 git check-ignore -v profiles/example/applications.sqlite3
+# Legacy/reference-only safety check; do not create profiles/alex/.
 git check-ignore -v profiles/alex/applications.sqlite3
 git check-ignore -v profiles/alex/config.yaml
 git check-ignore -v profiles/alex/blacklist.txt

@@ -2,18 +2,24 @@ from __future__ import annotations
 
 from typing import Annotated
 from urllib.parse import parse_qs
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_session
+from app.artifacts.resolution import (
+    UnsafeArtifactPathError,
+    resolve_artifact_path_under_applications_dir,
+)
 from app.core.config import ProjectConfig
 from app.core.paths import ProfilePaths
-from app.db.repositories import ApplicationRepository
+from app.db.repositories import ApplicationRepository, ArtifactRepository
 from app.jobs.input_models import JobInput
 from app.pipeline.intake import ApplicationIntakeService
+from app.pipeline.local_web_pipeline import LocalApplicationPipelineService
 from app.web.templating import render_error_page, templates
 
 router = APIRouter(tags=["applications"])
@@ -97,6 +103,101 @@ async def create_application(
     )
 
 
+@router.post("/applications/{application_number}/run-local-pipeline")
+async def run_local_pipeline(
+    request: Request,
+    application_number: int,
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    config: ProjectConfig = request.app.state.config
+    profile_paths: ProfilePaths = request.app.state.profile_paths
+    service = LocalApplicationPipelineService(
+        session=session,
+        config=config,
+        profile_paths=profile_paths,
+    )
+
+    try:
+        service.run_for_application_number(application_number)
+    except ValueError as exc:
+        return render_error_page(
+            request=request,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message=str(exc),
+        )
+    except FileNotFoundError as exc:
+        return render_error_page(
+            request=request,
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=str(exc),
+        )
+
+    session.commit()
+
+    return RedirectResponse(
+        url=f"/applications/{application_number}/review",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get("/applications/{application_number}/artifacts/{artifact_id}/download")
+async def download_application_artifact(
+    request: Request,
+    application_number: int,
+    artifact_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    config: ProjectConfig = request.app.state.config
+    profile_paths: ProfilePaths = request.app.state.profile_paths
+    application = ApplicationRepository(session).get_by_number(
+        profile_name=config.app.profile_name,
+        application_number=application_number,
+    )
+
+    if application is None:
+        return render_error_page(
+            request=request,
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="Application not found.",
+        )
+
+    artifact = ArtifactRepository(session).get_for_application(
+        artifact_id=artifact_id,
+        application_id=application.id,
+    )
+    if artifact is None:
+        return render_error_page(
+            request=request,
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="Artifact not found.",
+        )
+
+    try:
+        artifact_path = resolve_artifact_path_under_applications_dir(
+            applications_dir=profile_paths.applications_dir,
+            stored_relative_path=artifact.path,
+        )
+    except UnsafeArtifactPathError:
+        return render_error_page(
+            request=request,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Unsafe artifact path.",
+        )
+
+    if not artifact_path.is_file():
+        return render_error_page(
+            request=request,
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="Artifact file not found.",
+        )
+
+    return FileResponse(
+        path=artifact_path,
+        filename=artifact_path.name,
+        media_type="application/octet-stream",
+    )
+
+
 @router.get("/applications/{application_number}", response_class=HTMLResponse)
 async def application_detail(
     request: Request,
@@ -116,6 +217,14 @@ async def application_detail(
             message="Application not found.",
         )
 
+    artifacts_by_type = {
+        artifact.artifact_type: artifact for artifact in application.artifacts
+    }
+    final_export_ready = bool(
+        artifacts_by_type.get("tailored_cv_pdf")
+        and artifacts_by_type.get("tailored_cv_docx")
+    )
+
     return templates.TemplateResponse(
         request=request,
         name="applications_detail.html",
@@ -126,5 +235,7 @@ async def application_detail(
             "events": application.events,
             "artifacts": application.artifacts,
             "has_job_text_hash": application.job_text_hash is not None,
+            "final_export_ready": final_export_ready,
+            "approval_required": config.workflow.require_human_approval_before_export,
         },
     )

@@ -6,7 +6,11 @@ from app.api.routes_applications import router as applications_router
 from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_health import router as health_router
 from app.api.routes_review import router as review_router
-from app.core.config import ProjectConfig, load_profile_config
+from app.core.config import (
+    ProjectConfig,
+    load_profile_config,
+    validate_llm_runtime_config,
+)
 from app.core.paths import build_profile_paths
 from app.db.session import create_session_factory, create_sqlite_engine
 from app.web.routes import router as web_router
@@ -14,6 +18,7 @@ from app.web.routes import router as web_router
 
 def create_app(config: ProjectConfig | None = None) -> FastAPI:
     resolved_config = config or load_profile_config()
+    validate_llm_runtime_config(resolved_config)
 
     app = FastAPI(
         title="Local Job Application Assistant",

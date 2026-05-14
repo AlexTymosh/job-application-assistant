@@ -149,6 +149,18 @@ class ArtifactRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
+    def get_for_application(
+        self,
+        *,
+        artifact_id: UUID,
+        application_id: UUID,
+    ) -> Artifact | None:
+        statement = select(Artifact).where(
+            Artifact.id == artifact_id,
+            Artifact.application_id == application_id,
+        )
+        return self._session.scalars(statement).one_or_none()
+
     def create(
         self,
         *,

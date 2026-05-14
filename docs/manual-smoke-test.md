@@ -102,7 +102,7 @@ Use the review link or open:
 http://127.0.0.1:8000/applications/1/review
 ```
 
-Verify that the review page is read-only, displays the application number as the normal ID, does not show the internal UUID as normal metadata, and displays existing metadata, warnings, events, and artefact path information without generating missing artefacts.
+Verify that the review page displays the application number as the normal ID, does not show the internal UUID as normal metadata, and displays existing metadata, warnings, events, and artefact path information. Use the **Run local fake pipeline** button to generate extracted-job, Evidence Matrix, CV Match Report, Markdown, and HTML review artefacts. With the default approval-required config, confirm PDF/DOCX artefacts are not created yet and the UI says final exports are waiting for approval. Confirm generated artefact links download files and that only relative artefact paths are shown in the UI.
 
 ## 13. Verify HTML 404 pages
 

@@ -168,6 +168,7 @@ uv run --env-file .env -- uvicorn app.main:app --reload
 Run from the repository root:
 
 ```powershell
+# Legacy/reference-only safety check; do not create profiles/alex/.
 git ls-files -- profiles/alex
 git status --short
 ```

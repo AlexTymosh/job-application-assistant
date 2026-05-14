@@ -10,6 +10,7 @@ workflow:
 
 llm:
   provider: "openai"
+  extraction_mode: "fake"
   model_extract: "${OPENAI_MODEL_EXTRACT}"
   model_tailor: "${OPENAI_MODEL_TAILOR}"
   model_qa: "${OPENAI_MODEL_QA}"

@@ -6,8 +6,12 @@ from pathlib import Path
 
 from app.artifacts.paths import (
     build_application_artifact_dir,
+    build_evidence_matrix_path,
+    build_evidence_matrix_relative_path,
     build_extracted_job_path,
     build_extracted_job_relative_path,
+    build_match_report_path,
+    build_match_report_relative_path,
     build_raw_job_text_path,
     build_raw_job_text_relative_path,
     build_tailored_cv_docx_path,
@@ -158,6 +162,52 @@ class ArtifactWriter:
         return WrittenArtifact(
             absolute_path=absolute_path,
             relative_path=build_tailored_cv_docx_relative_path(
+                artifact_dir_name=artifact_dir_name,
+            ),
+        )
+
+    def write_evidence_matrix(
+        self,
+        *,
+        artifact_dir_name: str,
+        evidence_matrix_data: list[dict[str, object]],
+    ) -> WrittenArtifact:
+        self.create_application_dir(artifact_dir_name=artifact_dir_name)
+        absolute_path = build_evidence_matrix_path(
+            applications_dir=self._applications_dir,
+            artifact_dir_name=artifact_dir_name,
+        )
+        absolute_path.write_text(
+            json.dumps(evidence_matrix_data, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        return WrittenArtifact(
+            absolute_path=absolute_path,
+            relative_path=build_evidence_matrix_relative_path(
+                artifact_dir_name=artifact_dir_name,
+            ),
+        )
+
+    def write_match_report(
+        self,
+        *,
+        artifact_dir_name: str,
+        match_report_data: dict[str, object],
+    ) -> WrittenArtifact:
+        self.create_application_dir(artifact_dir_name=artifact_dir_name)
+        absolute_path = build_match_report_path(
+            applications_dir=self._applications_dir,
+            artifact_dir_name=artifact_dir_name,
+        )
+        absolute_path.write_text(
+            json.dumps(match_report_data, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        return WrittenArtifact(
+            absolute_path=absolute_path,
+            relative_path=build_match_report_relative_path(
                 artifact_dir_name=artifact_dir_name,
             ),
         )

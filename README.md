@@ -13,6 +13,7 @@ The project is not an auto-apply bot and must not automatically submit applicati
 Use the committed fake example profile for public release verification:
 
 ```powershell
+Copy-Item .env.example .env
 $env:PROFILE_NAME = "example"
 $env:PROFILE_DATA_DIR = "profiles/example"
 uv sync --locked --group dev
@@ -83,7 +84,8 @@ The CV architecture is role-variant based: CV variants under `cv/variants/` are 
 - duplicate self-match protection;
 - application intake orchestration through `ApplicationIntakeService`;
 - strict Stage 4 Pydantic schemas for structured job extraction;
-- a deterministic fake extraction client for local tests and pipeline contract validation;
+- a deterministic fake extraction client for local tests, demo mode, and pipeline contract validation;
+- release-safe LLM extraction mode selection through config/environment (`fake` by default, `openai` only with a configured model and `OPENAI_API_KEY`);
 - serialisable `ApplicationRunState` for future pipeline orchestration;
 - a `JobExtractionStep` that uses manual job text and does not persist or call network services;
 - an isolated OpenAI Structured Outputs extraction client in `app/llm/openai_client.py`;
@@ -101,12 +103,14 @@ The CV architecture is role-variant based: CV variants under `cv/variants/` are 
 - unified diff helpers for Markdown strings;
 - in-memory Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`;
 - missing skills, keyword coverage, requirement coverage, and risk-of-overclaiming report models;
-- report builders that are deterministic, do not call OpenAI, do not mutate CV files, and do not write report artefacts to disk;
+- report builders that are deterministic, do not call OpenAI, and do not mutate CV files;
+- a local web pipeline action that can run fake extraction, read-only CV loading, fake safe tailoring, deterministic report generation, and approval-aware export persistence for one application;
 - an explicit no-fake-ATS-score warning in CV Match Reports;
 - isolated Markdown, HTML, PDF, and DOCX exporters in `app/exporters/`;
 - tailored CV Markdown, HTML, PDF, and DOCX artefact writing through `ArtifactWriter`;
 - privacy-safe `applications/<artifact_dir_name>/tailored_cv.md`, `applications/<artifact_dir_name>/tailored_cv.html`, `applications/<artifact_dir_name>/tailored_cv.pdf`, and `applications/<artifact_dir_name>/tailored_cv.docx` database artefact paths;
 - Markdown, HTML, PDF, and DOCX export persistence that is independent of FastAPI routes and does not call OpenAI;
+- safe artefact download routing that only serves artefacts owned by the active profile/application and rejects absolute paths or path traversal;
 - release checklist, manual smoke test, and local private profile setup documentation;
 - bootstrap tests that require release documentation and check release documentation for sensitive-data guardrails;
 - the correct CV package marker at `app/cv/__init__.py`;
@@ -191,14 +195,14 @@ Job posting URL or text
 
 The current local web-only v1.0 scope is:
 
-- FastAPI/Jinja2 web intake, dashboard, detail, read-only review pages, and simple HTML 404 pages for unknown application detail/review URLs;
+- FastAPI/Jinja2 web intake, dashboard, detail, review, local pipeline action, safe artefact download pages/routes, and simple HTML 404 pages for unknown application detail/review URLs;
 - manual job text intake;
 - SQLite persistence managed by Alembic;
 - fake example profile support plus external private profile support;
 - prompt-injection, blacklist, and duplicate warning persistence;
-- structured extraction schemas and an isolated OpenAI wrapper with tests using fake clients only;
+- structured extraction schemas, fake/demo extraction mode by default, and an isolated OpenAI wrapper with tests using fake clients only;
 - read-only Markdown CV loading and fact bank validation;
-- deterministic fake tailoring and deterministic in-memory reports;
+- deterministic fake tailoring, deterministic reports, and a web action that persists generated review artefacts plus final PDF/DOCX exports only when approval is disabled;
 - Markdown, HTML, PDF, and DOCX exporter foundations through the artefact boundary;
 - release documentation for local setup, smoke testing, and private profile safety.
 
@@ -303,7 +307,7 @@ All tailored CV versions must be generated separately as application artefacts i
 
 ## CV Sections
 
-Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate source variant files. Stage 6 adds only the safe tailoring contract, deterministic fake tailoring, diff support, and an in-memory pipeline step. It does not add real OpenAI tailoring, does not mutate selected CV variants, and does not write tailored CV artefacts to disk. Stage 7 report builders are also in-memory and read-only: they link extracted job requirements to verified fact bank facts, calculate coverage and overclaiming risk, and explicitly avoid fake ATS scores. Group 7 adds web intake, application detail, a read-only review surface, and a dashboard. No exporters, LangGraph, CLI commands, URL scraping, authentication, cloud deployment, or external integrations are added in Group 7.
+Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate source variant files. Stage 6 adds only the safe tailoring contract, deterministic fake tailoring, diff support, and an in-memory pipeline step. It does not add real OpenAI tailoring, does not mutate selected CV variants, and does not write tailored CV artefacts to disk. Stage 7 report builders are also in-memory and read-only: they link extracted job requirements to verified fact bank facts, calculate coverage and overclaiming risk, and explicitly avoid fake ATS scores. Group 7 adds web intake, application detail, a review surface, and a dashboard. P1 release hardening adds the service-backed local fake pipeline action and safe artefact downloads. No LangGraph, CLI commands, URL scraping, authentication, cloud deployment, or external integrations are added.
 
 The Markdown CV must contain stable section markers:
 
@@ -716,15 +720,9 @@ async def run(state: ApplicationRunState) -> ApplicationRunState:
 
 ## OpenAI API
 
-The OpenAI API is used for:
+The release-safe default is fake/demo extraction mode. In this mode the app can start and run the local web pipeline without `OPENAI_API_KEY`. Real OpenAI extraction mode is opt-in through `llm.extraction_mode: "openai"` or `LLM_EXTRACTION_MODE=openai`; startup fails clearly unless `llm.model_extract`/`OPENAI_MODEL_EXTRACT` and `OPENAI_API_KEY` are configured.
 
-- extracting structured job data through the isolated `OpenAIJobExtractionClient` wrapper;
-- analysing requirements;
-- adapting CV sections;
-- building the Evidence Matrix;
-- building the CV Match Report;
-- generating the cover letter;
-- QA review.
+The OpenAI API is currently used only for structured job extraction through the isolated `OpenAIJobExtractionClient` wrapper when OpenAI mode is explicitly enabled. Fake CV tailoring, Evidence Matrix building, CV Match Report building, and exporters do not call OpenAI.
 
 The model must be configurable via `config.yaml` or environment variables.
 
@@ -860,10 +858,12 @@ The current FastAPI/Jinja2 web vertical slice includes:
 - `/applications/new` — manual job intake form with optional source URL metadata and CV variant selection;
 - `POST /applications` — creates an application record through `ApplicationIntakeService`, writes the raw job text artefact through the existing artefact boundary, persists preflight warnings, and redirects to the number-based detail page, for example `/applications/1`;
 - `/applications/{application_number}` — application detail page with the application number as the normal ID, metadata, status, source URL, normalised URL, selected CV variant, job text hash presence, warnings, events, and privacy-safe relative artefact paths; unknown application numbers return a simple HTML 404 page;
-- `/applications/{application_number}/review` — read-only review surface that shows existing records and clearly states that it does not generate extraction, tailoring, OpenAI calls, reports, or exports; unknown application numbers return a simple HTML 404 page;
+- `/applications/{application_number}/review` — review surface that shows existing records and offers the local fake pipeline action; unknown application numbers return a simple HTML 404 page;
+- `POST /applications/{application_number}/run-local-pipeline` — thin web action that delegates to the local pipeline service for configured extraction, read-only CV loading, fake safe tailoring, deterministic reports, Markdown/HTML review artefacts, and approval-aware final exports;
+- `/applications/{application_number}/artifacts/{artifact_id}/download` — safe download route that verifies profile/application ownership and rejects absolute paths or path traversal;
 - `/dashboard` — newest-first application list with status, CV variant, warning count, artefact count, and links to detail and review pages.
 
-The web routes do not call OpenAI, do not run CV tailoring, do not scrape URLs, and do not run Markdown/HTML/PDF/DOCX exporters. The production application initialises a SQLite session factory in `app.state`, but Alembic remains responsible for schema creation and migrations. Tests may create temporary tables explicitly.
+The web routes stay thin: they do not call OpenAI directly, do not scrape URLs, and do not write export files directly. The local pipeline action delegates extraction, CV loading, fake tailoring, deterministic report generation, and approval-aware export persistence to service/pipeline/exporter layers. When `workflow.require_human_approval_before_export` is true, it creates review artefacts but does not create final PDF/DOCX exports. The production application initialises a SQLite session factory in `app.state`, but Alembic remains responsible for schema creation and migrations. Tests may create temporary tables explicitly.
 
 Known limitation: if the raw job text artefact is written successfully but the later database commit fails, a local orphan artefact can remain. This is acceptable for the current local-only stage and should be revisited during persistence hardening rather than solved with an overbuilt outbox in this task.
 

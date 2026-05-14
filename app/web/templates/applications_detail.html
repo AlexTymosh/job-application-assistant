@@ -5,6 +5,10 @@
 
   <p><a href="/applications/{{ application.application_number }}/review">Open review page</a></p>
 
+  <form method="post" action="/applications/{{ application.application_number }}/run-local-pipeline">
+    <button type="submit">Run local fake pipeline</button>
+  </form>
+
   <dl>
     <dt>Application number</dt>
     <dd>{{ application.display_number }}</dd>
@@ -37,6 +41,24 @@
     </dl>
   </details>
 
+
+  {% if approval_required and not final_export_ready and application.status == "awaiting_approval" %}
+    <section>
+      <h2>Approval required</h2>
+      <p>Final PDF/DOCX exports are waiting for human approval. Review artefacts are available, but final documents have not been created.</p>
+    </section>
+  {% elif approval_required and not final_export_ready and application.status == "qa_warning" %}
+    <section>
+      <h2>Review warnings before approval</h2>
+      <p>QA warnings must be reviewed before approval. Final PDF/DOCX exports have not been created.</p>
+    </section>
+  {% elif final_export_ready %}
+    <section>
+      <h2>Final exports ready</h2>
+      <p>Final PDF/DOCX exports are available for download.</p>
+    </section>
+  {% endif %}
+
   <section>
     <h2>Warnings</h2>
     {% if warnings %}
@@ -68,7 +90,7 @@
     {% if artifacts %}
       <ul>
         {% for artifact in artifacts %}
-          <li><strong>{{ artifact.artifact_type }}</strong>: <code>{{ artifact.path }}</code></li>
+          <li><strong>{{ artifact.artifact_type }}</strong>: <code>{{ artifact.path }}</code> — <a href="/applications/{{ application.application_number }}/artifacts/{{ artifact.id }}/download">Download</a></li>
         {% endfor %}
       </ul>
     {% else %}

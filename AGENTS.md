@@ -1069,7 +1069,7 @@ Rules for Stage 7 and later reports work:
 
 ## 44. Web Intake, Review, and Dashboard Foundation
 
-Group 7 web intake, review, and dashboard foundation is implemented. It adds thin FastAPI routes and minimal Jinja2 pages for manual application intake, application detail review, a read-only review surface, and a dashboard.
+Group 7 web intake, review, and dashboard foundation is implemented. It adds thin FastAPI routes and minimal Jinja2 pages for manual application intake, application detail review, a review surface, and a dashboard.
 
 Rules for Group 7 and later web work:
 
@@ -1077,8 +1077,8 @@ Rules for Group 7 and later web work:
 - Web intake uses `ApplicationIntakeService` for manual job input and preflight warning persistence.
 - Manual job text is required by the web intake form at this stage; URL scraping is not implemented.
 - The application initialises a SQLite engine and session factory in `app.state`; production startup must not call `create_all_tables` because Alembic owns schema management.
-- Web routes must not call OpenAI, run CV tailoring, run report builders, or run exporters.
-- The review page is a read-only surface showing existing metadata, warnings, events, and artefact paths; it must not generate missing artefacts.
+- Web routes must not call OpenAI directly, mutate CVs directly, build reports directly, or write export files directly; route handlers must delegate to service, pipeline, repository, and exporter layers.
+- The review page shows persisted metadata, warnings, events, and artefact paths; when a local pipeline action is available it must delegate all business logic to a service layer and must not auto-apply or submit applications.
 - Dashboard rows must show relative artefact counts and warning counts without exposing absolute private profile paths.
 - Database artefact records must continue to store privacy-safe relative paths only.
 - No authentication, LangGraph, CLI commands, cloud deployment, URL scraping, or export functionality is added by this stage.
@@ -1155,3 +1155,23 @@ Rules for application numbers and identifiers:
 - Existing artefact folders must not be renamed during normal application startup.
 - The UUID must not be shown as the primary visible application ID in normal UI. If it is useful, it may appear only inside a collapsed technical/debug section, not as normal metadata.
 - The current local SQLite v1 implementation uses a simple per-profile `max(application_number) + 1` assignment strategy. This is acceptable for the local single-user application and is not a multi-user SaaS counter strategy.
+
+
+---
+## 48. P1 Local Web Release Hardening
+
+P1 local web release hardening is implemented for the first usable local web release.
+
+Rules for this release-hardening stage and later work:
+
+- Fake/demo extraction mode is the default release-safe mode and must allow the app to run without `OPENAI_API_KEY`.
+- Real OpenAI extraction mode is opt-in and must fail clearly when the extraction model or `OPENAI_API_KEY` is missing.
+- The LLM mode must be configured through profile config and/or environment variables, not by hardcoding a model or API key in business logic.
+- Web routes remain thin; the local pipeline action delegates extraction, CV loading, fake safe tailoring, deterministic report generation, and approval-aware export persistence to service/pipeline/exporter layers.
+- The local pipeline action must respect `workflow.require_human_approval_before_export`: when approval is required it must not create final PDF/DOCX artefacts and must set `awaiting_approval` or `qa_warning`; when approval is disabled it may create PDF/DOCX artefacts and set `exported`.
+- The local pipeline action must not auto-apply, submit applications, send emails, automate LinkedIn, or create false CV claims.
+- Safe artefact downloads must verify active profile/application ownership, resolve stored relative paths under `profile_paths.applications_dir`, and reject absolute paths or path traversal.
+- Database artefact paths remain privacy-safe relative paths and must not store absolute private profile paths.
+- Real private profile data must always be described as external to the repository, for example `C:/Users/<user>/job-application-assistant-data/alex/`; `profiles/alex/` is legacy/reference-only wording when it appears in ignore or safety checks and must not be presented as a path to create or commit.
+- Committed profile data remains limited to fake data under `profiles/example/`.
+- Tests must not call the real OpenAI API and must not require `OPENAI_API_KEY`.
