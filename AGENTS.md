@@ -152,7 +152,9 @@ Never commit:
 
 Real private profile data must live outside the repository.
 
-Private app data must be created through the storage/bootstrap boundary in `app/storage/`, not ad hoc in routes, tests, or pipeline code. Future setup and settings code should use this boundary when resolving or creating app-owned folders.
+Private app data must be created through the storage/bootstrap boundary in `app/storage/`, not ad hoc in routes, tests, or pipeline code. Setup, settings, and Data Folder UI code must use this boundary when resolving or creating app-owned folders.
+
+The active app data folder location must be resolved by `app/storage/`. `APP_DATA_DIR` remains the highest-priority developer override. When `APP_DATA_DIR` is not set, any user-selected app data folder pointer must be stored outside the app data folder itself through the `app/storage/` location boundary. Do not store the active app data folder path in `app_settings` or in `app_data_root/app.sqlite3`, because that database lives inside the folder being selected.
 
 Future managed storage should default to a user-visible application folder, for example:
 

@@ -13,7 +13,7 @@ Read first:
 
 Move the project from file-based profile configuration to a managed local application setup.
 
-The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, and a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management.
+The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, and a Data Folder UI for connecting the app data root safely.
 
 ---
 
@@ -21,66 +21,41 @@ The current app remains a local FastAPI/Jinja2 web application with manual intak
 
 ### PR 1 — App data directory bootstrap
 
-Implemented:
-- app data root resolution under `Documents/JobApplicationAssistant`;
-- `APP_DATA_DIR` override support;
-- idempotent creation of the app data root plus `profiles/`, `logs/`, and `backups/`;
-- tests for path resolution, bootstrap idempotency, and no private profile file creation;
-- documentation of the storage bootstrap boundary.
+Implemented the default `Documents/JobApplicationAssistant` app data root, `APP_DATA_DIR` override support, and idempotent creation of only `profiles/`, `logs/`, and `backups/` without private profile files.
 
 ### PR 2 — Setup status and setup redirect
 
-Implemented:
-- setup status models and service checks for app data folders, file-based profile config, active profile folders, SQLite database tables, LLM runtime mode, default CV variant loading, and fact-bank validation;
-- startup refactor so missing or invalid profile/LLM setup is represented as incomplete setup instead of a startup crash;
-- `/setup` route and template that render setup pass/fail status without exposing secrets;
-- middleware setup gate that redirects incomplete installations to `/setup` before route dependencies run;
-- health and documentation routes remain available while setup is incomplete;
-- tests for setup checks, side-effect boundaries, redirects, and complete/incomplete route behaviour.
+Implemented setup diagnostics for app data folders, file-based profile config, active profile readiness, profile SQLite tables, LLM mode, default CV variant, and fact-bank validation, plus `/setup` and the setup redirect gate.
 
 ### PR 3 — Managed settings storage
 
-Implemented:
-- dedicated app-level SQLite settings database at `Documents/JobApplicationAssistant/app.sqlite3`, or `APP_DATA_DIR/app.sqlite3` when overridden;
-- separate `app/settings/` storage boundary with its own SQLAlchemy metadata, session helpers, schema validation, repository, service, and deterministic schema migration code;
-- `app_settings` key/value table for non-secret JSON settings plus an app settings schema version table;
-- managed settings support for LLM extraction mode, human approval before export, Markdown/HTML/PDF/DOCX export toggles, default file-based profile name/path, and OpenAI API key configured metadata;
-- secret-looking setting keys are rejected, and only boolean OpenAI key metadata may be stored in SQLite;
-- effective runtime config loading overlays supported app-managed settings over the existing file-based YAML/default flow;
-- setup status now checks app settings storage separately from the profile `applications.sqlite3` database;
-- startup error handling catches only expected local setup/storage exceptions while allowing unexpected programming errors to fail loudly;
-- regression tests proving `app_settings` is not part of profile DB metadata and profile application tables are not required in `app.sqlite3`.
+Implemented `app_data_root/app.sqlite3` for non-secret app settings, deterministic settings schema migration, managed settings overlay onto runtime config, and setup checks proving app settings storage is separate from profile databases.
 
 ### PR 4 — Settings UI
 
-Implemented:
-- `/settings` GET and POST routes for supported non-secret managed app settings;
-- a simple Jinja2 settings page for LLM extraction mode, human approval before final export, export format toggles, and default file-based profile selection;
-- form validation for unsupported LLM modes, invalid boolean values, partial default profile selections, unsupported fields, and secret-looking generic fields;
-- explicit persistence of unchecked checkbox values as `False`;
-- clearing default profile selection when both profile fields are blank;
-- setup gate exemptions so `/settings` remains available while setup is incomplete;
-- runtime state refresh after saving settings, including clearing stale runtime state when saved settings make setup incomplete;
-- tests covering complete and incomplete setup access, settings persistence, OpenAI runtime diagnostics, raw secret rejection, and runtime refresh.
+Implemented `/settings` for supported non-secret managed settings, default file-based profile selection, validation, setup-gate exemption, and runtime refresh after saves.
 
 ### PR 5 — OS keyring secrets
 
+Implemented `app/secrets/` for OpenAI API key storage through an injectable OS keyring boundary, kept SQLite limited to key-configured metadata, preserved `OPENAI_API_KEY` as a developer fallback, and updated setup/settings/runtime tests for safe secret handling.
+
+### PR 6 — Data Folder UI
+
 Implemented:
-- added the `app/secrets/` boundary for OpenAI API key read, write, delete, and configured checks;
-- added runtime dependency metadata for Python `keyring`;
-- stores raw OpenAI API keys through an injectable OS keyring service using stable service/account names;
-- keeps SQLite limited to the existing non-secret `secrets.openai_api_key_configured` boolean metadata;
-- preserves `OPENAI_API_KEY` as a developer fallback when no keyring value is available;
-- updates setup status and LLM runtime validation so fake mode needs no key, OpenAI mode requires `model_extract`, and OpenAI mode accepts either keyring or environment fallback keys;
-- passes the resolved effective API key into the OpenAI SDK client path before any network request;
-- extends `/settings` so users can configure, replace, or clear the OpenAI API key without prefill, echo, or display of raw key material;
-- adds tests with fake keyring backends for secret service operations, Settings UI key management, setup status key resolution, SQLite non-leakage, rendered HTML non-leakage, and OpenAI factory API key injection.
+- `app/storage/` location boundary for resolving `APP_DATA_DIR`, persisted user selection, and default Documents app data roots;
+- persisted app data root pointer storage outside the app data folder to avoid the `app.sqlite3` circular dependency;
+- `/data-folder` GET/POST page for viewing, validating, creating, and connecting the app data root;
+- setup-gate exemption and base navigation for `/data-folder`;
+- safe connect/create behaviour that rejects blank, repository-internal, file-like invalid, and `APP_DATA_DIR`-controlled changes;
+- bootstrap of only `profiles/`, `logs/`, `backups/`, generic `README.txt`, and `app.sqlite3`;
+- runtime state refresh after a successful data folder connection;
+- tests covering default/pointer/env precedence, route availability, page diagnostics, POST validation, pointer persistence, state refresh, no profile file creation, and no raw OpenAI key leakage.
 
 Non-goals preserved:
-- no data folder picker UI;
 - no managed profiles table;
 - no managed CV, fact, alias, section, or block tables;
 - no profile import tools;
+- no profile data migration;
 - no pipeline migration to managed CV storage;
 - no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph;
 - existing `.env`, YAML, Markdown, and file-based profile support remains compatible.
@@ -89,26 +64,37 @@ Remaining risks:
 - setup status is still diagnostic; it does not repair missing profile files or run profile migrations;
 - if the host OS keyring backend is missing or unavailable, Settings reports a safe keyring error and `OPENAI_API_KEY` remains the developer fallback;
 - database readiness checks verify tables/schema but do not yet provide a guided repair or migration button;
-- the Settings UI saves profile paths as text and relies on setup checks to report whether the selected path is usable.
+- the Settings UI saves profile paths as text and relies on setup checks to report whether the selected path is usable;
+- the Data Folder UI uses a text path input for this local developer release and does not provide an OS-native folder picker.
 
 ## Next Implementation Plan
 
-### PR 6 — Data folder UI
+### PR 7 — Managed profiles
 
 Goal:
-Add a safe UI path for viewing and later changing/connecting the local app data folder.
+Add the first managed profiles foundation without migrating CV/fact data or changing the pipeline to DB-backed CV storage.
 
 Recommended scope:
-- show the current app data folder and app-managed subfolders in setup/settings diagnostics;
-- keep folder creation and validation inside `app/storage/`;
-- do not migrate profile data automatically;
-- do not add managed profiles, managed CV storage, import tools, or data migration in this PR;
-- preserve `.env`/`APP_DATA_DIR` as a developer override while introducing user-facing diagnostics.
+- introduce managed profile records in app-managed storage;
+- support active managed profile selection through app services and thin routes;
+- allow connecting existing file-based profile folders by path;
+- keep existing `.env`, YAML, Markdown, and file-based profile behaviour compatible;
+- do not import Markdown/YAML into managed CV/fact tables in this PR;
+- do not migrate profile `applications.sqlite3` data automatically;
+- do not change the tailoring/export pipeline to managed CV/fact storage yet.
+
+Non-goals for PR 7:
+- no managed CV storage;
+- no import tools;
+- no CV/fact editor;
+- no pipeline migration;
+- no profile backup/export tooling;
+- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
 
 ## Key Decisions
 
 - Default app data folder should be visible and user-owned: `Documents/JobApplicationAssistant/`.
-- User should be able to connect an existing data folder in a future PR.
+- Users can connect an existing app data folder through `/data-folder`; `APP_DATA_DIR` remains the highest-priority developer override.
 - SQLite should become the primary source of app/profile settings later.
 - YAML should remain as example/import/export/fallback only, not the main UI-facing settings store.
 - OpenAI API key uses OS keyring as the preferred storage backend, with `OPENAI_API_KEY` retained as a developer fallback.

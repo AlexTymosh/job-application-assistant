@@ -79,7 +79,7 @@ This version can be used by a technical user who can:
 - run Alembic migrations;
 - inspect logs/errors if something fails.
 
-This version is not yet suitable for a non-technical user. The current product direction is to continue from app data bootstrap, setup diagnostics, managed settings storage, and the first Settings UI towards managed profiles, managed CV data, guided repair actions, and a persistent application data folder under Documents.
+This version is not yet suitable for a non-technical user. The current product direction is to continue from app data bootstrap, setup diagnostics, managed settings storage, the Settings UI, and the Data Folder UI towards managed profiles, managed CV data, guided repair actions, and a persistent application data folder under Documents.
 
 ---
 
@@ -172,7 +172,11 @@ The application now has a small storage bootstrap foundation for a durable, user
 Documents/JobApplicationAssistant
 ```
 
-Set `APP_DATA_DIR` to override that location, for example when testing or when connecting a folder outside the repository. The bootstrap layer creates only the root folder and the required empty subfolders:
+Set `APP_DATA_DIR` to override that location, for example when testing. `APP_DATA_DIR` has the highest precedence and wins over any folder selected through the UI. When it is set and non-blank, `/data-folder` reports that the effective folder is controlled by the environment and rejects POST actions that would change the active folder.
+
+When `APP_DATA_DIR` is not set, the Data Folder UI can persist a selected app data root through a small pointer file in the user's config location. That pointer is stored outside the app data folder to avoid a circular dependency: `app.sqlite3` lives inside the active app data folder, so `app_settings` must not be used to decide which app data folder is active. If no environment override and no pointer file exist, the fallback remains `Documents/JobApplicationAssistant`.
+
+The bootstrap layer creates only the root folder and the required empty subfolders:
 
 ```text
 profiles/
@@ -180,15 +184,16 @@ logs/
 backups/
 ```
 
-The app data folder now also owns the first app-managed settings database:
+The app data folder now also owns the first app-managed settings database and may contain a generic data-folder README:
 
 ```text
 app.sqlite3
+README.txt
 ```
 
 The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. Raw API keys are not stored in SQLite; OpenAI mode prefers the OS keyring value and falls back to the runtime `OPENAI_API_KEY` environment variable for developer workflows. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, and Markdown CV behaviour remains compatible.
 
-The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, and Settings UI are now implemented. This still does not implement managed profiles, managed CV storage, data folder picker UI, profile import, or pipeline migration to managed CV storage.
+The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, and Data Folder UI are now implemented. This still does not implement managed profiles, managed CV storage, profile import, or pipeline migration to managed CV storage.
 
 If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
 
@@ -199,6 +204,14 @@ The Settings page is available at:
 ```
 
 It edits supported non-secret managed settings: LLM extraction mode, human approval before final export, Markdown/HTML/PDF/DOCX export toggles, and default file-based profile name/path. It also lets the user configure, replace, or clear the OpenAI API key through the OS keyring without displaying the raw key or storing it in SQLite. It remains available when setup is incomplete so the user can repair LLM mode, OpenAI key status, or default profile selection.
+
+The Data Folder page is available at:
+
+```text
+/data-folder
+```
+
+It shows the effective app data root, whether that root came from `APP_DATA_DIR`, a persisted user selection, or the default Documents location, the expected `profiles/`, `logs/`, `backups/`, `app.sqlite3`, and `README.txt` paths, and a link back to setup diagnostics. It can create or connect a safe external app data folder by text path. The action bootstraps only the approved app data root files/folders and initialises or migrates only `app.sqlite3`. It does not create private profile folders, profile config files, CV files, fact-bank files, profile `applications.sqlite3` databases, import tools, or profile migrations. Existing file-based `.env`, YAML, Markdown, and profile support remains compatible, and profile data is not migrated automatically.
 
 ---
 
@@ -231,7 +244,7 @@ Target direction:
 
 ## Planned Application Data Folder
 
-The bootstrap foundation uses a visible long-lived root folder. Future releases should add managed files inside it, for example:
+The bootstrap foundation uses a visible long-lived root folder. The current Data Folder UI can create or connect the root safely. Future releases should add managed profile files inside it, for example:
 
 ```text
 Documents/
@@ -247,7 +260,7 @@ Documents/
     └── README.txt
 ```
 
-The user should be able to choose or connect this folder from the application UI.
+The user can now connect this folder from the application UI, but managed profiles and profile migration are still future work.
 
 Rationale:
 
@@ -505,46 +518,66 @@ These may be considered only after the local core workflow is stable.
 - improve human approval/export flow;
 - keep documentation aligned with code.
 
-### 2. Managed app storage, setup diagnostics, and Settings UI
+### 2. Managed app storage, setup diagnostics, settings, keyring, and Data Folder UI
 
 Implemented foundations:
 
 - create a default `Documents/JobApplicationAssistant` folder;
-- allow overriding the app data folder for tests and local development;
-- bootstrap folders and the app settings database automatically;
-- redirect incomplete installations to setup;
+- keep `APP_DATA_DIR` as the highest-priority developer override;
+- store any UI-selected app data root pointer outside the app data folder;
+- bootstrap only approved app data folders plus `app.sqlite3` and generic `README.txt`;
+- redirect incomplete installations to setup while keeping `/setup`, `/settings`, and `/data-folder` available;
 - store supported non-secret settings in SQLite;
 - edit supported non-secret settings at `/settings`;
-- keep YAML as a compatibility/import layer;
-- keep generated artefacts out of the repository.
+- store raw OpenAI API keys through the OS keyring boundary, not in SQLite;
+- view, validate, create, or connect the app data folder at `/data-folder`;
+- keep YAML and Markdown as compatibility/import/export formats;
+- keep private profile data and generated artefacts out of the repository.
 
-Future work in this area includes a data folder picker and guided repair actions.
+Remaining work in this area is guided repair actions, not automatic profile migration.
 
-### 3. Add managed profiles
+### 3. Managed profiles
 
+- managed profile table;
+- active managed profile selection;
+- managed profile settings;
+- connect existing profile folders without automatic migration.
 
-- profile table;
-- active profile selection;
-- profile settings;
-- external data folder connection.
-
-### 4. Add managed CV storage
+### 4. Managed CV storage
 
 - CV variants;
 - aliases;
 - sections;
 - blocks;
 - facts;
-- fact links;
-- import existing Markdown/YAML profile into managed storage.
+- fact links.
 
-### 6. Add CV and fact editor UI
+### 5. Import tools
+
+- import existing Markdown CV variants into managed storage;
+- import existing YAML fact-bank data into managed storage;
+- preview and approve imports before writing managed records.
+
+### 6. CV and fact editor UI
 
 - edit variants;
 - edit sections and blocks;
 - edit facts;
 - preview generated Markdown;
 - preserve source data and generated artefacts separately.
+
+### 7. Pipeline migration to managed CV/facts
+
+- read verified facts from managed storage;
+- generate tailored CV artefacts from managed CV data;
+- preserve the rule that no verified fact means no strengthened CV claim.
+
+### 8. Release polish
+
+- guided setup repair actions;
+- clearer manual smoke checks;
+- privacy review for generated files and diagnostics;
+- final local-first packaging notes.
 
 ---
 
