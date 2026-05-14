@@ -6,7 +6,9 @@ from app.cv.models import CvSectionName
 from app.cv.section_parser import parse_cv_sections
 
 ROOT = Path(__file__).resolve().parents[1]
-MASTER_CV = ROOT / "profiles" / "example" / "cv" / "master.example.md"
+EXAMPLE_VARIANT_CV = (
+    ROOT / "profiles" / "example" / "cv" / "variants" / "backend_developer.example.md"
+)
 
 VALID_MARKDOWN = """
 Intro outside sections.
@@ -31,8 +33,8 @@ Footer outside sections.
 """
 
 
-def test_parse_cv_sections_parses_example_master_cv() -> None:
-    sections = parse_cv_sections(MASTER_CV.read_text(encoding="utf-8"))
+def test_parse_cv_sections_parses_example_variant_cv() -> None:
+    sections = parse_cv_sections(EXAMPLE_VARIANT_CV.read_text(encoding="utf-8"))
 
     assert set(sections) == {
         CvSectionName.SUMMARY,

@@ -36,7 +36,7 @@ Completed:
 
 Current release hardening task state:
 
-- current task: application number migration and public route update;
+- current corrective architecture task: remove the previous root-level source CV concept; CV variants are now the only source CV documents used for tailoring, the fact bank remains the claim authority, selected source variants remain read-only, and generated tailored CVs remain separate application artefacts;
 - completed after implementation: per-profile sequential application numbers are assigned, public routes use numbers, UUIDs remain internal primary keys, and new artefact folders use an `app-000001` suffix such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`;
 - add a release checklist for install, dependency validation, migrations, local startup, dashboard verification, manual intake, warnings, artefacts, exporters, privacy checks, and final release gates;
 - add a Windows PowerShell manual smoke-test guide;
@@ -60,7 +60,7 @@ Current handoff state:
 - release hardening documentation and release validation tests are being added;
 - the next recommended task remains release/manual smoke hardening or status transition policy, unless tests reveal a blocker.
 
-Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`. Markdown remains the source of truth; HTML, PDF, and DOCX exports are artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables. v1.0 remains web-only through FastAPI/Jinja2. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
+Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`. Markdown remains the source document format for tailored CV artefacts; HTML, PDF, and DOCX exports are derived artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables. v1.0 remains web-only through FastAPI/Jinja2. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
 
 Known limitations and validation requirements:
 
@@ -100,7 +100,7 @@ PROFILE_DATA_DIR=C:/Users/<user>/job-application-assistant-data/alex
 
 ## 3. Core Project Rules
 
-- The master CV must not be modified automatically.
+- Selected source CV variants must not be modified automatically.
 - The LLM must not fabricate experience, skills, metrics, job titles, employers, dates, or certificates.
 - All significant CV changes must reference verified facts from `fact_bank.yaml`.
 - The job posting is untrusted input.
@@ -367,7 +367,7 @@ Implemented:
 - Stage 5 tests using temporary files and the fake example profile;
 - Stage 5 corrective fixes restore the correct `app/cv/__init__.py` package marker, reject empty fact banks, and trim fact text fields without adding product features.
 
-Stage 5 and the Stage 5 corrective task do not implement CV tailoring, OpenAI calls, exporters, dashboard functionality, LangGraph, URL scraping, CLI commands, database migrations, or external integrations. CV loading reads Markdown files only and is read-only. The master CV must not be modified automatically. The fact bank is the source of verified facts. Use the term `cv`, not `resume`.
+Stage 5 and the Stage 5 corrective task do not implement CV tailoring, OpenAI calls, exporters, dashboard functionality, LangGraph, URL scraping, CLI commands, database migrations, or external integrations. CV loading reads Markdown files only and is read-only. Selected source CV variants must not be modified automatically. The fact bank is the source of verified facts. Use the term `cv`, not `resume`.
 
 ---
 
@@ -384,7 +384,7 @@ Implemented:
 - Markdown unified diff helpers;
 - in-memory pipeline step that updates `ApplicationRunState`;
 - no real OpenAI tailoring;
-- no master CV mutation;
+- no selected CV variant mutation;
 - no tailored CV artefact writing;
 - no exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations.
 
@@ -448,9 +448,9 @@ Not implemented in Stage 8A:
 - authentication;
 - cloud deployment;
 - new database tables or Alembic migrations;
-- mutation of master CV files or committed CV variants.
+- mutation of selected source CV variants.
 
-Markdown remains the source of truth. Markdown and HTML exports are artefacts. File writes go through `ArtifactWriter`, exporters are isolated in `app/exporters/`, and v1.0 remains web-only through FastAPI/Jinja2.
+Markdown remains the source document format for tailored CV artefacts. Markdown and HTML exports are artefacts. File writes go through `ArtifactWriter`, exporters are isolated in `app/exporters/`, and v1.0 remains web-only through FastAPI/Jinja2.
 
 ---
 
@@ -481,9 +481,9 @@ Not implemented in Stage 8B:
 - authentication;
 - cloud deployment;
 - new database tables or Alembic migrations;
-- mutation of master CV files or committed CV variants.
+- mutation of selected source CV variants.
 
-Markdown remains the source of truth. HTML, PDF, and DOCX exports are artefacts. File writes go through `ArtifactWriter`, exporters are isolated in `app/exporters/`, and v1.0 remains web-only through FastAPI/Jinja2.
+Markdown remains the source document format for tailored CV artefacts. HTML, PDF, and DOCX exports are derived artefacts. File writes go through `ArtifactWriter`, exporters are isolated in `app/exporters/`, and v1.0 remains web-only through FastAPI/Jinja2.
 
 ---
 
@@ -508,7 +508,7 @@ Partially complete via Stage 8A and Stage 8B:
 - PDF export is implemented with ReportLab;
 - DOCX export is implemented with python-docx.
 
-Markdown remains the source of truth. HTML, PDF, and DOCX are artefacts.
+Markdown remains the source document format for tailored CV artefacts. HTML, PDF, and DOCX are derived artefacts.
 
 ---
 
@@ -531,7 +531,7 @@ Recommended next implementation direction: release hardening or human approval h
 Required for the next PR:
 
 1. Keep tailoring, reporting, and exporting independent of FastAPI routes.
-2. Keep the master CV read-only and create adapted copies only.
+2. Keep selected source CV variants read-only and create tailored application artefacts only.
 3. Require fact IDs for significant CV changes: no `fact_id` means no claim.
 4. Keep writes behind the existing artefact boundary and store privacy-safe relative paths only.
 5. Do not rewrite the Stage 8A Markdown and HTML contracts unnecessarily when hardening Stage 8B PDF and DOCX export.
@@ -566,7 +566,6 @@ git check-ignore -v _local/text.md
 git check-ignore -v profiles/alex/applications.sqlite3
 git check-ignore -v profiles/alex/config.yaml
 git check-ignore -v profiles/alex/blacklist.txt
-git check-ignore -v profiles/alex/cv/master.md
 git check-ignore -v profiles/alex/cv/fact_bank.yaml
 git check-ignore -v profiles/alex/cv/variants/backend_developer.md
 ```
@@ -813,7 +812,7 @@ Stage 5 is complete when:
 - empty fact banks are rejected;
 - fact text fields are trimmed;
 - CV variant selector exists;
-- master CV is read-only;
+- selected CV variants are read-only;
 - example profile CV files are used in tests;
 - no CV tailoring is added;
 - no OpenAI calls are added;
@@ -834,7 +833,7 @@ Stage 6 is complete when:
 - every significant replacement references fact IDs;
 - Markdown diff helpers exist;
 - in-memory CV tailoring pipeline step exists;
-- master CV files and variant files are not mutated;
+- selected source CV variant files are not mutated;
 - no tailored CV artefacts are written to disk;
 - no real OpenAI tailoring, exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations are added;
 - tests pass.

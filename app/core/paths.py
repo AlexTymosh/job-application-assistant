@@ -12,7 +12,6 @@ class ProfilePaths:
     config_file: Path
     blacklist_file: Path
     cv_dir: Path
-    master_cv: Path
     fact_bank: Path
     variants_dir: Path
     applications_dir: Path
@@ -38,10 +37,6 @@ def build_profile_paths(config: ProjectConfig) -> ProfilePaths:
             else "blacklist.txt"
         ),
         cv_dir=cv_dir,
-        master_cv=cv_dir
-        / (
-            "master.example.md" if config.app.profile_name == "example" else "master.md"
-        ),
         fact_bank=cv_dir
         / (
             "fact_bank.example.yaml"

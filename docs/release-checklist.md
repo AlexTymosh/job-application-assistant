@@ -50,7 +50,7 @@ $env:PROFILE_NAME = "example"
 $env:PROFILE_DATA_DIR = "profiles/example"
 ```
 
-The example profile uses files with `.example` suffixes, such as `config.example.yaml`, `blacklist.example.txt`, `master.example.md`, `fact_bank.example.yaml`, and `backend_developer.example.md`.
+The example profile uses files with `.example` suffixes, such as `config.example.yaml`, `blacklist.example.txt`, `fact_bank.example.yaml`, and `backend_developer.example.md`. Selected CV variants are the only source documents for tailoring; there is no separate root-level source CV requirement.
 
 ## Real external private profile
 
@@ -170,7 +170,7 @@ Verify Markdown, HTML, PDF, and DOCX exporters through automated tests:
 uv run pytest tests/test_markdown_exporter.py tests/test_html_exporter.py tests/test_pdf_exporter.py tests/test_docx_exporter.py tests/test_export_markdown_html.py tests/test_export_pdf_docx.py
 ```
 
-Existing export flows must write files through `ArtifactWriter`, store only relative database paths, and must not mutate master CV files or committed variants.
+Existing export flows must write files through `ArtifactWriter`, store only relative database paths, and must not mutate selected source CV variants.
 
 ## Git ignore and privacy checks
 
@@ -183,7 +183,6 @@ git check-ignore -v profiles/example/applications.sqlite3
 git check-ignore -v profiles/alex/applications.sqlite3
 git check-ignore -v profiles/alex/config.yaml
 git check-ignore -v profiles/alex/blacklist.txt
-git check-ignore -v profiles/alex/cv/master.md
 git check-ignore -v profiles/alex/cv/fact_bank.yaml
 git check-ignore -v profiles/alex/cv/variants/backend_developer.md
 ```

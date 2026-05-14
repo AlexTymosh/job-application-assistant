@@ -20,7 +20,9 @@ from app.llm.schemas import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-EXAMPLE_MASTER_CV = ROOT / "profiles" / "example" / "cv" / "master.example.md"
+EXAMPLE_VARIANT_CV = (
+    ROOT / "profiles" / "example" / "cv" / "variants" / "backend_developer.example.md"
+)
 EXAMPLE_FACT_BANK = ROOT / "profiles" / "example" / "cv" / "fact_bank.example.yaml"
 
 
@@ -39,9 +41,9 @@ def build_requirement(
 
 
 def build_loaded_cv() -> LoadedCv:
-    markdown = load_markdown_file(EXAMPLE_MASTER_CV)
+    markdown = load_markdown_file(EXAMPLE_VARIANT_CV)
     return LoadedCv(
-        path=EXAMPLE_MASTER_CV,
+        path=EXAMPLE_VARIANT_CV,
         markdown=markdown,
         sections=parse_cv_sections(markdown),
     )
@@ -148,8 +150,8 @@ def test_fake_tailor_ignores_do_not_claim_facts() -> None:
     assert result.tailored_markdown == build_loaded_cv().markdown
 
 
-def test_fake_tailor_does_not_modify_master_file_and_uses_in_memory_strings() -> None:
-    before_file_content = EXAMPLE_MASTER_CV.read_text(encoding="utf-8")
+def test_fake_tailor_keeps_selected_variant_read_only() -> None:
+    before_file_content = EXAMPLE_VARIANT_CV.read_text(encoding="utf-8")
 
     result = tailor(
         ExtractedJob(
@@ -157,6 +159,6 @@ def test_fake_tailor_does_not_modify_master_file_and_uses_in_memory_strings() ->
         )
     )
 
-    after_file_content = EXAMPLE_MASTER_CV.read_text(encoding="utf-8")
+    after_file_content = EXAMPLE_VARIANT_CV.read_text(encoding="utf-8")
     assert before_file_content == after_file_content
     assert result.tailored_markdown != after_file_content

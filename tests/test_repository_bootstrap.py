@@ -21,7 +21,6 @@ REQUIRED_PROJECT_FILES = [
     ".env.example",
     "profiles/example/config.example.yaml",
     "profiles/example/blacklist.example.txt",
-    "profiles/example/cv/master.example.md",
     "profiles/example/cv/fact_bank.example.yaml",
     "profiles/example/cv/variants/backend_developer.example.md",
     "app/__init__.py",
@@ -158,10 +157,8 @@ PRIVATE_PATHS_THAT_MUST_NOT_BE_TRACKED = [
     "profiles/alex/config.yaml",
     "profiles/alex/blacklist.txt",
     "profiles/alex/applications.sqlite3",
-    "profiles/alex/cv/master.md",
     "profiles/alex/cv/fact_bank.yaml",
     "profiles/alex/cv/variants/backend_developer.md",
-    "profiles/alex/resume/master.md",
     "profiles/alex/resume/fact_bank.yaml",
     "profiles/alex/resume/variants/backend_developer.md",
     "profiles/example/applications.sqlite3",
@@ -202,10 +199,23 @@ def test_example_profile_uses_example_suffixes() -> None:
     unsafe_files = [
         path.relative_to(ROOT).as_posix()
         for path in example_profile_files
-        if path.name in {"config.yaml", "blacklist.txt", "master.md", "fact_bank.yaml"}
+        if path.name in {"config.yaml", "blacklist.txt", "fact_bank.yaml"}
     ]
 
     assert unsafe_files == []
+
+
+def test_example_profile_has_at_least_one_example_cv_variant() -> None:
+    expected_variant = (
+        ROOT
+        / "profiles"
+        / "example"
+        / "cv"
+        / "variants"
+        / "backend_developer.example.md"
+    )
+
+    assert expected_variant.is_file()
 
 
 def test_required_bootstrap_files_are_tracked_by_git() -> None:
