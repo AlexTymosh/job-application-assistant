@@ -2,7 +2,7 @@
 
 Local Job Application Assistant is a local-first FastAPI web application for preparing job application materials from a job description and a verified CV profile.
 
-The current developer release works, but it is not yet an end-user product. It is intended for users who are comfortable with Python, PowerShell, `uv`, YAML files, local folders, and manual troubleshooting. It now includes setup diagnostics, setup redirects, managed settings storage, and a simple Settings UI; later releases should add keyring secrets, profile management, guided repair actions, and a simpler packaged user experience for non-programmers.
+The current developer release works, but it is not yet an end-user product. It is intended for users who are comfortable with Python, PowerShell, `uv`, YAML files, local folders, and manual troubleshooting. It now includes setup diagnostics, setup redirects, managed settings storage, OS keyring-backed OpenAI API key storage, and a Settings UI; later releases should add profile management, guided repair actions, and a simpler packaged user experience for non-programmers.
 
 The application is not an auto-apply bot. It must not automatically submit applications, automate LinkedIn, send real emails, or apply to jobs without explicit user action.
 
@@ -46,12 +46,13 @@ Implemented today:
 - dashboard, application detail, review, setup, and settings pages;
 - app data folder bootstrap under `Documents/JobApplicationAssistant` with `APP_DATA_DIR` override support;
 - managed app settings storage in `app.sqlite3`;
-- `/settings` UI for supported non-secret settings;
+- `/settings` UI for supported non-secret settings and safe OpenAI API key management;
+- OS keyring-backed OpenAI API key storage with SQLite limited to non-secret metadata;
 - release checklist and smoke-test documentation.
 
 The current release is still raw:
 
-- raw OpenAI API keys are not managed through the UI yet;
+- raw OpenAI API keys are stored through the OS keyring boundary and are never displayed;
 - settings not listed on `/settings` still use `.env` and `config.yaml`;
 - private CV data is still file-based;
 - CV variants and facts are not yet edited through the web UI;
@@ -70,7 +71,7 @@ This version can be used by a technical user who can:
 - use PowerShell;
 - run `uv`;
 - use the setup and settings pages for supported local configuration;
-- edit `.env` for developer fallbacks and secrets that are not UI-managed yet;
+- edit `.env` for developer fallbacks that are not UI-managed yet;
 - prepare a private profile folder;
 - create `config.yaml`;
 - create Markdown CV variants;
@@ -78,7 +79,7 @@ This version can be used by a technical user who can:
 - run Alembic migrations;
 - inspect logs/errors if something fails.
 
-This version is not yet suitable for a non-technical user. The current product direction is to continue from app data bootstrap, setup diagnostics, managed settings storage, and the first Settings UI towards OS keyring secrets, managed profiles, managed CV data, and a persistent application data folder under Documents.
+This version is not yet suitable for a non-technical user. The current product direction is to continue from app data bootstrap, setup diagnostics, managed settings storage, and the first Settings UI towards managed profiles, managed CV data, guided repair actions, and a persistent application data folder under Documents.
 
 ---
 
@@ -185,9 +186,9 @@ The app data folder now also owns the first app-managed settings database:
 app.sqlite3
 ```
 
-The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. Raw API keys are not stored in SQLite; OpenAI mode still requires the runtime `OPENAI_API_KEY` environment variable until OS keyring support is added. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, and Markdown CV behaviour remains compatible.
+The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. Raw API keys are not stored in SQLite; OpenAI mode prefers the OS keyring value and falls back to the runtime `OPENAI_API_KEY` environment variable for developer workflows. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, and Markdown CV behaviour remains compatible.
 
-The setup diagnostics, setup redirect, managed app settings storage, and a simple Settings UI are now implemented. This still does not implement OS keyring secret storage, managed profiles, managed CV storage, data folder picker UI, profile import, or raw OpenAI API key editing.
+The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, and Settings UI are now implemented. This still does not implement managed profiles, managed CV storage, data folder picker UI, profile import, or pipeline migration to managed CV storage.
 
 If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
 
@@ -197,7 +198,7 @@ The Settings page is available at:
 /settings
 ```
 
-It edits supported non-secret managed settings: LLM extraction mode, human approval before final export, Markdown/HTML/PDF/DOCX export toggles, and default file-based profile name/path. It remains available when setup is incomplete so the user can repair LLM mode or default profile selection. Raw OpenAI API keys are not accepted on this page; keyring-backed secret storage remains future work.
+It edits supported non-secret managed settings: LLM extraction mode, human approval before final export, Markdown/HTML/PDF/DOCX export toggles, and default file-based profile name/path. It also lets the user configure, replace, or clear the OpenAI API key through the OS keyring without displaying the raw key or storing it in SQLite. It remains available when setup is incomplete so the user can repair LLM mode, OpenAI key status, or default profile selection.
 
 ---
 
@@ -206,8 +207,9 @@ It edits supported non-secret managed settings: LLM extraction mode, human appro
 The current implementation uses:
 
 - managed app settings storage for supported non-secret settings;
-- `/settings` for editing supported non-secret settings in the app;
-- `.env` for developer fallback profile selection and secrets that are not UI-managed yet;
+- `/settings` for editing supported non-secret settings and managing the OpenAI API key safely;
+- OS keyring for the raw OpenAI API key, with `app_settings` storing only configured/unconfigured metadata;
+- `.env` for developer fallback profile selection and `OPENAI_API_KEY` fallback;
 - `config.yaml` for private profile settings that are not managed yet;
 - `fact_bank.yaml` for verified user facts;
 - Markdown files under `cv/variants/` as source CV variants;
@@ -399,15 +401,15 @@ In fake mode:
 - tests and local demos are deterministic;
 - no real OpenAI call is made.
 
-OpenAI mode is opt-in:
+OpenAI mode is opt-in. Configure the OpenAI API key through `/settings` so the raw value is stored in the OS keyring, then select OpenAI extraction mode and configure the extraction model. For developer workflows, `OPENAI_API_KEY` remains available as a fallback when no keyring key exists.
 
 ```env
 LLM_EXTRACTION_MODE=openai
-OPENAI_API_KEY=...
+OPENAI_API_KEY=...  # developer fallback only
 OPENAI_MODEL_EXTRACT=...
 ```
 
-OpenAI mode should fail clearly if required configuration is missing.
+OpenAI mode fails clearly if the extraction model is missing or no effective API key is available from keyring or environment fallback. The environment fallback is never copied into keyring or SQLite automatically.
 
 Current OpenAI usage is limited to structured job extraction. Fake CV tailoring, Evidence Matrix building, CV Match Report building, and exporters do not call OpenAI.
 
@@ -518,20 +520,15 @@ Implemented foundations:
 
 Future work in this area includes a data folder picker and guided repair actions.
 
-### 3. Add OS keyring secret storage
+### 3. Add managed profiles
 
-- store OpenAI API key in OS keyring;
-- store only secret metadata in SQLite;
-- keep `.env` as developer fallback.
-
-### 4. Add managed profiles
 
 - profile table;
 - active profile selection;
 - profile settings;
 - external data folder connection.
 
-### 5. Add managed CV storage
+### 4. Add managed CV storage
 
 - CV variants;
 - aliases;

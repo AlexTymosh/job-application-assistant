@@ -8,12 +8,18 @@ from pydantic import ValidationError
 
 from app.core.config import LlmExtractionMode
 from app.runtime import refresh_runtime_state
+from app.secrets.openai_key import SecretStorageError, get_environment_openai_api_key
 from app.settings.form_models import (
     SettingsFormError,
     parse_settings_form,
     persist_settings_form,
 )
 from app.settings.schema import ManagedAppSettings
+from app.settings.secret_form import (
+    OpenAISecretFormError,
+    persist_openai_secret_form,
+    split_openai_secret_form_fields,
+)
 from app.settings.service import AppSettingsService
 from app.setup.checks import SetupCheck, SetupStatus
 from app.web.templating import templates
@@ -40,13 +46,29 @@ async def save_settings(request: Request) -> Response:
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
+    openai_secret_service = request.app.state.openai_secret_service
+
     try:
-        result = parse_settings_form(form)
+        settings_form, secret_result = split_openai_secret_form_fields(form)
+        result = parse_settings_form(settings_form)
         persist_settings_form(service, result)
-    except SettingsFormError as exc:
+        persist_openai_secret_form(
+            app_settings_service=service,
+            openai_secret_service=openai_secret_service,
+            result=secret_result,
+        )
+    except (SettingsFormError, OpenAISecretFormError) as exc:
         return _render_settings(
             request,
-            submitted_values={str(key): value for key, value in form.items()},
+            submitted_values=_safe_submitted_values(form),
+            error_message=str(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except SecretStorageError as exc:
+        return _render_settings(
+            request,
+            submitted_values=_safe_submitted_values(form),
             error_message=str(exc),
             status_code=status.HTTP_400_BAD_REQUEST,
         )
@@ -76,6 +98,7 @@ def _render_settings(
             error_message = error_message or f"Stored app settings are invalid: {exc}"
     setup_status: SetupStatus = request.app.state.setup_status
     llm_check = _check_by_code(setup_status, "llm_mode")
+    openai_key_status = _openai_key_status(request)
 
     return templates.TemplateResponse(
         request=request,
@@ -86,6 +109,7 @@ def _render_settings(
             "effective_config": getattr(request.app.state, "config", None),
             "llm_modes": [mode.value for mode in LlmExtractionMode],
             "llm_check": llm_check,
+            "openai_key_status": openai_key_status,
             "setup_status": setup_status,
             "submitted_values": submitted_values or {},
             "error_message": error_message,
@@ -96,3 +120,23 @@ def _render_settings(
 
 def _check_by_code(setup_status: SetupStatus, code: str) -> SetupCheck | None:
     return next((check for check in setup_status.checks if check.code == code), None)
+
+
+def _safe_submitted_values(form: dict[str, str]) -> dict[str, str]:
+    return {key: value for key, value in form.items() if key != "openai_api_key"}
+
+
+def _openai_key_status(request: Request) -> str:
+    secret_service = request.app.state.openai_secret_service
+    try:
+        if secret_service.is_configured():
+            return "OpenAI API key configured in keyring"
+    except SecretStorageError as exc:
+        if get_environment_openai_api_key() is not None:
+            return "OpenAI API key available from environment fallback"
+        return str(exc)
+
+    if get_environment_openai_api_key() is not None:
+        return "OpenAI API key available from environment fallback"
+
+    return "OpenAI API key not configured"

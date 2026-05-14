@@ -149,7 +149,11 @@ def load_profile_config(config_path: Path | None = None) -> ProjectConfig:
     return ProjectConfig.model_validate(normalised_data)
 
 
-def validate_llm_runtime_config(config: ProjectConfig) -> None:
+def validate_llm_runtime_config(
+    config: ProjectConfig,
+    *,
+    has_openai_api_key: bool | None = None,
+) -> None:
     if config.llm.extraction_mode is LlmExtractionMode.FAKE:
         return
 
@@ -160,10 +164,13 @@ def validate_llm_runtime_config(config: ProjectConfig) -> None:
                 "OPENAI_MODEL_EXTRACT to be configured."
             )
 
-        api_key = os.getenv("OPENAI_API_KEY")
-        if api_key is None or not api_key.strip():
+        if has_openai_api_key is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            has_openai_api_key = api_key is not None and bool(api_key.strip())
+        if not has_openai_api_key:
             raise ValueError(
-                "OpenAI extraction mode requires OPENAI_API_KEY to be set."
+                "OpenAI extraction mode requires an OpenAI API key in the OS "
+                "keyring or OPENAI_API_KEY environment fallback."
             )
 
         return

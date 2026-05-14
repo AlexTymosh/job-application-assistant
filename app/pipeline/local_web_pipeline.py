@@ -30,6 +30,7 @@ from app.pipeline.job_extraction import JobExtractionStep
 from app.pipeline.state import ApplicationRunState
 from app.reports.evidence_matrix import build_evidence_matrix
 from app.reports.match_report import build_cv_match_report
+from app.secrets.openai_key import OpenAISecretService
 
 EVIDENCE_MATRIX_ARTIFACT_TYPE = "evidence_matrix"
 MATCH_REPORT_ARTIFACT_TYPE = "match_report"
@@ -57,10 +58,12 @@ class LocalApplicationPipelineService:
         session: Session,
         config: ProjectConfig,
         profile_paths: ProfilePaths,
+        openai_secret_service: OpenAISecretService | None = None,
     ) -> None:
         self._session = session
         self._config = config
         self._profile_paths = profile_paths
+        self._openai_secret_service = openai_secret_service
         self._artifact_writer = ArtifactWriter(
             applications_dir=profile_paths.applications_dir
         )
@@ -99,7 +102,10 @@ class LocalApplicationPipelineService:
             job_text_hash=application.job_text_hash,
         )
 
-        extraction_client = build_job_extraction_client(self._config)
+        extraction_client = build_job_extraction_client(
+            self._config,
+            openai_secret_service=self._openai_secret_service,
+        )
         state = JobExtractionStep(extraction_client).run(state)
         if state.extracted_job is None:
             raise ValueError("Job extraction did not produce a structured job.")

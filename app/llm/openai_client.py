@@ -24,13 +24,19 @@ class OpenAIJobExtractionClient:
     network access or an OpenAI API key.
     """
 
-    def __init__(self, model: str, client: object | None = None) -> None:
+    def __init__(
+        self,
+        model: str,
+        client: object | None = None,
+        api_key: str | None = None,
+    ) -> None:
         normalised_model = model.strip()
 
         if not normalised_model:
             raise OpenAIExtractionError("OpenAI extraction model must not be empty.")
 
         self._model = normalised_model
+        self._api_key = api_key.strip() if api_key is not None else None
         self._client = client if client is not None else self._build_default_client()
         self._system_prompt = _PROMPT_PATH.read_text(encoding="utf-8")
 
@@ -85,9 +91,12 @@ class OpenAIJobExtractionClient:
         )
 
     def _build_default_client(self) -> object:
+        if self._api_key is None or not self._api_key.strip():
+            raise OpenAIExtractionError("OpenAI API key is not configured.")
+
         from openai import OpenAI
 
-        return OpenAI()
+        return OpenAI(api_key=self._api_key)
 
 
 def _find_refusal(value: object) -> str | None:
