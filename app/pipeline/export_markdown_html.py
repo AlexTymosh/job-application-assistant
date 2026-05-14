@@ -28,6 +28,7 @@ def export_markdown_html_artifacts(
     *,
     session: Session,
     application_id: UUID,
+    artifact_dir_name: str,
     tailored_cv_markdown: str,
     artifact_writer: ArtifactWriter | None = None,
     applications_dir: Path | None = None,
@@ -46,11 +47,11 @@ def export_markdown_html_artifacts(
     html_content = HtmlExporter().export(markdown_content, title=title)
 
     written_markdown = artifact_writer.write_tailored_cv_markdown(
-        application_id=application_id,
+        artifact_dir_name=artifact_dir_name,
         markdown=markdown_content,
     )
     written_html = artifact_writer.write_tailored_cv_html(
-        application_id=application_id,
+        artifact_dir_name=artifact_dir_name,
         html=html_content,
     )
 

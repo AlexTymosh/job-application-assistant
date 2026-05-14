@@ -1,31 +1,31 @@
 from pathlib import Path
-from uuid import UUID
 
 from app.artifacts.writer import ArtifactWriter
+
+ARTIFACT_DIR_NAME = "2026-05-14_09-26-01__unknown-company__unknown-role__33333333"
 
 
 def test_artifact_writer_creates_raw_job_text_file_and_safe_relative_path(
     tmp_path: Path,
 ) -> None:
-    application_id = UUID("33333333-3333-3333-3333-333333333333")
     applications_dir = tmp_path / "private-profile" / "applications"
     raw_text = "Senior Python developer role with FastAPI and SQL."
 
     writer = ArtifactWriter(applications_dir=applications_dir)
 
     written_artifact = writer.write_raw_job_text(
-        application_id=application_id,
+        artifact_dir_name=ARTIFACT_DIR_NAME,
         raw_text=raw_text,
     )
 
     assert written_artifact.absolute_path == (
-        applications_dir / str(application_id) / "job_raw.txt"
+        applications_dir / ARTIFACT_DIR_NAME / "job_raw.txt"
     )
     assert written_artifact.absolute_path.is_file()
     assert written_artifact.absolute_path.read_text(encoding="utf-8") == raw_text
     assert (
         written_artifact.relative_path
-        == "applications/33333333-3333-3333-3333-333333333333/job_raw.txt"
+        == f"applications/{ARTIFACT_DIR_NAME}/job_raw.txt"
     )
     assert str(tmp_path) not in written_artifact.relative_path
 
@@ -33,25 +33,24 @@ def test_artifact_writer_creates_raw_job_text_file_and_safe_relative_path(
 def test_artifact_writer_creates_tailored_cv_markdown_with_final_newline(
     tmp_path: Path,
 ) -> None:
-    application_id = UUID("66666666-6666-6666-6666-666666666666")
     applications_dir = tmp_path / "private-profile" / "applications"
 
     writer = ArtifactWriter(applications_dir=applications_dir)
 
     written_artifact = writer.write_tailored_cv_markdown(
-        application_id=application_id,
+        artifact_dir_name=ARTIFACT_DIR_NAME,
         markdown="# Tailored CV",
     )
 
     assert written_artifact.absolute_path == (
-        applications_dir / str(application_id) / "tailored_cv.md"
+        applications_dir / ARTIFACT_DIR_NAME / "tailored_cv.md"
     )
     assert (
         written_artifact.absolute_path.read_text(encoding="utf-8") == "# Tailored CV\n"
     )
     assert (
         written_artifact.relative_path
-        == "applications/66666666-6666-6666-6666-666666666666/tailored_cv.md"
+        == f"applications/{ARTIFACT_DIR_NAME}/tailored_cv.md"
     )
     assert str(tmp_path) not in written_artifact.relative_path
 
@@ -59,18 +58,17 @@ def test_artifact_writer_creates_tailored_cv_markdown_with_final_newline(
 def test_artifact_writer_creates_tailored_cv_html_with_final_newline(
     tmp_path: Path,
 ) -> None:
-    application_id = UUID("77777777-7777-7777-7777-777777777777")
     applications_dir = tmp_path / "private-profile" / "applications"
 
     writer = ArtifactWriter(applications_dir=applications_dir)
 
     written_artifact = writer.write_tailored_cv_html(
-        application_id=application_id,
+        artifact_dir_name=ARTIFACT_DIR_NAME,
         html="<!doctype html>",
     )
 
     assert written_artifact.absolute_path == (
-        applications_dir / str(application_id) / "tailored_cv.html"
+        applications_dir / ARTIFACT_DIR_NAME / "tailored_cv.html"
     )
     assert (
         written_artifact.absolute_path.read_text(encoding="utf-8")
@@ -78,7 +76,7 @@ def test_artifact_writer_creates_tailored_cv_html_with_final_newline(
     )
     assert (
         written_artifact.relative_path
-        == "applications/77777777-7777-7777-7777-777777777777/tailored_cv.html"
+        == f"applications/{ARTIFACT_DIR_NAME}/tailored_cv.html"
     )
     assert str(tmp_path) not in written_artifact.relative_path
 
@@ -86,24 +84,23 @@ def test_artifact_writer_creates_tailored_cv_html_with_final_newline(
 def test_artifact_writer_creates_tailored_cv_pdf_and_preserves_bytes(
     tmp_path: Path,
 ) -> None:
-    application_id = UUID("88888888-8888-8888-8888-888888888888")
     applications_dir = tmp_path / "private-profile" / "applications"
     pdf_bytes = b"%PDF-1.4 fake test bytes"
 
     writer = ArtifactWriter(applications_dir=applications_dir)
 
     written_artifact = writer.write_tailored_cv_pdf(
-        application_id=application_id,
+        artifact_dir_name=ARTIFACT_DIR_NAME,
         pdf_bytes=pdf_bytes,
     )
 
     assert written_artifact.absolute_path == (
-        applications_dir / str(application_id) / "tailored_cv.pdf"
+        applications_dir / ARTIFACT_DIR_NAME / "tailored_cv.pdf"
     )
     assert written_artifact.absolute_path.read_bytes() == pdf_bytes
     assert (
         written_artifact.relative_path
-        == "applications/88888888-8888-8888-8888-888888888888/tailored_cv.pdf"
+        == f"applications/{ARTIFACT_DIR_NAME}/tailored_cv.pdf"
     )
     assert str(tmp_path) not in written_artifact.relative_path
 
@@ -111,23 +108,22 @@ def test_artifact_writer_creates_tailored_cv_pdf_and_preserves_bytes(
 def test_artifact_writer_creates_tailored_cv_docx_and_preserves_bytes(
     tmp_path: Path,
 ) -> None:
-    application_id = UUID("99999999-9999-9999-9999-999999999999")
     applications_dir = tmp_path / "private-profile" / "applications"
     docx_bytes = b"PK fake test bytes"
 
     writer = ArtifactWriter(applications_dir=applications_dir)
 
     written_artifact = writer.write_tailored_cv_docx(
-        application_id=application_id,
+        artifact_dir_name=ARTIFACT_DIR_NAME,
         docx_bytes=docx_bytes,
     )
 
     assert written_artifact.absolute_path == (
-        applications_dir / str(application_id) / "tailored_cv.docx"
+        applications_dir / ARTIFACT_DIR_NAME / "tailored_cv.docx"
     )
     assert written_artifact.absolute_path.read_bytes() == docx_bytes
     assert (
         written_artifact.relative_path
-        == "applications/99999999-9999-9999-9999-999999999999/tailored_cv.docx"
+        == f"applications/{ARTIFACT_DIR_NAME}/tailored_cv.docx"
     )
     assert str(tmp_path) not in written_artifact.relative_path

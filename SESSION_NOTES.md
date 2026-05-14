@@ -36,6 +36,8 @@ Completed:
 
 Current release hardening task state:
 
+- current task: add human-readable application artefact directories while keeping UUIDs as stable database identifiers;
+- completed after implementation: artefact directory naming is stable, length-limited, Windows-safe, and privacy-safe, with relative database artefact paths such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__a5c19f0a/job_raw.txt`;
 - add a release checklist for install, dependency validation, migrations, local startup, dashboard verification, manual intake, warnings, artefacts, exporters, privacy checks, and final release gates;
 - add a Windows PowerShell manual smoke-test guide;
 - add a local private profile setup guide that keeps real data outside the repository;
@@ -56,9 +58,9 @@ Current handoff state:
 - Stage 8A Markdown and HTML export foundation is implemented;
 - Stage 8B PDF and DOCX export foundation is implemented;
 - release hardening documentation and release validation tests are being added;
-- the next implementation step should be human approval hardening or final release candidate validation, depending on the user decision.
+- the next recommended task remains release/manual smoke hardening or status transition policy, unless tests reveal a blocker.
 
-Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<application_id>/tailored_cv.pdf` and `applications/<application_id>/tailored_cv.docx`. Markdown remains the source of truth; HTML, PDF, and DOCX exports are artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables. v1.0 remains web-only through FastAPI/Jinja2. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
+Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`. Markdown remains the source of truth; HTML, PDF, and DOCX exports are artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables. v1.0 remains web-only through FastAPI/Jinja2. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
 
 Known limitations and validation requirements:
 
@@ -176,7 +178,7 @@ Implemented job input, preflight, and intake foundation:
 - isolated `OpenAIJobExtractionClient` wrapper in `app/llm/openai_client.py`;
 - OpenAI job extraction prompt in `app/llm/prompts/job_extraction.md`;
 - extracted job artefact persistence via the artefact writer and artifact repository boundaries;
-- privacy-safe relative extracted job artefact paths;
+- privacy-safe relative extracted job artefact paths using human-readable intake-time artefact directory names;
 - deterministic OpenAI client contract tests that use fake SDK objects and require no API key;
 - Markdown CV loader;
 - CV section parser;
@@ -325,7 +327,7 @@ Implemented:
 - refusal, SDK failure, missing parsed output, and validation failures are converted to project-level exceptions;
 - concise prompt file that treats job postings as untrusted data and forbids CV tailoring, cover letters, invented fields, and ATS scores;
 - extracted job JSON persistence through `ArtifactWriter` and `ArtifactRepository`;
-- database artefact paths remain relative, for example `applications/<application_id>/extracted_job.json`;
+- database artefact paths remain relative, for example `applications/<artifact_dir_name>/extracted_job.json`;
 - mocked OpenAI client tests that do not call the real API and do not require `OPENAI_API_KEY`;
 - extraction persistence tests that prove the JSON file and database artefact row are created inside an explicit transaction boundary.
 
@@ -429,7 +431,7 @@ Implemented:
 - tailored CV Markdown and HTML path builders;
 - `ArtifactWriter.write_tailored_cv_markdown()` and `ArtifactWriter.write_tailored_cv_html()`;
 - export persistence helper that writes both artefacts and creates `ArtifactRepository` rows;
-- database artefact paths remain relative, for example `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html`;
+- database artefact paths remain relative, for example `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`;
 - tests for exporters, artefact paths, artefact writer methods, and SQLite artefact persistence inside an explicit transaction.
 
 Not implemented in Stage 8A:
@@ -462,7 +464,7 @@ Implemented:
 - tailored CV PDF and DOCX path builders;
 - `ArtifactWriter.write_tailored_cv_pdf()` and `ArtifactWriter.write_tailored_cv_docx()`;
 - export persistence helper that writes both artefacts and creates `ArtifactRepository` rows;
-- database artefact paths remain relative, for example `applications/<application_id>/tailored_cv.pdf` and `applications/<application_id>/tailored_cv.docx`;
+- database artefact paths remain relative, for example `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`;
 - tests for exporters, artefact paths, artefact writer methods, and SQLite artefact persistence inside an explicit transaction.
 
 Not implemented in Stage 8B:

@@ -15,12 +15,13 @@ def persist_extracted_job_artifact(
     artifacts: ArtifactRepository,
     artifact_writer: ArtifactWriter,
     application_id: UUID,
+    artifact_dir_name: str,
     extracted_job: ExtractedJob,
 ) -> Artifact:
     """Persist an extracted job JSON artefact and register its relative path."""
 
     written_artifact = artifact_writer.write_extracted_job(
-        application_id=application_id,
+        artifact_dir_name=artifact_dir_name,
         extracted_job_data=extracted_job.model_dump(mode="json"),
     )
 

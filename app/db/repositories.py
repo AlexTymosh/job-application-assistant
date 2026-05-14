@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.artifacts.naming import build_application_artifact_dir_name
 from app.db.models import (
     Application,
     ApplicationEvent,
@@ -39,6 +40,14 @@ class ApplicationRepository:
         )
 
         self._session.add(application)
+        self._session.flush()
+
+        application.artifact_dir_name = build_application_artifact_dir_name(
+            created_at=application.created_at,
+            application_id=application.id,
+            company_name=application.company_name,
+            job_title=application.job_title,
+        )
         self._session.flush()
 
         return application

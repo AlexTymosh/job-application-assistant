@@ -91,3 +91,8 @@ future_integrations:
         "application_warnings",
         "alembic_version",
     }.issubset(set(inspector.get_table_names()))
+
+    application_columns = {
+        column["name"] for column in inspector.get_columns("applications")
+    }
+    assert "artifact_dir_name" in application_columns

@@ -23,27 +23,30 @@ def test_export_markdown_html_writes_files_and_database_rows(tmp_path: Path) -> 
     with session_factory() as session, session.begin():
         application = ApplicationRepository(session).create(profile_name="example")
         application_id = application.id
+        artifact_dir_name = application.artifact_dir_name
+        assert artifact_dir_name is not None
 
         result = export_markdown_html_artifacts(
             session=session,
             applications_dir=applications_dir,
             application_id=application_id,
+            artifact_dir_name=artifact_dir_name,
             tailored_cv_markdown=markdown,
             title="Jane Example CV",
         )
 
         assert result.markdown.relative_path == (
-            f"applications/{application_id}/tailored_cv.md"
+            f"applications/{artifact_dir_name}/tailored_cv.md"
         )
         assert (
             result.html.relative_path
-            == f"applications/{application_id}/tailored_cv.html"
+            == f"applications/{artifact_dir_name}/tailored_cv.html"
         )
         assert result.markdown_artifact.path == result.markdown.relative_path
         assert result.html_artifact.path == result.html.relative_path
 
-    markdown_path = applications_dir / str(application_id) / "tailored_cv.md"
-    html_path = applications_dir / str(application_id) / "tailored_cv.html"
+    markdown_path = applications_dir / artifact_dir_name / "tailored_cv.md"
+    html_path = applications_dir / artifact_dir_name / "tailored_cv.html"
 
     assert markdown_path.is_file()
     assert html_path.is_file()
@@ -64,8 +67,8 @@ def test_export_markdown_html_writes_files_and_database_rows(tmp_path: Path) -> 
         "tailored_cv_markdown",
     ]
     assert {artifact.path for artifact in artifacts} == {
-        f"applications/{application_id}/tailored_cv.md",
-        f"applications/{application_id}/tailored_cv.html",
+        f"applications/{artifact_dir_name}/tailored_cv.md",
+        f"applications/{artifact_dir_name}/tailored_cv.html",
     }
     for artifact in artifacts:
         assert str(tmp_path) not in artifact.path

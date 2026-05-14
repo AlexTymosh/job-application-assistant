@@ -61,6 +61,9 @@ def test_create_application_and_related_records(tmp_path: Path) -> None:
         assert len(stored_applications) == 1
         assert stored_applications[0].job_title == "Backend Developer"
         assert stored_applications[0].status == ApplicationStatus.DRAFT.value
+        assert stored_applications[0].artifact_dir_name is not None
+        assert "example-company" in stored_applications[0].artifact_dir_name
+        assert "backend-developer" in stored_applications[0].artifact_dir_name
 
 
 def test_update_application_status(tmp_path: Path) -> None:
