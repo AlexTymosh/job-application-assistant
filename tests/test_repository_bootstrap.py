@@ -36,7 +36,7 @@ REQUIRED_PROJECT_FILES = [
     "app/core/paths.py",
     "app/web/__init__.py",
     "app/web/routes.py",
-    "app/web/templates.py",
+    "app/web/templating.py",
     "app/web/templates/applications_new.html",
     "app/web/templates/applications_detail.html",
     "app/web/templates/review.html",

@@ -41,13 +41,12 @@ def slugify_artifact_part(value: str | None, fallback: str, max_length: int) -> 
     fallback_slug = _normalise_slug(fallback) or "unknown"
     raw_value = value.strip() if value is not None else ""
     slug = _normalise_slug(raw_value) or fallback_slug
-    slug = _avoid_reserved_windows_name(slug, fallback_slug)
-    slug = _truncate_slug(slug, max_length)
+    slug = _safe_length_limited_slug(slug, fallback_slug, max_length)
 
     if not slug:
-        slug = _truncate_slug(fallback_slug, max_length)
+        slug = _safe_length_limited_slug(fallback_slug, fallback_slug, max_length)
 
-    return _avoid_reserved_windows_name(slug, fallback_slug)
+    return slug
 
 
 def format_application_display_number(application_number: int) -> str:
@@ -124,6 +123,24 @@ def _avoid_reserved_windows_name(slug: str, fallback_slug: str) -> str:
     if replacement.lower() not in _WINDOWS_RESERVED_NAMES:
         return replacement
     return fallback_slug
+
+
+def _safe_length_limited_slug(slug: str, fallback_slug: str, max_length: int) -> str:
+    reserved_safe_slug = _avoid_reserved_windows_name(slug, fallback_slug)
+    truncated_slug = _truncate_slug(reserved_safe_slug, max_length)
+
+    if truncated_slug.lower() not in _WINDOWS_RESERVED_NAMES:
+        return truncated_slug
+
+    fallback = _truncate_slug(fallback_slug, max_length)
+    if fallback and fallback.lower() not in _WINDOWS_RESERVED_NAMES:
+        return fallback
+
+    safe_placeholder = "x"[:max_length]
+    if safe_placeholder and safe_placeholder.lower() not in _WINDOWS_RESERVED_NAMES:
+        return safe_placeholder
+
+    return "x"
 
 
 def _validate_application_number(application_number: int) -> None:

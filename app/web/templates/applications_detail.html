@@ -9,8 +9,6 @@
     <dt>Application number</dt>
     <dd>{{ application.display_number }}</dd>
 
-    <dt>Internal UUID</dt>
-    <dd><small><code>{{ application.id }}</code></small></dd>
 
     <dt>Profile</dt>
     <dd>{{ application.profile_name }}</dd>
@@ -30,6 +28,14 @@
     <dt>Job text hash</dt>
     <dd>{% if has_job_text_hash %}Present{% else %}Not available{% endif %}</dd>
   </dl>
+
+  <details>
+    <summary>Technical details</summary>
+    <dl>
+      <dt>Database UUID</dt>
+      <dd><small><code>{{ application.id }}</code></small></dd>
+    </dl>
+  </details>
 
   <section>
     <h2>Warnings</h2>

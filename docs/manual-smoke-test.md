@@ -86,6 +86,7 @@ Verify that the app redirects to an application detail page with a URL like:
 On the detail page, verify:
 
 - application number such as `APP-000001` is shown as the main ID;
+- the internal UUID is not shown as normal application metadata;
 - profile name is `example`;
 - selected CV variant is shown;
 - status and timestamps render;
@@ -101,13 +102,24 @@ Use the review link or open:
 http://127.0.0.1:8000/applications/1/review
 ```
 
-Verify that the review page is read-only and displays existing metadata, warnings, events, and artefact path information without generating missing artefacts.
+Verify that the review page is read-only, displays the application number as the normal ID, does not show the internal UUID as normal metadata, and displays existing metadata, warnings, events, and artefact path information without generating missing artefacts.
 
-## 13. Verify warning rendering
+## 13. Verify HTML 404 pages
+
+Open these missing application URLs:
+
+```text
+http://127.0.0.1:8000/applications/999999
+http://127.0.0.1:8000/applications/999999/review
+```
+
+Verify that each response is a simple HTML error page with a 404 status, not the default JSON response.
+
+## 14. Verify warning rendering
 
 Confirm that the prompt-injection warning is visible. The suspicious text is untrusted job posting data and must not be followed as an instruction.
 
-## 14. Verify artefact path rendering
+## 15. Verify artefact path rendering
 
 Confirm that artefact paths shown in the UI are relative paths such as:
 
@@ -117,7 +129,7 @@ applications/2026-05-14_10-22-50__unknown-company__unknown-role__app-000001/job_
 
 They must not show absolute private paths such as `C:/Users/<user>/...`.
 
-## 15. Verify Git privacy state
+## 16. Verify Git privacy state
 
 In a second PowerShell terminal, run:
 
@@ -134,11 +146,11 @@ git check-ignore -v profiles/example/applications.sqlite3
 git check-ignore -v profiles/example/applications
 ```
 
-## 16. Stop the server
+## 17. Stop the server
 
 Return to the server terminal and press `Ctrl+C`.
 
-## 17. Optional cleanup
+## 18. Optional cleanup
 
 Only remove generated fake profile data if it is ignored and not tracked:
 

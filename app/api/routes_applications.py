@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from urllib.parse import parse_qs
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -14,7 +14,7 @@ from app.core.paths import ProfilePaths
 from app.db.repositories import ApplicationRepository
 from app.jobs.input_models import JobInput
 from app.pipeline.intake import ApplicationIntakeService
-from app.web.templates import templates
+from app.web.templating import render_error_page, templates
 
 router = APIRouter(tags=["applications"])
 
@@ -110,7 +110,11 @@ async def application_detail(
     )
 
     if application is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        return render_error_page(
+            request=request,
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="Application not found.",
+        )
 
     return templates.TemplateResponse(
         request=request,

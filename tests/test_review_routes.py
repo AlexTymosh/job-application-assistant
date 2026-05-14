@@ -24,6 +24,9 @@ def test_review_page_displays_read_only_review_information(tmp_path: Path) -> No
     assert response.status_code == 200
     assert "Application Review" in response.text
     assert "APP-000001" in response.text
+    assert "Internal UUID" not in response.text
+    assert "Technical details" in response.text
+    assert "Database UUID" in response.text
     assert "read-only review surface" in response.text
     assert (
         "does not run extraction, tailoring, OpenAI calls, or exporters"
@@ -67,3 +70,14 @@ def test_review_page_links_existing_extracted_job_artifact(tmp_path: Path) -> No
     assert response.status_code == 200
     assert "extracted_job.json" in response.text
     assert str(tmp_path) not in response.text
+
+
+def test_get_unknown_review_returns_404_html(tmp_path: Path) -> None:
+    client = build_test_client(tmp_path)
+
+    response = client.get("/applications/999999/review")
+
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("text/html")
+    assert "Error" in response.text
+    assert "Application not found." in response.text

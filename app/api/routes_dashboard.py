@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_session
 from app.core.config import ProjectConfig
 from app.db.repositories import ApplicationRepository
-from app.web.templates import templates
+from app.web.templating import templates
 
 router = APIRouter(tags=["dashboard"])
 

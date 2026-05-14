@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from app.core.config import ProjectConfig
-from app.web.templates import templates
+from app.web.templating import templates
 
 router = APIRouter(tags=["web"])
 

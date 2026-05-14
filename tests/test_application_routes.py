@@ -70,6 +70,9 @@ def test_post_valid_manual_text_creates_application_and_redirects(
     assert detail_response.status_code == 200
     assert "Application Detail" in detail_response.text
     assert "APP-000001" in detail_response.text
+    assert "Internal UUID" not in detail_response.text
+    assert "Technical details" in detail_response.text
+    assert "Database UUID" in detail_response.text
     assert "backend_developer" in detail_response.text
     assert "https://example.test/jobs/backend" in detail_response.text
     assert "Present" in detail_response.text
@@ -124,9 +127,12 @@ def test_get_application_detail_displays_warnings_events_and_artifacts(
     assert str(tmp_path) not in response.text
 
 
-def test_get_unknown_application_returns_404(tmp_path: Path) -> None:
+def test_get_unknown_application_returns_404_html(tmp_path: Path) -> None:
     client = build_test_client(tmp_path)
 
-    response = client.get("/applications/999")
+    response = client.get("/applications/999999")
 
     assert response.status_code == 404
+    assert response.headers["content-type"].startswith("text/html")
+    assert "Error" in response.text
+    assert "Application not found." in response.text
