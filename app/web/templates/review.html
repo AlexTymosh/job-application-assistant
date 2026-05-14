@@ -104,12 +104,21 @@
         {% endif %}
       </dd>
 
-      <dt>Tailored CV</dt>
+      <dt>Changed CV downloads</dt>
       <dd>
-        {% if tailored_cv_artifact %}
-          Available at <code>{{ tailored_cv_artifact.path }}</code>
+        {% if changed_cv_artifacts %}
+          <ul>
+            {% for artifact in changed_cv_artifacts %}
+              <li>
+                <strong>{{ artifact.artifact_type }}</strong>:
+                <a href="/applications/{{ application.application_number }}/artifacts/{{ artifact.id }}/download">
+                  Download {{ artifact.path.split('/')[-1] }}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
         {% else %}
-          Not available yet.
+          Not available yet. Run the local pipeline first.
         {% endif %}
       </dd>
 

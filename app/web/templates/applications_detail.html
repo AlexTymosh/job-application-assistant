@@ -59,6 +59,26 @@
     </section>
   {% endif %}
 
+
+  <section>
+    <h2>Changed CV downloads</h2>
+    {% if changed_cv_artifacts %}
+      <ul>
+        {% for artifact in changed_cv_artifacts %}
+          <li>
+            <strong>{{ artifact.artifact_type }}</strong>:
+            <a href="/applications/{{ application.application_number }}/artifacts/{{ artifact.id }}/download">
+              Download {{ artifact.path.split('/')[-1] }}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No changed CV artefacts available yet. Run the local pipeline first.</p>
+    {% endif %}
+  </section>
+
+
   <section>
     <h2>Warnings</h2>
     {% if warnings %}
