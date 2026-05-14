@@ -12,6 +12,8 @@ from app.api.routes_review import router as review_router
 from app.api.routes_setup import router as setup_router
 from app.core.config import ProjectConfig
 from app.db.session import create_session_factory, create_sqlite_engine
+from app.settings.init import initialise_app_settings_storage
+from app.settings.service import load_effective_project_config
 from app.setup.init import initialise_setup_state
 from app.setup.service import SetupStatusService
 from app.storage.bootstrap import bootstrap_app_data_dirs
@@ -36,14 +38,28 @@ def create_app(config: ProjectConfig | None = None) -> FastAPI:
     )
 
     app_data_paths = bootstrap_app_data_dirs()
+    app_settings_service = None
+    try:
+        app_settings_service = initialise_app_settings_storage(app_data_paths)
+    except Exception:
+        app_settings_service = None
+
+    startup_config = config
+    if startup_config is None and app_settings_service is not None:
+        try:
+            startup_config = load_effective_project_config(app_data_paths)
+        except Exception:
+            startup_config = None
+
     setup_initialisation = initialise_setup_state(
         app_data_paths=app_data_paths,
-        config=config,
+        config=startup_config,
     )
 
     app.state.app_data_paths = app_data_paths
     app.state.setup_status = setup_initialisation.status
     app.state.explicit_config = config
+    app.state.app_settings_service = app_settings_service
     app.state.setup_status_service = SetupStatusService(app_data_paths=app_data_paths)
 
     if (

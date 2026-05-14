@@ -54,6 +54,7 @@ def test_setup_returns_200_and_renders_setup_status(
     assert response.status_code == 200
     assert "Setup checks" in response.text
     assert "Profile config" in response.text
+    assert "App settings database" in response.text
 
 
 def test_incomplete_setup_redirects_home_to_setup(
@@ -121,3 +122,18 @@ def test_complete_setup_allows_home_and_dashboard_to_render(
     assert "Active profile" in home_response.text
     assert dashboard_response.status_code == 200
     assert "Dashboard" in dashboard_response.text
+
+
+def test_fresh_app_data_initialises_app_settings_database(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    app_data_dir = tmp_path / "fresh-app-data"
+    monkeypatch.setenv("APP_DATA_DIR", str(app_data_dir))
+    monkeypatch.setenv("PROFILE_NAME", "missing")
+    monkeypatch.setenv("PROFILE_DATA_DIR", str(tmp_path / "missing-profile"))
+
+    client = TestClient(create_app())
+
+    assert client.get("/health/live").status_code == 200
+    assert (app_data_dir / "app.sqlite3").is_file()

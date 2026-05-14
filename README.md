@@ -174,9 +174,17 @@ logs/
 backups/
 ```
 
-This is intentionally only the folder bootstrap foundation. It does not implement the setup wizard, settings UI, keyring secret storage, managed profiles, managed CV storage, database creation, or profile import yet. Existing `.env`, `PROFILE_NAME`, and `PROFILE_DATA_DIR` file-based profile behaviour remains compatible.
+The app data folder now also owns the first app-managed settings database:
 
-If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, profile config, the active file-based profile, SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
+```text
+app.sqlite3
+```
+
+The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. Raw API keys are not stored in SQLite; OpenAI mode still requires the runtime `OPENAI_API_KEY` environment variable until OS keyring support is added. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, and Markdown CV behaviour remains compatible.
+
+This still does not implement the setup wizard, settings UI, keyring secret storage, managed profiles, managed CV storage, or profile import yet.
+
+If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
 
 ---
 

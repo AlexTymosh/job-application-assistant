@@ -4,9 +4,11 @@ from dataclasses import dataclass
 
 import yaml
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.config import ProjectConfig, load_profile_config
+from app.core.config import ProjectConfig
 from app.core.paths import ProfilePaths, build_profile_paths
+from app.settings.service import load_effective_project_config
 from app.setup.checks import SetupStatus
 from app.setup.service import SetupStatusService
 from app.storage.app_dirs import AppDataPaths
@@ -16,6 +18,7 @@ _EXPECTED_CONFIG_EXCEPTIONS = (
     ValueError,
     ValidationError,
     OSError,
+    SQLAlchemyError,
     yaml.YAMLError,
 )
 
@@ -34,7 +37,7 @@ def initialise_setup_state(
 ) -> SetupInitialisation:
     service = SetupStatusService(app_data_paths=app_data_paths)
     status = service.build_status(config=config)
-    resolved_config = _load_available_config(config)
+    resolved_config = _load_available_config(config, app_data_paths=app_data_paths)
     profile_paths = _build_available_profile_paths(resolved_config)
 
     return SetupInitialisation(
@@ -44,12 +47,16 @@ def initialise_setup_state(
     )
 
 
-def _load_available_config(config: ProjectConfig | None) -> ProjectConfig | None:
+def _load_available_config(
+    config: ProjectConfig | None,
+    *,
+    app_data_paths: AppDataPaths,
+) -> ProjectConfig | None:
     if config is not None:
         return config
 
     try:
-        return load_profile_config()
+        return load_effective_project_config(app_data_paths)
     except _EXPECTED_CONFIG_EXCEPTIONS:
         return None
 
