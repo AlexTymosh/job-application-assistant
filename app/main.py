@@ -18,6 +18,7 @@ from app.api.routes_setup import router as setup_router
 from app.core.config import ProjectConfig
 from app.db.session import create_session_factory, create_sqlite_engine
 from app.runtime import refresh_runtime_state
+from app.secrets.openai_key import OpenAISecretService, build_openai_secret_service
 from app.settings.init import initialise_app_settings_storage
 from app.settings.service import load_effective_project_config
 from app.setup.init import initialise_setup_state
@@ -48,7 +49,11 @@ _EXPECTED_STARTUP_SETUP_EXCEPTIONS = (
 )
 
 
-def create_app(config: ProjectConfig | None = None) -> FastAPI:
+def create_app(
+    config: ProjectConfig | None = None,
+    *,
+    openai_secret_service: OpenAISecretService | None = None,
+) -> FastAPI:
     app = FastAPI(
         title="Local Job Application Assistant",
         version="0.1.0",
@@ -70,16 +75,24 @@ def create_app(config: ProjectConfig | None = None) -> FastAPI:
         except _EXPECTED_STARTUP_SETUP_EXCEPTIONS:
             startup_config = None
 
+    if openai_secret_service is None:
+        openai_secret_service = build_openai_secret_service()
+
     setup_initialisation = initialise_setup_state(
         app_data_paths=app_data_paths,
         config=startup_config,
+        openai_secret_service=openai_secret_service,
     )
 
     app.state.app_data_paths = app_data_paths
     app.state.setup_status = setup_initialisation.status
     app.state.explicit_config = config
     app.state.app_settings_service = app_settings_service
-    app.state.setup_status_service = SetupStatusService(app_data_paths=app_data_paths)
+    app.state.openai_secret_service = openai_secret_service
+    app.state.setup_status_service = SetupStatusService(
+        app_data_paths=app_data_paths,
+        openai_secret_service=openai_secret_service,
+    )
 
     if (
         setup_initialisation.config is not None

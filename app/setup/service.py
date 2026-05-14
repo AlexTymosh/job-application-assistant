@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import os
 import sqlite3
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -21,6 +21,11 @@ from app.cv.selector import select_default_cv_variant
 # Import models so SQLAlchemy metadata is populated for readiness checks.
 from app.db import models  # noqa: F401
 from app.db.base import Base
+from app.secrets.openai_key import (
+    OpenAISecretService,
+    SecretStorageError,
+    get_environment_openai_api_key,
+)
 from app.settings.init import initialise_app_settings_storage
 from app.settings.migrations import is_app_settings_schema_current
 from app.settings.service import load_effective_project_config
@@ -41,8 +46,14 @@ _EXPECTED_SETUP_EXCEPTIONS = (
 class SetupStatusService:
     """Evaluate local setup readiness without creating private profile data."""
 
-    def __init__(self, *, app_data_paths: AppDataPaths) -> None:
+    def __init__(
+        self,
+        *,
+        app_data_paths: AppDataPaths,
+        openai_secret_service: OpenAISecretService | None = None,
+    ) -> None:
         self._app_data_paths = app_data_paths
+        self._openai_secret_service = openai_secret_service
 
     def build_status(
         self,
@@ -307,12 +318,27 @@ class SetupStatusService:
                 action_hint="Set llm.extraction_mode to fake or openai.",
             )
 
+        key_status = _OpenAIKeyStatus(
+            has_effective_key=False,
+            message="Fake extraction mode does not require an OpenAI API key.",
+        )
+        if config.llm.extraction_mode.value == "openai":
+            key_status = self._openai_key_status()
+
         try:
-            validate_llm_runtime_config(config)
+            validate_llm_runtime_config(
+                config,
+                has_openai_api_key=key_status.has_effective_key,
+            )
         except _EXPECTED_SETUP_EXCEPTIONS as exc:
-            hint = "Use fake mode, or set llm.model_extract and OPENAI_API_KEY."
-            if config.llm.model_extract and not _has_openai_api_key():
-                hint = "Set OPENAI_API_KEY, or use fake extraction mode."
+            hint = (
+                "Use fake mode, or configure llm.model_extract and an OpenAI API key."
+            )
+            if config.llm.model_extract and not key_status.has_effective_key:
+                hint = (
+                    "Store an OpenAI API key in Settings, set OPENAI_API_KEY as a "
+                    "developer fallback, or use fake extraction mode."
+                )
             return SetupCheck(
                 code="llm_mode",
                 label="LLM mode",
@@ -325,7 +351,39 @@ class SetupStatusService:
             code="llm_mode",
             label="LLM mode",
             ok=True,
-            message="LLM extraction mode is valid for this runtime.",
+            message=(
+                f"LLM extraction mode is valid for this runtime. {key_status.message}"
+            ),
+        )
+
+    def _openai_key_status(self) -> _OpenAIKeyStatus:
+        if self._openai_secret_service is not None:
+            try:
+                if self._openai_secret_service.is_configured():
+                    return _OpenAIKeyStatus(
+                        has_effective_key=True,
+                        message="OpenAI API key configured in keyring.",
+                    )
+            except SecretStorageError as exc:
+                if get_environment_openai_api_key() is not None:
+                    return _OpenAIKeyStatus(
+                        has_effective_key=True,
+                        message="OpenAI API key available from environment fallback.",
+                    )
+                return _OpenAIKeyStatus(
+                    has_effective_key=False,
+                    message=str(exc),
+                )
+
+        if get_environment_openai_api_key() is not None:
+            return _OpenAIKeyStatus(
+                has_effective_key=True,
+                message="OpenAI API key available from environment fallback.",
+            )
+
+        return _OpenAIKeyStatus(
+            has_effective_key=False,
+            message="OpenAI API key not configured.",
         )
 
     def _check_cv_source(
@@ -391,6 +449,12 @@ class SetupStatusService:
         )
 
 
+@dataclass(frozen=True)
+class _OpenAIKeyStatus:
+    has_effective_key: bool
+    message: str
+
+
 def _check_expected[T](
     *,
     code: str,
@@ -440,8 +504,3 @@ def _read_sqlite_table_names(database_file: Path) -> set[str]:
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         ).fetchall()
     return {str(row[0]) for row in rows}
-
-
-def _has_openai_api_key() -> bool:
-    api_key = os.getenv("OPENAI_API_KEY")
-    return api_key is not None and bool(api_key.strip())

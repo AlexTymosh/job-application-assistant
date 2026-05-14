@@ -8,13 +8,38 @@ from pathlib import Path
 
 from app.core.config import ProjectConfig, load_profile_config
 from app.db.session import create_all_tables, create_sqlite_engine
+from app.secrets.openai_key import OpenAISecretService
 from app.settings.migrations import migrate_app_settings_database
 from app.setup.service import SetupStatusService
 from app.storage.app_dirs import build_app_data_paths, resolve_app_data_paths
 from app.storage.bootstrap import bootstrap_app_data_dirs
 
 
-def build_service(tmp_path: Path) -> SetupStatusService:
+class FakeKeyring:
+    def __init__(self) -> None:
+        self.value: str | None = None
+
+    def get_password(self, service_name: str, username: str) -> str | None:
+        return self.value
+
+    def set_password(self, service_name: str, username: str, password: str) -> None:
+        self.value = password
+
+    def delete_password(self, service_name: str, username: str) -> None:
+        self.value = None
+
+
+def build_secret_service(api_key: str | None = None) -> OpenAISecretService:
+    keyring = FakeKeyring()
+    keyring.value = api_key
+    return OpenAISecretService(keyring_backend=keyring)
+
+
+def build_service(
+    tmp_path: Path,
+    *,
+    openai_api_key: str | None = None,
+) -> SetupStatusService:
     app_data_root = tmp_path / "app-data"
     app_data_paths = build_app_data_paths(app_data_root)
     app_data_paths.root.mkdir(parents=True)
@@ -22,7 +47,10 @@ def build_service(tmp_path: Path) -> SetupStatusService:
     app_data_paths.logs_dir.mkdir()
     app_data_paths.backups_dir.mkdir()
     migrate_app_settings_database(app_data_paths.database_file)
-    return SetupStatusService(app_data_paths=app_data_paths)
+    return SetupStatusService(
+        app_data_paths=app_data_paths,
+        openai_secret_service=build_secret_service(openai_api_key),
+    )
 
 
 def copy_example_profile(tmp_path: Path) -> tuple[Path, ProjectConfig]:
@@ -104,6 +132,7 @@ from pathlib import Path
 import sys
 
 from app.core.config import ProjectConfig, load_profile_config
+from app.secrets.openai_key import OpenAISecretService
 from app.settings.migrations import migrate_app_settings_database
 from app.setup.service import SetupStatusService
 from app.storage.app_dirs import build_app_data_paths
@@ -175,6 +204,86 @@ def test_openai_mode_without_api_key_or_model_makes_setup_incomplete(
 
     assert status.is_complete is False
     assert check_by_code(status, "llm_mode").ok is False
+
+
+def _openai_config(
+    config: ProjectConfig, *, model_extract: str | None
+) -> ProjectConfig:
+    config_data = config.model_dump()
+    config_data["llm"] = config_data["llm"] | {
+        "extraction_mode": "openai",
+        "model_extract": model_extract,
+    }
+    return ProjectConfig.model_validate(config_data)
+
+
+def test_openai_mode_setup_passes_with_keyring_key_and_no_env_key(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _, config = copy_example_profile(tmp_path)
+    create_profile_database(config)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    service = build_service(tmp_path, openai_api_key="sk-test-keyring")
+
+    status = service.build_status(
+        config=_openai_config(config, model_extract="gpt-test")
+    )
+
+    assert status.is_complete is True
+    assert check_by_code(status, "llm_mode").ok is True
+    assert "keyring" in check_by_code(status, "llm_mode").message
+
+
+def test_openai_mode_setup_passes_with_environment_fallback_only(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _, config = copy_example_profile(tmp_path)
+    create_profile_database(config)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-env")
+    service = build_service(tmp_path)
+
+    status = service.build_status(
+        config=_openai_config(config, model_extract="gpt-test")
+    )
+
+    assert status.is_complete is True
+    assert check_by_code(status, "llm_mode").ok is True
+    assert "environment fallback" in check_by_code(status, "llm_mode").message
+
+
+def test_openai_mode_setup_fails_with_model_but_no_key(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _, config = copy_example_profile(tmp_path)
+    create_profile_database(config)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    service = build_service(tmp_path)
+
+    status = service.build_status(
+        config=_openai_config(config, model_extract="gpt-test")
+    )
+
+    assert status.is_complete is False
+    assert check_by_code(status, "llm_mode").ok is False
+    assert "OS keyring or OPENAI_API_KEY" in check_by_code(status, "llm_mode").message
+
+
+def test_fake_mode_setup_does_not_require_openai_key(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _, config = copy_example_profile(tmp_path)
+    create_profile_database(config)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    service = build_service(tmp_path)
+
+    status = service.build_status(config=config)
+
+    assert status.is_complete is True
+    assert check_by_code(status, "llm_mode").ok is True
 
 
 def test_setup_checks_do_not_create_private_profile_files_or_database_tables(

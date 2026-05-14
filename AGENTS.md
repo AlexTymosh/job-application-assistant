@@ -160,7 +160,7 @@ Future managed storage should default to a user-visible application folder, for 
 Documents/JobApplicationAssistant/
 ```
 
-OpenAI API keys and other secrets should be stored through OS keyring. SQLite may store only non-secret metadata such as whether a secret is configured. Settings UI code must never store raw secrets in SQLite.
+OpenAI API keys and other secrets must be stored through the `app/secrets/` boundary backed by OS keyring. Routes, templates, and `AppSettingsRepository` must never handle raw secret storage directly. SQLite may store only non-secret metadata such as whether a secret is configured. Settings UI code must never store raw secrets in SQLite or display raw secrets back to the user. Tests must inject or mock keyring backends and must never touch the real OS keyring.
 
 ---
 
@@ -208,6 +208,7 @@ Rules:
 - fake/demo extraction mode must work without an API key;
 - real OpenAI mode must fail clearly when required model/API key settings are missing;
 - tests must use fake or mocked clients;
+- tests that cover keyring behaviour must inject fake keyring backends and never touch the real OS keyring;
 - do not call OpenAI from tests;
 - do not call OpenAI directly from FastAPI routes;
 - use structured schemas for extraction and other machine-readable LLM outputs;

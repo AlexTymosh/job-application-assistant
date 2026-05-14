@@ -2,7 +2,7 @@
 
 {% block content %}
   <h1>Settings</h1>
-  <p>Manage non-secret local application settings stored in the app data database.</p>
+  <p>Manage local application settings and safe OpenAI API key storage.</p>
 
   {% if error_message %}
     <section aria-labelledby="settings-error-heading" role="alert">
@@ -14,7 +14,7 @@
   <section aria-labelledby="settings-status-heading">
     <h2 id="settings-status-heading">Current status</h2>
     <p>Effective LLM extraction mode: <strong>{{ settings.llm_extraction_mode.value if settings.llm_extraction_mode else (effective_config.llm.extraction_mode.value if effective_config else "fake") }}</strong></p>
-    <p>OpenAI API keys are not edited on this page yet. Raw API keys must not be entered here and are not displayed.</p>
+    <p>OpenAI API key status: <strong>{{ openai_key_status }}</strong></p>
     {% if llm_check and not llm_check.ok %}
       <p role="alert"><strong>OpenAI/runtime warning:</strong> {{ llm_check.message }} {{ llm_check.action_hint or "" }}</p>
     {% endif %}
@@ -70,6 +70,18 @@
       <label for="default-profile-data-dir">Default profile data directory</label>
       <input id="default-profile-data-dir" name="profiles.default_profile_data_dir" type="text" value="{{ submitted_values.get("profiles.default_profile_data_dir", settings.default_profile_data_dir.as_posix() if settings.default_profile_data_dir else "") }}">
       <p>The path is saved without checking it here. Setup reports whether the selected profile is usable.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>OpenAI API key</legend>
+      <p>Raw OpenAI API keys are stored in the OS keyring, not SQLite. This page never displays the key and does not prefill this field.</p>
+      <label for="openai-api-key">New OpenAI API key</label>
+      <input id="openai-api-key" name="openai_api_key" type="password" value="" autocomplete="new-password">
+      <label>
+        <input type="checkbox" name="clear_openai_api_key" value="true">
+        Clear the OpenAI API key stored in the OS keyring
+      </label>
+      <p>Leave the password field blank and the clear box unchecked to keep the existing key status unchanged.</p>
     </fieldset>
 
     <button type="submit">Save settings</button>

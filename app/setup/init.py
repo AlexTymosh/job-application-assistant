@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import ProjectConfig
 from app.core.paths import ProfilePaths, build_profile_paths
+from app.secrets.openai_key import OpenAISecretService
 from app.settings.service import load_effective_project_config
 from app.setup.checks import SetupStatus
 from app.setup.service import SetupStatusService
@@ -36,8 +37,12 @@ def initialise_setup_state(
     *,
     app_data_paths: AppDataPaths,
     config: ProjectConfig | None = None,
+    openai_secret_service: OpenAISecretService | None = None,
 ) -> SetupInitialisation:
-    service = SetupStatusService(app_data_paths=app_data_paths)
+    service = SetupStatusService(
+        app_data_paths=app_data_paths,
+        openai_secret_service=openai_secret_service,
+    )
     status = service.build_status(config=config)
     resolved_config = _load_available_config(config, app_data_paths=app_data_paths)
     profile_paths = _build_available_profile_paths(resolved_config)

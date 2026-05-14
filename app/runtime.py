@@ -15,6 +15,7 @@ def refresh_runtime_state(app: FastAPI, *, config: ProjectConfig | None = None) 
     setup_initialisation = initialise_setup_state(
         app_data_paths=app.state.app_data_paths,
         config=config,
+        openai_secret_service=app.state.openai_secret_service,
     )
     app.state.setup_status = setup_initialisation.status
 
