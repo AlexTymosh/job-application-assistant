@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,11 +36,9 @@ def resolve_default_app_data_root() -> Path:
 
 
 def resolve_effective_app_data_root() -> Path:
-    configured_root = os.getenv(APP_DATA_DIR_ENV_VAR)
-    if configured_root is not None and configured_root.strip():
-        return Path(configured_root).expanduser()
+    from app.storage.location import get_app_data_location_status
 
-    return resolve_default_app_data_root()
+    return get_app_data_location_status().paths.root
 
 
 def resolve_app_data_paths() -> AppDataPaths:
