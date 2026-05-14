@@ -3,11 +3,14 @@
 {% block content %}
   <h1>Application Detail</h1>
 
-  <p><a href="/applications/{{ application.id }}/review">Open review page</a></p>
+  <p><a href="/applications/{{ application.application_number }}/review">Open review page</a></p>
 
   <dl>
-    <dt>Application ID</dt>
-    <dd>{{ application.id }}</dd>
+    <dt>Application number</dt>
+    <dd>{{ application.display_number }}</dd>
+
+    <dt>Internal UUID</dt>
+    <dd><small><code>{{ application.id }}</code></small></dd>
 
     <dt>Profile</dt>
     <dd>{{ application.profile_name }}</dd>

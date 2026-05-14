@@ -6,7 +6,7 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Artifact
+from app.db.models import Application, Artifact
 from app.db.session import create_all_tables, create_sqlite_engine
 
 
@@ -28,6 +28,7 @@ def test_create_all_tables(tmp_path: Path) -> None:
         column["name"] for column in inspector.get_columns("applications")
     }
     assert "artifact_dir_name" in application_columns
+    assert "application_number" in application_columns
 
 
 def test_sqlite_foreign_keys_are_enforced(tmp_path: Path) -> None:
@@ -42,6 +43,28 @@ def test_sqlite_foreign_keys_are_enforced(tmp_path: Path) -> None:
                 artifact_type="job_raw",
                 path="missing/application/job_raw.txt",
             )
+        )
+
+        with pytest.raises(IntegrityError):
+            session.commit()
+
+
+def test_application_display_number_formats_public_identifier() -> None:
+    assert Application(application_number=1).display_number == "APP-000001"
+    assert Application(application_number=None).display_number == "APP-unknown"
+
+
+def test_profile_application_number_unique_index_is_enforced(tmp_path: Path) -> None:
+    database_file = tmp_path / "applications.sqlite3"
+    engine = create_sqlite_engine(database_file)
+    create_all_tables(engine)
+
+    with Session(engine) as session:
+        session.add_all(
+            [
+                Application(profile_name="example", application_number=1),
+                Application(profile_name="example", application_number=1),
+            ]
         )
 
         with pytest.raises(IntegrityError):

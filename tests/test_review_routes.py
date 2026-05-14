@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
 
-from app.db.repositories import ArtifactRepository
+from app.db.repositories import ApplicationRepository, ArtifactRepository
 from tests.test_application_routes import build_test_client, long_job_text
 
 
@@ -18,12 +17,13 @@ def test_review_page_displays_read_only_review_information(tmp_path: Path) -> No
         },
         follow_redirects=False,
     )
-    application_id = create_response.headers["location"].rsplit("/", maxsplit=1)[-1]
+    assert create_response.headers["location"] == "/applications/1"
 
-    response = client.get(f"/applications/{application_id}/review")
+    response = client.get("/applications/1/review")
 
     assert response.status_code == 200
     assert "Application Review" in response.text
+    assert "APP-000001" in response.text
     assert "read-only review surface" in response.text
     assert (
         "does not run extraction, tailoring, OpenAI calls, or exporters"
@@ -46,17 +46,23 @@ def test_review_page_links_existing_extracted_job_artifact(tmp_path: Path) -> No
         },
         follow_redirects=False,
     )
-    application_id = create_response.headers["location"].rsplit("/", maxsplit=1)[-1]
+    assert create_response.headers["location"] == "/applications/1"
 
     with client.app.state.session_factory() as session:
+        application = ApplicationRepository(session).get_by_number(
+            profile_name="example",
+            application_number=1,
+        )
+        assert application is not None
+
         ArtifactRepository(session).create(
-            application_id=UUID(application_id),
+            application_id=application.id,
             artifact_type="extracted_job",
-            path=f"applications/{application_id}/extracted_job.json",
+            path=f"applications/{application.artifact_dir_name}/extracted_job.json",
         )
         session.commit()
 
-    response = client.get(f"/applications/{application_id}/review")
+    response = client.get("/applications/1/review")
 
     assert response.status_code == 200
     assert "extracted_job.json" in response.text

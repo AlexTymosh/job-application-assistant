@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
 
-from app.db.repositories import ApplicationWarningRepository, ArtifactRepository
+from app.db.repositories import (
+    ApplicationRepository,
+    ApplicationWarningRepository,
+    ArtifactRepository,
+)
 from tests.test_application_routes import build_test_client, long_job_text
 
 
@@ -28,18 +31,24 @@ def test_dashboard_lists_applications_counts_and_links(tmp_path: Path) -> None:
         },
         follow_redirects=False,
     )
-    application_id = create_response.headers["location"].rsplit("/", maxsplit=1)[-1]
+    assert create_response.headers["location"] == "/applications/1"
 
     with client.app.state.session_factory() as session:
+        application = ApplicationRepository(session).get_by_number(
+            profile_name="example",
+            application_number=1,
+        )
+        assert application is not None
+
         ApplicationWarningRepository(session).create(
-            application_id=UUID(application_id),
+            application_id=application.id,
             code="manual_review",
             message="Manual review requested.",
         )
         ArtifactRepository(session).create(
-            application_id=UUID(application_id),
+            application_id=application.id,
             artifact_type="extracted_job",
-            path=f"applications/{application_id}/extracted_job.json",
+            path=f"applications/{application.artifact_dir_name}/extracted_job.json",
         )
         session.commit()
 
@@ -48,8 +57,9 @@ def test_dashboard_lists_applications_counts_and_links(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert "backend_developer" in response.text
     assert "draft" in response.text
-    assert f'href="/applications/{application_id}"' in response.text
-    assert f'href="/applications/{application_id}/review"' in response.text
+    assert "APP-000001" in response.text
+    assert 'href="/applications/1"' in response.text
+    assert 'href="/applications/1/review"' in response.text
     assert ">1</td>" in response.text
     assert ">2</td>" in response.text
     assert str(tmp_path) not in response.text

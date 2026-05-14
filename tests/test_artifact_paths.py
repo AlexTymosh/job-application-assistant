@@ -14,7 +14,7 @@ from app.artifacts.paths import (
     build_tailored_cv_pdf_relative_path,
 )
 
-ARTIFACT_DIR_NAME = "2026-05-14_09-26-01__unknown-company__unknown-role__22222222"
+ARTIFACT_DIR_NAME = "2026-05-14_09-26-01__unknown-company__unknown-role__app-000001"
 
 
 def test_application_artifact_dir_is_built_from_applications_dir() -> None:

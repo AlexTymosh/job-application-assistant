@@ -4,10 +4,13 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.artifacts.naming import MAX_ARTIFACT_DIR_NAME_LENGTH
+from app.artifacts.naming import (
+    MAX_ARTIFACT_DIR_NAME_LENGTH,
+    format_application_display_number,
+)
 from app.db.base import Base, TimestampMixin, UuidPrimaryKeyMixin
 
 
@@ -40,8 +43,20 @@ class WarningLevel(StrEnum):
 
 class Application(Base, UuidPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "applications"
+    __table_args__ = (
+        Index(
+            "ix_applications_profile_name_application_number",
+            "profile_name",
+            "application_number",
+            unique=True,
+        ),
+    )
 
     profile_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    application_number: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
     status: Mapped[str] = mapped_column(
         String(50),
         default=ApplicationStatus.DRAFT.value,
@@ -58,7 +73,6 @@ class Application(Base, UuidPrimaryKeyMixin, TimestampMixin):
     artifact_dir_name: Mapped[str | None] = mapped_column(
         String(MAX_ARTIFACT_DIR_NAME_LENGTH),
         nullable=True,
-        unique=True,
         index=True,
     )
 
@@ -77,6 +91,12 @@ class Application(Base, UuidPrimaryKeyMixin, TimestampMixin):
         back_populates="application",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def display_number(self) -> str:
+        if self.application_number is None:
+            return "APP-unknown"
+        return format_application_display_number(self.application_number)
 
 
 class Artifact(Base, UuidPrimaryKeyMixin, TimestampMixin):

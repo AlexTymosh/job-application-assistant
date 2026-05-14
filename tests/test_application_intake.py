@@ -78,7 +78,9 @@ def test_application_intake_creates_application_artifact_event_and_warnings(
         assert application.artifact_dir_name is not None
         assert "unknown-company" in application.artifact_dir_name
         assert "unknown-role" in application.artifact_dir_name
-        assert application_id.hex[:8] in application.artifact_dir_name
+        assert application.application_number == 1
+        assert "app-000001" in application.artifact_dir_name
+        assert application_id.hex not in application.artifact_dir_name
 
         artifact = session.scalars(
             select(Artifact).where(Artifact.application_id == application_id)
@@ -220,7 +222,9 @@ def test_application_intake_clean_input_has_no_warnings_and_safe_artifact_path(
         assert application.artifact_dir_name is not None
         assert "unknown-company" in application.artifact_dir_name
         assert "unknown-role" in application.artifact_dir_name
-        assert application_id.hex[:8] in application.artifact_dir_name
+        assert application.application_number == 1
+        assert "app-000001" in application.artifact_dir_name
+        assert application_id.hex not in application.artifact_dir_name
         assert (
             artifact.path == f"applications/{application.artifact_dir_name}/job_raw.txt"
         )

@@ -8,8 +8,11 @@
   <section>
     <h2>Application metadata</h2>
     <dl>
-      <dt>Application ID</dt>
-      <dd>{{ application.id }}</dd>
+      <dt>Application number</dt>
+      <dd>{{ application.display_number }}</dd>
+
+      <dt>Internal UUID</dt>
+      <dd><small><code>{{ application.id }}</code></small></dd>
 
       <dt>Profile</dt>
       <dd>{{ application.profile_name }}</dd>

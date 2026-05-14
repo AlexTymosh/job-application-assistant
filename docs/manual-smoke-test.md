@@ -26,7 +26,7 @@ If this fails because dependency download is blocked, complete the smoke test la
 ## 4. Apply database migrations
 
 ```powershell
-uv run alembic upgrade head
+uv run --env-file .env -- alembic upgrade head
 ```
 
 This may create `profiles/example/applications.sqlite3`. The file is generated local data and should be ignored by Git.
@@ -34,7 +34,7 @@ This may create `profiles/example/applications.sqlite3`. The file is generated l
 ## 5. Start the app
 
 ```powershell
-uv run uvicorn app.main:app --reload
+uv run --env-file .env -- uvicorn app.main:app --reload
 ```
 
 Leave this terminal running until the smoke test is complete.
@@ -78,13 +78,14 @@ Submit the form.
 Verify that the app redirects to an application detail page with a URL like:
 
 ```text
-/applications/<application_id>
+/applications/1
 ```
 
 ## 11. Open the application detail page
 
 On the detail page, verify:
 
+- application number such as `APP-000001` is shown as the main ID;
 - profile name is `example`;
 - selected CV variant is shown;
 - status and timestamps render;
@@ -97,7 +98,7 @@ On the detail page, verify:
 Use the review link or open:
 
 ```text
-http://127.0.0.1:8000/applications/<application_id>/review
+http://127.0.0.1:8000/applications/1/review
 ```
 
 Verify that the review page is read-only and displays existing metadata, warnings, events, and artefact path information without generating missing artefacts.
@@ -111,7 +112,7 @@ Confirm that the prompt-injection warning is visible. The suspicious text is unt
 Confirm that artefact paths shown in the UI are relative paths such as:
 
 ```text
-applications/<application_id>/job_raw.txt
+applications/2026-05-14_10-22-50__unknown-company__unknown-role__app-000001/job_raw.txt
 ```
 
 They must not show absolute private paths such as `C:/Users/<user>/...`.

@@ -76,7 +76,9 @@ def test_job_input_service_creates_application_raw_text_artifact_and_event(
         assert stored_application.artifact_dir_name is not None
         assert "unknown-company" in stored_application.artifact_dir_name
         assert "unknown-role" in stored_application.artifact_dir_name
-        assert application_id.hex[:8] in stored_application.artifact_dir_name
+        assert stored_application.application_number == 1
+        assert "app-000001" in stored_application.artifact_dir_name
+        assert application_id.hex not in stored_application.artifact_dir_name
 
         artifact = session.scalars(select(Artifact)).one()
 

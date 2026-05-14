@@ -7,6 +7,7 @@
     <table>
       <thead>
         <tr>
+          <th>Application</th>
           <th>Created</th>
           <th>Company</th>
           <th>Job title</th>
@@ -20,6 +21,7 @@
       <tbody>
         {% for application in applications %}
           <tr>
+            <td>{{ application.display_number }}</td>
             <td>{{ application.created_at }}</td>
             <td>{{ application.company_name or "Not available" }}</td>
             <td>{{ application.job_title or "Not available" }}</td>
@@ -28,8 +30,8 @@
             <td>{{ application.warnings | length }}</td>
             <td>{{ application.artifacts | length }}</td>
             <td>
-              <a href="/applications/{{ application.id }}">Detail</a>
-              <a href="/applications/{{ application.id }}/review">Review</a>
+              <a href="/applications/{{ application.application_number }}">Detail</a>
+              <a href="/applications/{{ application.application_number }}/review">Review</a>
             </td>
           </tr>
         {% endfor %}
