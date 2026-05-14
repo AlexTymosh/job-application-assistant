@@ -85,7 +85,7 @@ The current implementation includes:
 - an isolated OpenAI Structured Outputs extraction client in `app/llm/openai_client.py`;
 - a dedicated job extraction prompt that treats job postings as untrusted data;
 - extracted job artefact persistence through the artefact writer boundary;
-- privacy-safe `applications/<application_id>/extracted_job.json` database paths that do not store absolute private profile paths;
+- privacy-safe `applications/<artifact_dir_name>/extracted_job.json` database paths that do not store absolute private profile paths;
 - mocked OpenAI contract tests that do not call the real API and do not require `OPENAI_API_KEY`;
 - read-only Markdown CV loading;
 - required CV section marker parsing and validation;
@@ -101,12 +101,14 @@ The current implementation includes:
 - an explicit no-fake-ATS-score warning in CV Match Reports;
 - isolated Markdown, HTML, PDF, and DOCX exporters in `app/exporters/`;
 - tailored CV Markdown, HTML, PDF, and DOCX artefact writing through `ArtifactWriter`;
-- privacy-safe `applications/<application_id>/tailored_cv.md`, `applications/<application_id>/tailored_cv.html`, `applications/<application_id>/tailored_cv.pdf`, and `applications/<application_id>/tailored_cv.docx` database artefact paths;
+- privacy-safe `applications/<artifact_dir_name>/tailored_cv.md`, `applications/<artifact_dir_name>/tailored_cv.html`, `applications/<artifact_dir_name>/tailored_cv.pdf`, and `applications/<artifact_dir_name>/tailored_cv.docx` database artefact paths;
 - Markdown, HTML, PDF, and DOCX export persistence that is independent of FastAPI routes and does not call OpenAI;
 - release checklist, manual smoke test, and local private profile setup documentation;
 - bootstrap tests that require release documentation and check release documentation for sensitive-data guardrails;
 - the correct CV package marker at `app/cv/__init__.py`;
 - bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, Stage 7 reports tests, and Stage 8A and Stage 8B export tests.
+
+Application UUIDs remain the stable database identifiers. Artefact folder names are generated once at intake time for human readability only, using a Windows-safe and length-limited path such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__a5c19f0a/job_raw.txt`; long company and title values are truncated safely and database artefact rows store relative paths only.
 
 Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 7 adds strict in-memory report models plus deterministic Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`. Stage 8A adds Markdown and HTML export foundation. Stage 8B adds PDF and DOCX export foundation with ReportLab and python-docx. Markdown remains the source of truth. HTML, PDF, and DOCX exports are artefacts written through `ArtifactWriter`, with database rows storing privacy-safe relative paths only. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, FastAPI export routes, or new database tables. The rule remains: no `fact_id` means no claim.
 
@@ -375,7 +377,7 @@ Stage 8A adds Markdown and HTML export foundation:
 - Raw HTML from Markdown input is escaped by default.
 - Exporters are isolated in `app/exporters/` and do not depend on FastAPI `Request`, `Response`, Jinja2 route objects, web templates, OpenAI clients, or network resources.
 - File writes go through `ArtifactWriter`; exporters do not write files directly.
-- Database artefact records store privacy-safe relative paths such as `applications/<application_id>/tailored_cv.md` and `applications/<application_id>/tailored_cv.html`.
+- Database artefact records store privacy-safe relative paths such as `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`.
 - Markdown and HTML exports are artefacts; master CV files and committed CV variants are not mutated.
 
 Stage 8B adds PDF and DOCX export foundation:
@@ -387,7 +389,7 @@ Stage 8B adds PDF and DOCX export foundation:
 - WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows.
 - Exporters are isolated in `app/exporters/` and do not write files directly.
 - File writes go through `ArtifactWriter`, including `tailored_cv.pdf` and `tailored_cv.docx`.
-- Database artefact records store privacy-safe relative paths such as `applications/<application_id>/tailored_cv.pdf` and `applications/<application_id>/tailored_cv.docx`.
+- Database artefact records store privacy-safe relative paths such as `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`.
 - Export does not call OpenAI, fetch network resources, mutate the master CV, or mutate committed CV variants.
 
 No CLI commands are added, and v1.0 remains web-only through FastAPI/Jinja2.

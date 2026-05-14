@@ -52,19 +52,22 @@ def test_persist_extracted_job_artifact_writes_json_and_database_row(
     with session_scope(session_factory) as session:
         application = ApplicationRepository(session).create(profile_name="example")
         application_id = application.id
+        artifact_dir_name = application.artifact_dir_name
+        assert artifact_dir_name is not None
         artifact = persist_extracted_job_artifact(
             artifacts=ArtifactRepository(session),
             artifact_writer=ArtifactWriter(applications_dir=applications_dir),
             application_id=application_id,
+            artifact_dir_name=artifact_dir_name,
             extracted_job=build_extracted_job(),
         )
 
         assert artifact.artifact_type == "extracted_job"
-        assert artifact.path == f"applications/{application_id}/extracted_job.json"
+        assert artifact.path == f"applications/{artifact_dir_name}/extracted_job.json"
         assert str(tmp_path) not in artifact.path
         assert not Path(artifact.path).is_absolute()
 
-    extracted_job_path = applications_dir / str(application_id) / "extracted_job.json"
+    extracted_job_path = applications_dir / artifact_dir_name / "extracted_job.json"
     assert extracted_job_path.is_file()
 
     stored_json = json.loads(extracted_job_path.read_text(encoding="utf-8"))
@@ -78,7 +81,8 @@ def test_persist_extracted_job_artifact_writes_json_and_database_row(
 
         assert stored_artifact.artifact_type == "extracted_job"
         assert (
-            stored_artifact.path == f"applications/{application_id}/extracted_job.json"
+            stored_artifact.path
+            == f"applications/{artifact_dir_name}/extracted_job.json"
         )
         assert str(tmp_path) not in stored_artifact.path
         assert not Path(stored_artifact.path).is_absolute()

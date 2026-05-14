@@ -51,7 +51,9 @@ def test_application_intake_creates_application_artifact_event_and_warnings(
         )
 
         application_id = result.application.id
+        artifact_dir_name = result.application.artifact_dir_name
 
+        assert artifact_dir_name is not None
         assert result.preflight.has_warnings is True
         assert "bad company" in result.preflight.blacklist_matches
         assert (
@@ -59,7 +61,7 @@ def test_application_intake_creates_application_artifact_event_and_warnings(
         )
         assert result.preflight.duplicate_application_id is None
 
-    raw_job_path = applications_dir / str(application_id) / "job_raw.txt"
+    raw_job_path = applications_dir / artifact_dir_name / "job_raw.txt"
 
     assert raw_job_path.is_file()
     assert raw_job_path.read_text(encoding="utf-8") == manual_text
@@ -73,6 +75,21 @@ def test_application_intake_creates_application_artifact_event_and_warnings(
         assert application.selected_cv_variant == "backend_developer"
         assert application.normalized_url == "https://example.com/jobs/123"
         assert application.job_text_hash is not None
+        assert application.artifact_dir_name is not None
+        assert "unknown-company" in application.artifact_dir_name
+        assert "unknown-role" in application.artifact_dir_name
+        assert application_id.hex[:8] in application.artifact_dir_name
+
+        artifact = session.scalars(
+            select(Artifact).where(Artifact.application_id == application_id)
+        ).one()
+        assert (
+            artifact.path == f"applications/{application.artifact_dir_name}/job_raw.txt"
+        )
+        assert str(tmp_path) not in artifact.path
+        assert "C:/Users" not in artifact.path
+        assert "C:\\Users" not in artifact.path
+        assert not Path(artifact.path).is_absolute()
 
         warnings = session.scalars(
             select(ApplicationWarning).where(
@@ -177,10 +194,12 @@ def test_application_intake_clean_input_has_no_warnings_and_safe_artifact_path(
         )
 
         application_id = result.application.id
+        artifact_dir_name = result.application.artifact_dir_name
 
+        assert artifact_dir_name is not None
         assert result.preflight.has_warnings is False
 
-    raw_job_path = applications_dir / str(application_id) / "job_raw.txt"
+    raw_job_path = applications_dir / artifact_dir_name / "job_raw.txt"
 
     assert raw_job_path.is_file()
     assert raw_job_path.read_text(encoding="utf-8") == manual_text
@@ -196,5 +215,16 @@ def test_application_intake_clean_input_has_no_warnings_and_safe_artifact_path(
         ).one()
 
         assert stored_warnings == []
-        assert artifact.path == f"applications/{application_id}/job_raw.txt"
+        application = ApplicationRepository(session).get(application_id)
+        assert application is not None
+        assert application.artifact_dir_name is not None
+        assert "unknown-company" in application.artifact_dir_name
+        assert "unknown-role" in application.artifact_dir_name
+        assert application_id.hex[:8] in application.artifact_dir_name
+        assert (
+            artifact.path == f"applications/{application.artifact_dir_name}/job_raw.txt"
+        )
         assert str(tmp_path) not in artifact.path
+        assert "C:/Users" not in artifact.path
+        assert "C:\\Users" not in artifact.path
+        assert not Path(artifact.path).is_absolute()

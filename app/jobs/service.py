@@ -46,8 +46,11 @@ class JobInputService:
         application.job_text_hash = job_text_hash
 
         if manual_text:
+            if application.artifact_dir_name is None:
+                raise ValueError("Application artefact directory name was not set.")
+
             written_artifact = self._artifact_writer.write_raw_job_text(
-                application_id=application.id,
+                artifact_dir_name=application.artifact_dir_name,
                 raw_text=manual_text,
             )
 

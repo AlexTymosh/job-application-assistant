@@ -786,6 +786,15 @@ C:/Users/<user>/job-application-assistant-data/alex/applications/<application_id
 
 The committed `profiles/example/` tree is for fake examples only.
 
+Application identity and artefact directory rules:
+
+- `Application.id` remains the stable UUID primary identifier for database identity, links, and relationships.
+- Application artefact directory names are human-readable convenience labels only; they are not primary identifiers.
+- New application artefact directories use the stable intake-time format `YYYY-MM-DD_HH-MM-SS__company-slug__role-slug__shortid`, for example `applications/2026-05-14_09-26-01__unknown-company__unknown-role__a5c19f0a/job_raw.txt`.
+- Artefact directory names must be Windows-safe and length-limited.
+- Database artefact paths must remain privacy-safe relative paths and must never store absolute private profile paths.
+- Artefact directories must not be renamed after later LLM extraction unless a future explicit migration task handles it.
+
 Reference artefacts:
 
 ```text
@@ -1095,7 +1104,7 @@ Rules for Stage 8A and later export work:
 - Routes must not write export files directly.
 - File writes must go through `ArtifactWriter`.
 - Database rows must store relative paths only.
-- Database artefact paths must remain privacy-safe relative paths, for example `applications/<application_id>/tailored_cv.md`, `applications/<application_id>/tailored_cv.html`, `applications/<application_id>/tailored_cv.pdf`, and `applications/<application_id>/tailored_cv.docx`.
+- Database artefact paths must remain privacy-safe relative paths, for example `applications/<artifact_dir_name>/tailored_cv.md`, `applications/<artifact_dir_name>/tailored_cv.html`, `applications/<artifact_dir_name>/tailored_cv.pdf`, and `applications/<artifact_dir_name>/tailored_cv.docx`.
 - Export code must not mutate master CV files or committed CV variants.
 - Export code must not add CV claims, rewrite sections, generate fake ATS scores, or call OpenAI.
 - Stage 8B implements PDF and DOCX export foundation through the artefact boundary.

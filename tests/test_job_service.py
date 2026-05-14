@@ -55,8 +55,10 @@ def test_job_input_service_creates_application_raw_text_artifact_and_event(
 
         session.commit()
         application_id = application.id
+        artifact_dir_name = application.artifact_dir_name
 
-    application_dir = applications_dir / str(application_id)
+    assert artifact_dir_name is not None
+    application_dir = applications_dir / artifact_dir_name
     raw_job_path = application_dir / "job_raw.txt"
 
     assert raw_job_path.is_file()
@@ -71,9 +73,19 @@ def test_job_input_service_creates_application_raw_text_artifact_and_event(
         assert stored_application.selected_cv_variant == "backend_developer"
         assert stored_application.job_text_hash is not None
         assert stored_application.normalized_url == "https://example.com/jobs/123"
+        assert stored_application.artifact_dir_name is not None
+        assert "unknown-company" in stored_application.artifact_dir_name
+        assert "unknown-role" in stored_application.artifact_dir_name
+        assert application_id.hex[:8] in stored_application.artifact_dir_name
 
         artifact = session.scalars(select(Artifact)).one()
 
         assert artifact.artifact_type == "job_raw"
-        assert artifact.path == f"applications/{application_id}/job_raw.txt"
+        assert (
+            artifact.path
+            == f"applications/{stored_application.artifact_dir_name}/job_raw.txt"
+        )
         assert str(tmp_path) not in artifact.path
+        assert "C:/Users" not in artifact.path
+        assert "C:\\Users" not in artifact.path
+        assert not Path(artifact.path).is_absolute()

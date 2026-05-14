@@ -25,26 +25,30 @@ def test_export_pdf_docx_writes_files_and_database_rows(tmp_path: Path) -> None:
     with session_factory() as session, session.begin():
         application = ApplicationRepository(session).create(profile_name="example")
         application_id = application.id
+        artifact_dir_name = application.artifact_dir_name
+        assert artifact_dir_name is not None
 
         result = export_pdf_docx_artifacts(
             session=session,
             applications_dir=applications_dir,
             application_id=application_id,
+            artifact_dir_name=artifact_dir_name,
             tailored_cv_markdown=markdown,
             title="Jane Example CV",
         )
 
         assert (
-            result.pdf.relative_path == f"applications/{application_id}/tailored_cv.pdf"
+            result.pdf.relative_path
+            == f"applications/{artifact_dir_name}/tailored_cv.pdf"
         )
         assert result.docx.relative_path == (
-            f"applications/{application_id}/tailored_cv.docx"
+            f"applications/{artifact_dir_name}/tailored_cv.docx"
         )
         assert result.pdf_artifact.path == result.pdf.relative_path
         assert result.docx_artifact.path == result.docx.relative_path
 
-    pdf_path = applications_dir / str(application_id) / "tailored_cv.pdf"
-    docx_path = applications_dir / str(application_id) / "tailored_cv.docx"
+    pdf_path = applications_dir / artifact_dir_name / "tailored_cv.pdf"
+    docx_path = applications_dir / artifact_dir_name / "tailored_cv.docx"
 
     assert pdf_path.is_file()
     assert docx_path.is_file()
@@ -63,8 +67,8 @@ def test_export_pdf_docx_writes_files_and_database_rows(tmp_path: Path) -> None:
         "tailored_cv_pdf",
     ]
     assert {artifact.path for artifact in artifacts} == {
-        f"applications/{application_id}/tailored_cv.pdf",
-        f"applications/{application_id}/tailored_cv.docx",
+        f"applications/{artifact_dir_name}/tailored_cv.pdf",
+        f"applications/{artifact_dir_name}/tailored_cv.docx",
     }
     for artifact in artifacts:
         assert str(tmp_path) not in artifact.path
@@ -82,20 +86,23 @@ def test_export_pdf_docx_works_with_explicit_artifact_writer(tmp_path: Path) -> 
     with session_factory() as session, session.begin():
         application = ApplicationRepository(session).create(profile_name="example")
         application_id = application.id
+        artifact_dir_name = application.artifact_dir_name
+        assert artifact_dir_name is not None
 
         result = export_pdf_docx_artifacts(
             session=session,
             artifact_writer=writer,
             application_id=application_id,
+            artifact_dir_name=artifact_dir_name,
             tailored_cv_markdown="# Jane Example\n\n- Python",
         )
 
     assert (
         result.pdf.absolute_path
-        == applications_dir / str(application_id) / "tailored_cv.pdf"
+        == applications_dir / artifact_dir_name / "tailored_cv.pdf"
     )
     assert result.docx.absolute_path == (
-        applications_dir / str(application_id) / "tailored_cv.docx"
+        applications_dir / artifact_dir_name / "tailored_cv.docx"
     )
     assert result.pdf.absolute_path.read_bytes().startswith(b"%PDF")
     assert result.docx.absolute_path.read_bytes().startswith(b"PK")
@@ -116,5 +123,6 @@ def test_export_pdf_docx_requires_writer_or_applications_dir(tmp_path: Path) -> 
             export_pdf_docx_artifacts(
                 session=session,
                 application_id=application.id,
+                artifact_dir_name=application.artifact_dir_name or "missing",
                 tailored_cv_markdown="# Jane Example",
             )

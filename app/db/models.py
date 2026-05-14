@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.artifacts.naming import MAX_ARTIFACT_DIR_NAME_LENGTH
 from app.db.base import Base, TimestampMixin, UuidPrimaryKeyMixin
 
 
@@ -54,6 +55,12 @@ class Application(Base, UuidPrimaryKeyMixin, TimestampMixin):
     source_url: Mapped[str | None] = mapped_column(Text)
     normalized_url: Mapped[str | None] = mapped_column(Text)
     job_text_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    artifact_dir_name: Mapped[str | None] = mapped_column(
+        String(MAX_ARTIFACT_DIR_NAME_LENGTH),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
 
     selected_cv_variant: Mapped[str | None] = mapped_column(String(100))
     notes: Mapped[str | None] = mapped_column(Text)

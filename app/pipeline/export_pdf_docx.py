@@ -28,6 +28,7 @@ def export_pdf_docx_artifacts(
     *,
     session: Session,
     application_id: UUID,
+    artifact_dir_name: str,
     tailored_cv_markdown: str,
     artifact_writer: ArtifactWriter | None = None,
     applications_dir: Path | None = None,
@@ -46,11 +47,11 @@ def export_pdf_docx_artifacts(
     docx_bytes = DocxExporter().export(tailored_cv_markdown, title=title)
 
     written_pdf = artifact_writer.write_tailored_cv_pdf(
-        application_id=application_id,
+        artifact_dir_name=artifact_dir_name,
         pdf_bytes=pdf_bytes,
     )
     written_docx = artifact_writer.write_tailored_cv_docx(
-        application_id=application_id,
+        artifact_dir_name=artifact_dir_name,
         docx_bytes=docx_bytes,
     )
 

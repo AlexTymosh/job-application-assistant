@@ -24,6 +24,11 @@ def test_create_all_tables(tmp_path: Path) -> None:
     assert "application_events" in table_names
     assert "application_warnings" in table_names
 
+    application_columns = {
+        column["name"] for column in inspector.get_columns("applications")
+    }
+    assert "artifact_dir_name" in application_columns
+
 
 def test_sqlite_foreign_keys_are_enforced(tmp_path: Path) -> None:
     database_file = tmp_path / "applications.sqlite3"
