@@ -138,3 +138,4 @@ def test_openai_api_key_configured_rejects_raw_secret_value(tmp_path: Path) -> N
 
 def test_app_settings_do_not_affect_profile_base_metadata() -> None:
     assert "app_settings" not in Base.metadata.tables
+    assert "profiles" not in Base.metadata.tables

@@ -3,11 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.core.config import get_project_root
 from app.settings.init import initialise_app_settings_storage
 from app.storage.app_dirs import (
     APP_DATA_DIR_ENV_VAR,
+    APP_DATA_FOLDER_NAME,
     AppDataPaths,
     build_app_data_paths,
+    resolve_default_app_data_root,
 )
 from app.storage.bootstrap import bootstrap_app_data_dirs_for_paths
 from app.storage.location import (
@@ -98,8 +101,8 @@ def validate_user_selected_app_data_root(submitted_path: str) -> Path:
         raise AppDataFolderError("Enter a data folder path.")
 
     root = normalise_app_data_root(submitted_path)
-    repo_root = Path(__file__).resolve().parents[2]
-    if root == repo_root or root.is_relative_to(repo_root):
+    repo_root = get_project_root().resolve()
+    if root == repo_root or root == repo_root.parent or root.is_relative_to(repo_root):
         raise AppDataFolderError(
             "Choose a folder outside this repository so private data is not committed."
         )
@@ -108,17 +111,68 @@ def validate_user_selected_app_data_root(submitted_path: str) -> Path:
         raise AppDataFolderError("Choose a directory path, not an existing file.")
 
     parent = root.parent
-    if not root.exists() and root.suffix and not parent.exists():
-        raise AppDataFolderError(
-            "The path looks like a file path and its parent directory does not exist. "
-            "Choose a sensible directory path."
-        )
+    if not root.exists():
+        if root.suffix and not parent.exists():
+            raise AppDataFolderError(
+                "The path looks like a file path and its parent directory does "
+                "not exist. Choose a sensible directory path."
+            )
+        if root.name != APP_DATA_FOLDER_NAME:
+            raise AppDataFolderError(
+                f"New data folders must be named {APP_DATA_FOLDER_NAME}."
+            )
+        return root
 
+    _reject_broad_existing_root(root)
+    if _is_recognisable_app_data_folder(root):
+        return root
+    if root.name == APP_DATA_FOLDER_NAME and _is_empty_directory(root):
+        return root
+    if not _is_empty_directory(root):
+        raise AppDataFolderError(
+            "Choose an app-specific data folder. Existing non-empty folders must "
+            "already look like a Local Job Application Assistant data folder."
+        )
+    if root.name != APP_DATA_FOLDER_NAME:
+        raise AppDataFolderError(
+            f"Empty existing data folders must be named {APP_DATA_FOLDER_NAME}."
+        )
     return root
 
 
-def write_app_data_readme(paths: AppDataPaths) -> None:
+def write_app_data_readme(paths: AppDataPaths) -> bool:
+    if paths.readme_file.exists():
+        return False
     paths.readme_file.write_text(README_TEXT, encoding="utf-8")
+    return True
+
+
+def _reject_broad_existing_root(root: Path) -> None:
+    if root == Path(root.anchor):
+        raise AppDataFolderError(
+            "Choose an app-specific folder, not a filesystem root."
+        )
+    home = Path.home().resolve(strict=False)
+    if root == home:
+        raise AppDataFolderError("Choose an app-specific folder, not your home folder.")
+    documents_root = resolve_default_app_data_root().parent.resolve(strict=False)
+    if root == documents_root:
+        raise AppDataFolderError(
+            "Choose an app-specific folder, not your Documents folder."
+        )
+
+
+def _is_recognisable_app_data_folder(root: Path) -> bool:
+    if (root / "README.txt").is_file() and "Local Job Application Assistant" in (
+        root / "README.txt"
+    ).read_text(encoding="utf-8", errors="ignore"):
+        return True
+    structural_markers = APPROVED_BOOTSTRAP_CHILDREN - {"README.txt"}
+    return any((root / marker).exists() for marker in structural_markers)
+
+
+def _is_empty_directory(root: Path) -> bool:
+    return next(root.iterdir(), None) is None
 
 
 def _path_status(label: str, path: Path, kind: str) -> AppDataPathStatus:

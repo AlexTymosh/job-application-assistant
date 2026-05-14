@@ -13,7 +13,7 @@ Read first:
 
 Move the project from file-based profile configuration to a managed local application setup.
 
-The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, and a Data Folder UI for connecting the app data root safely.
+The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, a Data Folder UI for connecting the app data root safely, and managed profile records for selecting existing file-based profile folders.
 
 ---
 
@@ -41,55 +41,43 @@ Implemented `app/secrets/` for OpenAI API key storage through an injectable OS k
 
 ### PR 6 — Data Folder UI
 
-Implemented:
-- `app/storage/` location boundary for resolving `APP_DATA_DIR`, persisted user selection, and default Documents app data roots;
-- persisted app data root pointer storage outside the app data folder to avoid the `app.sqlite3` circular dependency;
-- `/data-folder` GET/POST page for viewing, validating, creating, and connecting the app data root;
-- setup-gate exemption and base navigation for `/data-folder`;
-- safe connect/create behaviour that rejects blank, repository-internal, file-like invalid, and `APP_DATA_DIR`-controlled changes;
-- bootstrap of only `profiles/`, `logs/`, `backups/`, generic `README.txt`, and `app.sqlite3`;
-- runtime state refresh after a successful data folder connection;
-- tests covering default/pointer/env precedence, route availability, page diagnostics, POST validation, pointer persistence, state refresh, no profile file creation, and no raw OpenAI key leakage.
+Implemented safe app data folder connection and creation through `/data-folder`. The UI now rejects broad or high-risk folder selections such as filesystem roots, home/Documents roots, repository paths, repository parents, and unrelated non-empty folders that are not recognisable app data folders. Existing `README.txt` files are preserved when connecting an existing folder.
+
+### PR 7 — Managed profiles
+
+Implemented the managed profiles foundation:
+- app-managed `profiles` records live in `app_data_root/app.sqlite3`;
+- `/profiles` lists connected file-based profiles, validates their folder status, connects existing profile folders, and activates one managed profile;
+- active managed profiles are preferred for effective config loading and setup diagnostics;
+- existing `.env`, managed settings default profile values, YAML config, Markdown CV variants, and YAML fact bank fallback remain compatible when no managed profile is active;
+- profile application history remains in each profile-specific `applications.sqlite3`.
 
 Non-goals preserved:
-- no managed profiles table;
-- no managed CV, fact, alias, section, or block tables;
-- no profile import tools;
-- no profile data migration;
-- no pipeline migration to managed CV storage;
-- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph;
-- existing `.env`, YAML, Markdown, and file-based profile support remains compatible.
+- no managed CV model yet;
+- no import tools;
+- no CV/fact editor;
+- no pipeline migration to DB-backed CV/fact storage;
+- no automatic profile application database migration;
+- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
 
 Remaining risks:
 - setup status is still diagnostic; it does not repair missing profile files or run profile migrations;
 - if the host OS keyring backend is missing or unavailable, Settings reports a safe keyring error and `OPENAI_API_KEY` remains the developer fallback;
 - database readiness checks verify tables/schema but do not yet provide a guided repair or migration button;
-- the Settings UI saves profile paths as text and relies on setup checks to report whether the selected path is usable;
-- the Data Folder UI uses a text path input for this local developer release and does not provide an OS-native folder picker.
+- profile and data folder UIs use text path inputs for this local developer release and do not provide OS-native folder pickers.
 
 ## Next Implementation Plan
 
-### PR 7 — Managed profiles
+### PR 8 — Managed CV model
 
 Goal:
-Add the first managed profiles foundation without migrating CV/fact data or changing the pipeline to DB-backed CV storage.
+Add the first managed CV data model while preserving the current file-based pipeline until an explicit migration step.
 
 Recommended scope:
-- introduce managed profile records in app-managed storage;
-- support active managed profile selection through app services and thin routes;
-- allow connecting existing file-based profile folders by path;
-- keep existing `.env`, YAML, Markdown, and file-based profile behaviour compatible;
-- do not import Markdown/YAML into managed CV/fact tables in this PR;
-- do not migrate profile `applications.sqlite3` data automatically;
-- do not change the tailoring/export pipeline to managed CV/fact storage yet.
-
-Non-goals for PR 7:
-- no managed CV storage;
-- no import tools;
-- no CV/fact editor;
-- no pipeline migration;
-- no profile backup/export tooling;
-- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
+- design managed CV variants, sections, blocks, facts, and aliases in app-managed storage;
+- keep imports/export compatibility explicit and safe;
+- do not auto-migrate private profile application history;
+- keep generated artefacts and existing pipeline behaviour stable unless the PR explicitly changes them.
 
 ## Key Decisions
 
