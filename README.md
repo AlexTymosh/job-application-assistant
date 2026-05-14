@@ -158,6 +158,26 @@ The committed `profiles/example/` tree is fake data only.
 
 ---
 
+## App Data Folder Foundation
+
+The application now has a small storage bootstrap foundation for a durable, user-visible app data folder. By default, the app data root resolves to:
+
+```text
+Documents/JobApplicationAssistant
+```
+
+Set `APP_DATA_DIR` to override that location, for example when testing or when connecting a folder outside the repository. The bootstrap layer creates only the root folder and the required empty subfolders:
+
+```text
+profiles/
+logs/
+backups/
+```
+
+This is intentionally only the folder bootstrap foundation. It does not implement the setup wizard, settings UI, keyring secret storage, managed profiles, managed CV storage, database creation, or profile import yet. Existing `.env`, `PROFILE_NAME`, and `PROFILE_DATA_DIR` file-based profile behaviour remains compatible.
+
+---
+
 ## Current Configuration Model
 
 The current implementation uses:
@@ -184,7 +204,7 @@ Target direction:
 
 ## Planned Application Data Folder
 
-Future releases should use a visible long-lived folder, for example:
+The bootstrap foundation uses a visible long-lived root folder. Future releases should add managed files inside it, for example:
 
 ```text
 Documents/

@@ -48,6 +48,7 @@ Target direction:
 
 - user data is stored outside the repository;
 - default app data folder is under the user's Documents folder;
+- app data folders are resolved and created through `app/storage/`;
 - existing profile folders can be connected by path;
 - settings are managed through the app UI and persisted in SQLite;
 - secrets such as OpenAI API keys are stored in OS keyring, not committed and not stored as plaintext;
@@ -148,6 +149,8 @@ Never commit:
 - generated PDFs/DOCX/HTML/Markdown for real users.
 
 Real private profile data must live outside the repository.
+
+Private app data must be created through the storage/bootstrap boundary in `app/storage/`, not ad hoc in routes, tests, or pipeline code. Future setup and settings code should use this boundary when resolving or creating app-owned folders.
 
 Future managed storage should default to a user-visible application folder, for example:
 
