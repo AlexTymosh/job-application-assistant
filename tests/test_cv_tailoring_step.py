@@ -15,7 +15,9 @@ from app.pipeline.cv_tailoring import CvTailoringStep
 from app.pipeline.state import ApplicationRunState
 
 ROOT = Path(__file__).resolve().parents[1]
-EXAMPLE_MASTER_CV = ROOT / "profiles" / "example" / "cv" / "master.example.md"
+EXAMPLE_VARIANT_CV = (
+    ROOT / "profiles" / "example" / "cv" / "variants" / "backend_developer.example.md"
+)
 EXAMPLE_FACT_BANK = ROOT / "profiles" / "example" / "cv" / "fact_bank.example.yaml"
 
 
@@ -29,9 +31,9 @@ class RecordingTailoringClient(FakeCvTailoringClient):
 
 
 def build_loaded_cv() -> LoadedCv:
-    markdown = load_markdown_file(EXAMPLE_MASTER_CV)
+    markdown = load_markdown_file(EXAMPLE_VARIANT_CV)
     return LoadedCv(
-        path=EXAMPLE_MASTER_CV,
+        path=EXAMPLE_VARIANT_CV,
         markdown=markdown,
         sections=parse_cv_sections(markdown),
     )
@@ -144,8 +146,8 @@ def test_step_does_not_call_openai() -> None:
     assert updated.status == "tailored"
 
 
-def test_step_keeps_master_cv_read_only() -> None:
-    before_file_content = EXAMPLE_MASTER_CV.read_text(encoding="utf-8")
+def test_step_keeps_selected_variant_read_only() -> None:
+    before_file_content = EXAMPLE_VARIANT_CV.read_text(encoding="utf-8")
     state = ApplicationRunState(
         application_id="app-1",
         profile_name="example",
@@ -158,7 +160,7 @@ def test_step_keeps_master_cv_read_only() -> None:
         fact_bank=build_fact_bank(),
     )
 
-    after_file_content = EXAMPLE_MASTER_CV.read_text(encoding="utf-8")
+    after_file_content = EXAMPLE_VARIANT_CV.read_text(encoding="utf-8")
     assert before_file_content == after_file_content
 
 

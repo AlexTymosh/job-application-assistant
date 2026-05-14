@@ -61,6 +61,8 @@ The project has completed:
 
 The current implementation includes:
 
+The CV architecture is role-variant based: CV variants under `cv/variants/` are the only source CV documents used for tailoring, `fact_bank.yaml` is the claim authority, selected source variants remain read-only during tailoring, and generated tailored CVs are saved separately as application artefacts. There is no separate root-level source CV file requirement.
+
 - repository bootstrap with `uv`;
 - CI and pre-commit checks;
 - minimal FastAPI application factory;
@@ -112,7 +114,7 @@ The current implementation includes:
 
 Application UUIDs remain the stable internal database identifiers, while per-profile application numbers such as `APP-000001` are the normal public identifiers. Artefact folder names are generated once at intake time for human readability only, using a Windows-safe and length-limited path such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`; long company and title values are truncated safely and database artefact rows store relative paths only.
 
-Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 7 adds strict in-memory report models plus deterministic Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`. Stage 8A adds Markdown and HTML export foundation. Stage 8B adds PDF and DOCX export foundation with ReportLab and python-docx. Markdown remains the source of truth. HTML, PDF, and DOCX exports are artefacts written through `ArtifactWriter`, with database rows storing privacy-safe relative paths only. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, FastAPI export routes, or new database tables. The rule remains: no `fact_id` means no claim.
+Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 7 adds strict in-memory report models plus deterministic Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`. Stage 8A adds Markdown and HTML export foundation. Stage 8B adds PDF and DOCX export foundation with ReportLab and python-docx. Markdown remains the source document format for tailored CV artefacts. HTML, PDF, and DOCX exports are artefacts written through `ArtifactWriter`, with database rows storing privacy-safe relative paths only. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, FastAPI export routes, or new database tables. The rule remains: no `fact_id` means no claim.
 
 The first release remains web-only through FastAPI/Jinja2. CLI commands are not a planned v1.0 requirement. Real private profile data must live outside the repository, while `profiles/example/` remains fake public data only.
 
@@ -161,7 +163,7 @@ The LLM must not:
 - change employers;
 - create fake certificates;
 - convert academic experience into commercial experience;
-- modify the master CV automatically.
+- mutate selected source CV variants automatically.
 
 ---
 
@@ -293,15 +295,15 @@ Markdown is used as the primary working CV format because it:
 - can be converted to HTML, PDF, and DOCX;
 - reduces the risk of unnoticed changes to the document.
 
-The master CV must not be modified automatically.
+Selected CV variants are the only source CV documents used for tailoring and must not be modified automatically.
 
-All adapted CV versions must be saved separately in the folder of the specific application.
+All tailored CV versions must be generated separately as application artefacts in the folder of the specific application. The fact bank remains the claim authority for any new or strengthened wording.
 
 ---
 
 ## 8. CV Sections
 
-Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate the master CV or any variant file. Stage 6 adds only the safe tailoring contract, deterministic fake tailoring, diff support, and an in-memory pipeline step. It does not add real OpenAI tailoring, does not mutate the master CV, and does not write tailored CV artefacts to disk. Stage 7 report builders are also in-memory and read-only: they link extracted job requirements to verified fact bank facts, calculate coverage and overclaiming risk, and explicitly avoid fake ATS scores. Group 7 adds web intake, application detail, a read-only review surface, and a dashboard. No exporters, LangGraph, CLI commands, URL scraping, authentication, cloud deployment, or external integrations are added in Group 7.
+Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate source variant files. Stage 6 adds only the safe tailoring contract, deterministic fake tailoring, diff support, and an in-memory pipeline step. It does not add real OpenAI tailoring, does not mutate selected CV variants, and does not write tailored CV artefacts to disk. Stage 7 report builders are also in-memory and read-only: they link extracted job requirements to verified fact bank facts, calculate coverage and overclaiming risk, and explicitly avoid fake ATS scores. Group 7 adds web intake, application detail, a read-only review surface, and a dashboard. No exporters, LangGraph, CLI commands, URL scraping, authentication, cloud deployment, or external integrations are added in Group 7.
 
 The Markdown CV must contain stable section markers:
 
@@ -373,18 +375,18 @@ Report artefact persistence and export are not added in Stage 7. Reports remain 
 
 Stage 8A adds Markdown and HTML export foundation:
 
-- Markdown remains the source of truth.
+- Markdown remains the source document format for tailored CV artefacts.
 - `MarkdownExporter` validates non-empty tailored CV Markdown and normalises the final newline without rewriting meaningful CV content.
 - `HtmlExporter` renders a conservative Markdown subset to a complete, safe, standalone HTML document.
 - Raw HTML from Markdown input is escaped by default.
 - Exporters are isolated in `app/exporters/` and do not depend on FastAPI `Request`, `Response`, Jinja2 route objects, web templates, OpenAI clients, or network resources.
 - File writes go through `ArtifactWriter`; exporters do not write files directly.
 - Database artefact records store privacy-safe relative paths such as `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`.
-- Markdown and HTML exports are artefacts; master CV files and committed CV variants are not mutated.
+- Markdown and HTML exports are artefacts; selected source CV variants are not mutated.
 
 Stage 8B adds PDF and DOCX export foundation:
 
-- Markdown remains the source of truth; HTML, PDF, and DOCX are artefacts.
+- Markdown remains the source document format for tailored CV artefacts; HTML, PDF, and DOCX are derived artefacts.
 - `PdfExporter` uses ReportLab to render the same conservative Markdown subset to local PDF bytes.
 - `DocxExporter` uses python-docx to render the same conservative Markdown subset to local DOCX bytes.
 - The exporter runtime dependencies are declared in `pyproject.toml` and locked in `uv.lock`; dependency changes must be followed by `uv lock` and `uv sync --locked --group dev`.
@@ -392,7 +394,7 @@ Stage 8B adds PDF and DOCX export foundation:
 - Exporters are isolated in `app/exporters/` and do not write files directly.
 - File writes go through `ArtifactWriter`, including `tailored_cv.pdf` and `tailored_cv.docx`.
 - Database artefact records store privacy-safe relative paths such as `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`.
-- Export does not call OpenAI, fetch network resources, mutate the master CV, or mutate committed CV variants.
+- Export does not call OpenAI, fetch network resources, or mutate selected source CV variants.
 
 No CLI commands are added, and v1.0 remains web-only through FastAPI/Jinja2.
 
@@ -534,7 +536,6 @@ profiles/
     ├── config.example.yaml
     ├── blacklist.example.txt
     └── cv/
-        ├── master.example.md
         ├── fact_bank.example.yaml
         └── variants/
             └── backend_developer.example.md
@@ -580,7 +581,6 @@ job-application-assistant-data/
     ├── config.yaml
     ├── blacklist.txt
     ├── cv/
-    │   ├── master.md
     │   ├── fact_bank.yaml
     │   └── variants/
     │       ├── backend_developer.md

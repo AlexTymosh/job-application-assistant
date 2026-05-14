@@ -11,10 +11,11 @@ def test_build_example_profile_paths() -> None:
 
     assert paths.profile_dir.as_posix().endswith("profiles/example")
     assert paths.cv_dir.as_posix().endswith("profiles/example/cv")
-    assert paths.master_cv.as_posix().endswith("profiles/example/cv/master.example.md")
     assert paths.fact_bank.as_posix().endswith(
         "profiles/example/cv/fact_bank.example.yaml"
     )
+    assert paths.variants_dir.as_posix().endswith("profiles/example/cv/variants")
+    assert paths.applications_dir.as_posix().endswith("profiles/example/applications")
     assert paths.database_file.as_posix().endswith(
         "profiles/example/applications.sqlite3"
     )
@@ -28,7 +29,6 @@ def test_profile_paths_do_not_hardcode_alex() -> None:
     all_paths = [
         paths.profile_dir,
         paths.cv_dir,
-        paths.master_cv,
         paths.fact_bank,
         paths.database_file,
     ]
@@ -64,6 +64,7 @@ def test_build_external_profile_paths(tmp_path: Path) -> None:
     assert paths.config_file == external_profile_dir / "config.yaml"
     assert paths.blacklist_file == external_profile_dir / "blacklist.txt"
     assert paths.cv_dir == external_profile_dir / "cv"
-    assert paths.master_cv == external_profile_dir / "cv" / "master.md"
     assert paths.fact_bank == external_profile_dir / "cv" / "fact_bank.yaml"
+    assert paths.variants_dir == external_profile_dir / "cv" / "variants"
+    assert paths.applications_dir == external_profile_dir / "applications"
     assert paths.database_file == external_profile_dir / "applications.sqlite3"

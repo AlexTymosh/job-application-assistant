@@ -114,7 +114,7 @@ The agent must not:
 - add a payment system;
 - add LangGraph to the MVP;
 - replace SQLite with another database;
-- modify the master CV automatically;
+- mutate selected source CV variants automatically;
 - delete user profiles;
 - delete application history;
 - delete application artefacts;
@@ -170,7 +170,6 @@ local-job-application-assistant/
 │       ├── config.example.yaml
 │       ├── blacklist.example.txt
 │       └── cv/
-│           ├── master.example.md
 │           ├── fact_bank.example.yaml
 │           └── variants/
 │               └── backend_developer.example.md
@@ -447,11 +446,10 @@ If a new status is needed, it must be described in the documentation or a migrat
 
 ## 17. CV Handling Rules
 
-The master CV must not be modified automatically.
+Selected CV variants are the only source CV documents used for tailoring and must not be modified automatically.
 
 Permitted:
 
-- reading `master.md`;
 - reading CV variants;
 - creating an adapted copy of the CV;
 - creating a diff;
@@ -461,7 +459,7 @@ Permitted:
 
 Prohibited:
 
-- modifying `master.md` without explicit user permission;
+- mutating selected source CV variants without explicit user permission;
 - adding unverified experience;
 - adding unverified technologies;
 - fabricating metrics;
@@ -766,7 +764,7 @@ The first release must support:
 - PDF export;
 - DOCX export.
 
-Markdown remains the source of truth.
+Markdown remains the source document format for tailored CV artefacts.
 
 HTML, PDF, and DOCX are artefacts.
 
@@ -994,7 +992,7 @@ The project must remain:
 Local-first CV Tailoring assistant
 + SQLite application tracking
 + evidence-based LLM guardrails
-+ Markdown source of truth
++ role-variant Markdown source documents
 + PDF/DOCX export
 + LangGraph-ready pipeline
 ```
@@ -1018,8 +1016,8 @@ Stage 5 is the completed CV loading foundation. It adds a read-only `app/cv/` la
 Rules for Stage 5 and later CV loading work:
 
 - CV loading reads Markdown files only.
-- CV loading is read-only and must not mutate master CV files, variant files, or fact bank files.
-- The master CV must not be modified automatically.
+- CV loading is read-only and must not mutate selected source CV variants or fact bank files.
+- Selected CV variants are the only source CV documents used for tailoring; there is no separate root-level source CV requirement.
 - The fact bank is the source of verified facts for future CV tailoring.
 - Fact bank loading must reject duplicate fact IDs, malformed facts, and empty fact banks.
 - Fact bank text fields must be normalised by trimming surrounding whitespace.
@@ -1038,7 +1036,7 @@ Stage 6 is implemented. It adds strict safe CV tailoring schemas, a deterministi
 Rules for Stage 6 and later tailoring work:
 
 - Stage 6 does not add real OpenAI tailoring.
-- Stage 6 does not mutate the master CV or CV variant files.
+- Stage 6 does not mutate selected source CV variant files.
 - Stage 6 does not write tailored CV artefacts to disk.
 - Stage 6 does not add exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations.
 - The fake tailoring client must use only verified claimable facts from the fact bank.
@@ -1059,7 +1057,7 @@ Rules for Stage 7 and later reports work:
 - Evidence Matrix items must not cite `do_not_claim` facts as usable evidence or include their fact IDs in evidence claims.
 - Report builders must be deterministic, independently testable, and free from fuzzy matching libraries unless a later task explicitly approves a new approach.
 - Report builders must not call OpenAI or any other LLM provider.
-- Report builders must not mutate master CV files, CV variant files, or fact bank files.
+- Report builders must not mutate selected source CV variant files or fact bank files.
 - Report builders must not write report artefacts to disk or database unless a later stage explicitly requests report artefact persistence.
 - Report builders must remain independent of FastAPI routes, Jinja2 templates, CLI commands, dashboard functionality, exporters, LangGraph, URL scraping, and external integrations.
 - Report models must remain serialisable and must not depend on filesystem paths, database sessions, or web framework objects.
@@ -1094,7 +1092,7 @@ Stage 8A is implemented. It adds Markdown and HTML export foundation for tailore
 
 Rules for Stage 8A and later export work:
 
-- Markdown remains the source of truth.
+- Markdown remains the source document format for tailored CV artefacts.
 - Markdown, HTML, PDF, and DOCX exports are artefacts, not replacements for the source CV files.
 - PDF export uses ReportLab.
 - DOCX export uses python-docx.
@@ -1105,7 +1103,7 @@ Rules for Stage 8A and later export work:
 - File writes must go through `ArtifactWriter`.
 - Database rows must store relative paths only.
 - Database artefact paths must remain privacy-safe relative paths, for example `applications/<artifact_dir_name>/tailored_cv.md`, `applications/<artifact_dir_name>/tailored_cv.html`, `applications/<artifact_dir_name>/tailored_cv.pdf`, and `applications/<artifact_dir_name>/tailored_cv.docx`.
-- Export code must not mutate master CV files or committed CV variants.
+- Export code must not mutate selected source CV variants.
 - Export code must not add CV claims, rewrite sections, generate fake ATS scores, or call OpenAI.
 - Stage 8B implements PDF and DOCX export foundation through the artefact boundary.
 - Runtime dependency changes, including exporter dependencies, must update `uv.lock` with `uv lock` and must pass `uv sync --locked --group dev` before merge.
