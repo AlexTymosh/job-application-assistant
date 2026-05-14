@@ -176,6 +176,8 @@ backups/
 
 This is intentionally only the folder bootstrap foundation. It does not implement the setup wizard, settings UI, keyring secret storage, managed profiles, managed CV storage, database creation, or profile import yet. Existing `.env`, `PROFILE_NAME`, and `PROFILE_DATA_DIR` file-based profile behaviour remains compatible.
 
+If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, profile config, the active file-based profile, SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
+
 ---
 
 ## Current Configuration Model

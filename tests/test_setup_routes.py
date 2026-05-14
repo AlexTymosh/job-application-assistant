@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import shutil
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+from app.core.config import ProjectConfig, load_profile_config
+from app.db.session import create_all_tables
+from app.main import create_app
+
+
+def build_complete_client(tmp_path: Path, monkeypatch) -> TestClient:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("APP_DATA_DIR", str(tmp_path / "app-data"))
+    profile_dir = tmp_path / "example"
+    shutil.copytree(Path("profiles/example"), profile_dir)
+    base_config = load_profile_config(Path("profiles/example/config.example.yaml"))
+    config_data = base_config.model_dump()
+    config_data["app"] = {"profile_name": "example", "data_dir": profile_dir}
+    config = ProjectConfig.model_validate(config_data)
+    app = create_app(config)
+    create_all_tables(app.state.engine)
+    return TestClient(app)
+
+
+def build_incomplete_client(tmp_path: Path, monkeypatch) -> TestClient:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("APP_DATA_DIR", str(tmp_path / "app-data"))
+    monkeypatch.setenv("PROFILE_NAME", "missing")
+    monkeypatch.setenv("PROFILE_DATA_DIR", str(tmp_path / "missing-profile"))
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    return TestClient(create_app())
+
+
+def test_app_can_start_when_config_or_profile_setup_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    client = build_incomplete_client(tmp_path, monkeypatch)
+
+    response = client.get("/setup")
+
+    assert response.status_code == 200
+    assert "Setup required" in response.text
+
+
+def test_setup_returns_200_and_renders_setup_status(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    client = build_incomplete_client(tmp_path, monkeypatch)
+
+    response = client.get("/setup")
+
+    assert response.status_code == 200
+    assert "Setup checks" in response.text
+    assert "Profile config" in response.text
+
+
+def test_incomplete_setup_redirects_home_to_setup(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    client = build_incomplete_client(tmp_path, monkeypatch)
+
+    response = client.get("/", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/setup"
+
+
+def test_incomplete_setup_redirects_dashboard_before_db_dependency(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    client = build_incomplete_client(tmp_path, monkeypatch)
+
+    response = client.get("/dashboard", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/setup"
+
+
+def test_incomplete_setup_redirects_new_application(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    client = build_incomplete_client(tmp_path, monkeypatch)
+
+    response = client.get("/applications/new", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/setup"
+
+
+def test_setup_does_not_redirect_to_itself(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    client = build_incomplete_client(tmp_path, monkeypatch)
+
+    response = client.get("/setup", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert "Setup required" in response.text
+
+
+def test_health_routes_remain_available(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    client = build_incomplete_client(tmp_path, monkeypatch)
+
+    assert client.get("/health/live").status_code == 200
+    assert client.get("/health/ready").status_code == 200
+
+
+def test_complete_setup_allows_home_and_dashboard_to_render(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    client = build_complete_client(tmp_path, monkeypatch)
+
+    home_response = client.get("/")
+    dashboard_response = client.get("/dashboard")
+
+    assert home_response.status_code == 200
+    assert "Active profile" in home_response.text
+    assert dashboard_response.status_code == 200
+    assert "Dashboard" in dashboard_response.text

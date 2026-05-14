@@ -17,7 +17,7 @@ The current app remains a local FastAPI/Jinja2 web application with manual intak
 
 ---
 
-## Completed Current Task
+## Completed Current Tasks
 
 ### PR 1 — App data directory bootstrap
 
@@ -28,47 +28,47 @@ Implemented:
 - tests for path resolution, bootstrap idempotency, and no private profile file creation;
 - documentation of the storage bootstrap boundary.
 
+### PR 2 — Setup status and setup redirect
+
+Implemented:
+- setup status models and service checks for app data folders, file-based profile config, active profile folders, SQLite database tables, LLM runtime mode, default CV variant loading, and fact-bank validation;
+- startup refactor so missing or invalid profile/LLM setup is represented as incomplete setup instead of a startup crash;
+- `/setup` route and template that render setup pass/fail status without exposing secrets;
+- middleware setup gate that redirects incomplete installations to `/setup` before route dependencies run;
+- health and documentation routes remain available while setup is incomplete;
+- tests for setup checks, side-effect boundaries, redirects, and complete/incomplete route behaviour.
+
 Non-goals preserved:
-- no setup redirect;
-- no `/setup` route;
 - no settings UI;
 - no `app_settings` table;
 - no OS keyring integration;
-- no managed profiles or managed CV storage;
-- no pipeline, exporter, OpenAI, auto-apply, LinkedIn, or email changes.
+- no managed profiles table;
+- no managed CV, fact, alias, section, or block tables;
+- no profile import tools;
+- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, or LangGraph;
+- existing YAML/Markdown file-based profile support remains compatible.
+
+Remaining risks:
+- setup status is currently diagnostic only; it does not repair missing profile files or run migrations;
+- OpenAI API keys still come from the environment until keyring support is added;
+- database readiness checks verify tables but do not yet provide a guided migration button or detailed migration version UI.
 
 ---
 
 ## Next Implementation Plan
 
-### PR 2 — Setup status and setup redirect
+### PR 3 — Managed settings storage
 
 Goal:
-Redirect users to setup when required configuration is missing.
+Introduce the first app-managed settings storage layer while preserving existing file-based profile compatibility.
 
-Add:
-- `app/setup/__init__.py`
-- `app/setup/checks.py`
-- `app/setup/service.py`
-- `app/api/routes_setup.py`
-- `app/web/templates/setup.html`
-- `tests/test_setup_checks.py`
-- `tests/test_setup_routes.py`
-
-Change:
-- home route should redirect to `/setup` if setup is incomplete;
-- dashboard remains available only after minimum setup is complete.
-
-Minimum setup checks:
-- app data directory exists;
-- SQLite database exists or can be created/migrated;
-- active profile exists;
-- LLM mode is selected;
-- if OpenAI mode is selected, API key is configured;
-- at least one CV variant/fact source is available.
-
-Commit:
-`✨ feat(setup): redirect incomplete installations to setup page`
+Recommended scope:
+- add an app-level SQLite settings database under the app data root;
+- add an `app_settings` table via Alembic or a dedicated app-data migration boundary;
+- persist non-secret setup metadata such as selected profile path, selected LLM mode, and whether an OpenAI key is configured;
+- keep raw API keys out of SQLite;
+- continue supporting existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, Markdown CV variants, and YAML fact-bank files;
+- avoid managed CV/fact/profile rewrites until later PRs.
 
 ---
 
