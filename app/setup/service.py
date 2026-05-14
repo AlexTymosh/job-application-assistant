@@ -17,6 +17,9 @@ from app.core.config import (
 from app.core.paths import ProfilePaths, build_profile_paths
 from app.cv.fact_bank import load_fact_bank
 from app.cv.selector import select_default_cv_variant
+
+# Import models so SQLAlchemy metadata is populated for readiness checks.
+from app.db import models  # noqa: F401
 from app.db.base import Base
 from app.setup.checks import SetupCheck, SetupStatus
 from app.storage.app_dirs import AppDataPaths

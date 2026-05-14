@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import shutil
+import sqlite3
+import subprocess
+import sys
 from pathlib import Path
 
 from app.core.config import ProjectConfig, load_profile_config
@@ -82,6 +85,43 @@ def test_complete_example_style_temporary_profile_can_be_complete(
 
     assert status.is_complete is True
     assert all(check.ok for check in status.checks)
+
+
+def test_empty_sqlite_database_fails_readiness_in_fresh_interpreter(
+    tmp_path: Path,
+) -> None:
+    profile_dir, _ = copy_example_profile(tmp_path)
+    sqlite3.connect(profile_dir / "applications.sqlite3").close()
+    app_data_root = tmp_path / "subprocess-app-data"
+    for child in ("profiles", "logs", "backups"):
+        (app_data_root / child).mkdir(parents=True, exist_ok=True)
+
+    script = """
+from pathlib import Path
+import sys
+
+from app.core.config import ProjectConfig, load_profile_config
+from app.setup.service import SetupStatusService
+from app.storage.app_dirs import build_app_data_paths
+
+profile_dir = Path(sys.argv[1])
+app_data_root = Path(sys.argv[2])
+base_config = load_profile_config(Path('profiles/example/config.example.yaml'))
+config_data = base_config.model_dump()
+config_data['app'] = {'profile_name': 'example', 'data_dir': profile_dir}
+status = SetupStatusService(
+    app_data_paths=build_app_data_paths(app_data_root),
+).build_status(config=ProjectConfig.model_validate(config_data))
+sqlite_check = next(check for check in status.checks if check.code == 'sqlite_database')
+assert sqlite_check.ok is False, sqlite_check.model_dump()
+assert 'applications' in sqlite_check.message
+"""
+
+    subprocess.run(
+        [sys.executable, "-c", script, str(profile_dir), str(app_data_root)],
+        check=True,
+        cwd=Path.cwd(),
+    )
 
 
 def test_missing_fact_bank_makes_setup_incomplete(tmp_path: Path) -> None:
