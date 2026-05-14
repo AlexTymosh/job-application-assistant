@@ -191,22 +191,40 @@ class LocalApplicationPipelineService:
             tailored_cv_markdown=state.tailored_cv_markdown,
             artifact_writer=self._artifact_writer,
         )
-        export_pdf_docx_artifacts(
-            session=self._session,
-            application_id=application.id,
-            artifact_dir_name=application.artifact_dir_name,
-            tailored_cv_markdown=state.tailored_cv_markdown,
-            artifact_writer=self._artifact_writer,
-        )
-        applications.update_status(
-            application_id=application.id,
-            status=ApplicationStatus.EXPORTED,
-        )
-        events.create(
-            application_id=application.id,
-            event_type="pipeline_exports_generated",
-            message="Markdown, HTML, PDF, and DOCX CV artefacts were generated.",
-        )
+        if self._config.workflow.require_human_approval_before_export:
+            review_status = self._status_before_final_export(
+                state=state,
+                match_report_missing_skills_exists=bool(match_report.missing_skills),
+            )
+            applications.update_status(
+                application_id=application.id,
+                status=review_status,
+            )
+            events.create(
+                application_id=application.id,
+                event_type="pipeline_review_artifacts_generated",
+                message=(
+                    "Markdown and HTML review artefacts were generated. "
+                    "Final PDF and DOCX exports are waiting for human approval."
+                ),
+            )
+        else:
+            export_pdf_docx_artifacts(
+                session=self._session,
+                application_id=application.id,
+                artifact_dir_name=application.artifact_dir_name,
+                tailored_cv_markdown=state.tailored_cv_markdown,
+                artifact_writer=self._artifact_writer,
+            )
+            applications.update_status(
+                application_id=application.id,
+                status=ApplicationStatus.EXPORTED,
+            )
+            events.create(
+                application_id=application.id,
+                event_type="pipeline_exports_generated",
+                message="Markdown, HTML, PDF, and DOCX CV artefacts were generated.",
+            )
 
         self._session.flush()
         refreshed_application = applications.get_by_number_with_related(
@@ -220,6 +238,22 @@ class LocalApplicationPipelineService:
             application=refreshed_application,
             artifact_count=len(refreshed_application.artifacts),
         )
+
+    def _status_before_final_export(
+        self,
+        *,
+        state: ApplicationRunState,
+        match_report_missing_skills_exists: bool,
+    ) -> ApplicationStatus:
+        warning_exists = bool(
+            state.warning_codes
+            or state.tailoring_warning_codes
+            or match_report_missing_skills_exists
+        )
+        if warning_exists:
+            return ApplicationStatus.QA_WARNING
+
+        return ApplicationStatus.AWAITING_APPROVAL
 
     def _read_raw_job_text(self, application: Application) -> str:
         raw_artifact = next(

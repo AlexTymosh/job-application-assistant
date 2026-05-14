@@ -1167,7 +1167,8 @@ Rules for this release-hardening stage and later work:
 - Fake/demo extraction mode is the default release-safe mode and must allow the app to run without `OPENAI_API_KEY`.
 - Real OpenAI extraction mode is opt-in and must fail clearly when the extraction model or `OPENAI_API_KEY` is missing.
 - The LLM mode must be configured through profile config and/or environment variables, not by hardcoding a model or API key in business logic.
-- Web routes remain thin; the local pipeline action delegates extraction, CV loading, fake safe tailoring, deterministic report generation, and export persistence to service/pipeline/exporter layers.
+- Web routes remain thin; the local pipeline action delegates extraction, CV loading, fake safe tailoring, deterministic report generation, and approval-aware export persistence to service/pipeline/exporter layers.
+- The local pipeline action must respect `workflow.require_human_approval_before_export`: when approval is required it must not create final PDF/DOCX artefacts and must set `awaiting_approval` or `qa_warning`; when approval is disabled it may create PDF/DOCX artefacts and set `exported`.
 - The local pipeline action must not auto-apply, submit applications, send emails, automate LinkedIn, or create false CV claims.
 - Safe artefact downloads must verify active profile/application ownership, resolve stored relative paths under `profile_paths.applications_dir`, and reject absolute paths or path traversal.
 - Database artefact paths remain privacy-safe relative paths and must not store absolute private profile paths.

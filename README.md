@@ -103,7 +103,7 @@ The CV architecture is role-variant based: CV variants under `cv/variants/` are 
 - in-memory Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`;
 - missing skills, keyword coverage, requirement coverage, and risk-of-overclaiming report models;
 - report builders that are deterministic, do not call OpenAI, and do not mutate CV files;
-- a local web pipeline action that can run fake extraction, read-only CV loading, fake safe tailoring, deterministic report generation, and Markdown/HTML/PDF/DOCX export persistence for one application;
+- a local web pipeline action that can run fake extraction, read-only CV loading, fake safe tailoring, deterministic report generation, and approval-aware export persistence for one application;
 - an explicit no-fake-ATS-score warning in CV Match Reports;
 - isolated Markdown, HTML, PDF, and DOCX exporters in `app/exporters/`;
 - tailored CV Markdown, HTML, PDF, and DOCX artefact writing through `ArtifactWriter`;
@@ -201,7 +201,7 @@ The current local web-only v1.0 scope is:
 - prompt-injection, blacklist, and duplicate warning persistence;
 - structured extraction schemas, fake/demo extraction mode by default, and an isolated OpenAI wrapper with tests using fake clients only;
 - read-only Markdown CV loading and fact bank validation;
-- deterministic fake tailoring, deterministic reports, and a web action that persists generated review/export artefacts;
+- deterministic fake tailoring, deterministic reports, and a web action that persists generated review artefacts plus final PDF/DOCX exports only when approval is disabled;
 - Markdown, HTML, PDF, and DOCX exporter foundations through the artefact boundary;
 - release documentation for local setup, smoke testing, and private profile safety.
 
@@ -858,11 +858,11 @@ The current FastAPI/Jinja2 web vertical slice includes:
 - `POST /applications` — creates an application record through `ApplicationIntakeService`, writes the raw job text artefact through the existing artefact boundary, persists preflight warnings, and redirects to the number-based detail page, for example `/applications/1`;
 - `/applications/{application_number}` — application detail page with the application number as the normal ID, metadata, status, source URL, normalised URL, selected CV variant, job text hash presence, warnings, events, and privacy-safe relative artefact paths; unknown application numbers return a simple HTML 404 page;
 - `/applications/{application_number}/review` — review surface that shows existing records and offers the local fake pipeline action; unknown application numbers return a simple HTML 404 page;
-- `POST /applications/{application_number}/run-local-pipeline` — thin web action that delegates to the local pipeline service for configured extraction, read-only CV loading, fake safe tailoring, deterministic reports, and exports;
+- `POST /applications/{application_number}/run-local-pipeline` — thin web action that delegates to the local pipeline service for configured extraction, read-only CV loading, fake safe tailoring, deterministic reports, Markdown/HTML review artefacts, and approval-aware final exports;
 - `/applications/{application_number}/artifacts/{artifact_id}/download` — safe download route that verifies profile/application ownership and rejects absolute paths or path traversal;
 - `/dashboard` — newest-first application list with status, CV variant, warning count, artefact count, and links to detail and review pages.
 
-The web routes stay thin: they do not call OpenAI directly, do not scrape URLs, and do not write export files directly. The local pipeline action delegates extraction, CV loading, fake tailoring, deterministic report generation, and export persistence to service/pipeline/exporter layers. The production application initialises a SQLite session factory in `app.state`, but Alembic remains responsible for schema creation and migrations. Tests may create temporary tables explicitly.
+The web routes stay thin: they do not call OpenAI directly, do not scrape URLs, and do not write export files directly. The local pipeline action delegates extraction, CV loading, fake tailoring, deterministic report generation, and approval-aware export persistence to service/pipeline/exporter layers. When `workflow.require_human_approval_before_export` is true, it creates review artefacts but does not create final PDF/DOCX exports. The production application initialises a SQLite session factory in `app.state`, but Alembic remains responsible for schema creation and migrations. Tests may create temporary tables explicitly.
 
 Known limitation: if the raw job text artefact is written successfully but the later database commit fails, a local orphan artefact can remain. This is acceptable for the current local-only stage and should be revisited during persistence hardening rather than solved with an overbuilt outbox in this task.
 

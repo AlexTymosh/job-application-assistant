@@ -217,6 +217,14 @@ async def application_detail(
             message="Application not found.",
         )
 
+    artifacts_by_type = {
+        artifact.artifact_type: artifact for artifact in application.artifacts
+    }
+    final_export_ready = bool(
+        artifacts_by_type.get("tailored_cv_pdf")
+        and artifacts_by_type.get("tailored_cv_docx")
+    )
+
     return templates.TemplateResponse(
         request=request,
         name="applications_detail.html",
@@ -227,5 +235,7 @@ async def application_detail(
             "events": application.events,
             "artifacts": application.artifacts,
             "has_job_text_hash": application.job_text_hash is not None,
+            "final_export_ready": final_export_ready,
+            "approval_required": config.workflow.require_human_approval_before_export,
         },
     )
