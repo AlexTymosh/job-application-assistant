@@ -41,7 +41,8 @@ Current release hardening task state:
 - fake/demo extraction mode is the release-safe default and allows local startup without `OPENAI_API_KEY`;
 - OpenAI extraction mode is opt-in and fails clearly if the extraction model or API key is missing;
 - safe artefact download routing verifies active profile/application ownership, resolves paths under `profile_paths.applications_dir`, and rejects absolute paths or path traversal;
-- a thin web action can run the local pipeline for one application using configured extraction, read-only CV loading, fake safe tailoring, deterministic reports, Markdown/HTML review artefacts, and approval-aware final exports;
+- a thin web action can run the local pipeline for one application using configured extraction, read-only CV loading, fake safe tailoring, deterministic reports, Markdown/HTML review artefacts, and approval-aware final exports; persisted warnings keep approval-required runs in `qa_warning`;
+- repeat local pipeline runs are rejected for applications already in `awaiting_approval`, `qa_warning`, or `exported` to avoid duplicate generated artefact rows;
 - real private profile data must remain external to the repository; any `profiles/alex/` references are legacy/reference-only safety examples and must not be presented as a path to create or commit;
 - keep v1.0 web-only through FastAPI/Jinja2;
 - do not add auto-apply, LinkedIn automation, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, or new database tables.

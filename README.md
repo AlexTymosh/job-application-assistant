@@ -13,6 +13,7 @@ The project is not an auto-apply bot and must not automatically submit applicati
 Use the committed fake example profile for public release verification:
 
 ```powershell
+Copy-Item .env.example .env
 $env:PROFILE_NAME = "example"
 $env:PROFILE_DATA_DIR = "profiles/example"
 uv sync --locked --group dev

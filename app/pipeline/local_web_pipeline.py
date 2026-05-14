@@ -32,6 +32,13 @@ from app.reports.match_report import build_cv_match_report
 
 EVIDENCE_MATRIX_ARTIFACT_TYPE = "evidence_matrix"
 MATCH_REPORT_ARTIFACT_TYPE = "match_report"
+_PIPELINE_TERMINAL_STATUSES = frozenset(
+    {
+        ApplicationStatus.AWAITING_APPROVAL.value,
+        ApplicationStatus.QA_WARNING.value,
+        ApplicationStatus.EXPORTED.value,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -68,9 +75,16 @@ class LocalApplicationPipelineService:
         if application is None:
             raise ValueError("Application not found.")
 
+        if application.status in _PIPELINE_TERMINAL_STATUSES:
+            raise ValueError(
+                "Local pipeline has already generated review or export artefacts for "
+                "this application. Re-running is not supported yet."
+            )
+
         if application.artifact_dir_name is None:
             raise ValueError("Application artefact directory name is missing.")
 
+        persisted_warning_exists = bool(application.warnings)
         manual_job_text = self._read_raw_job_text(application)
         selected_variant = (
             application.selected_cv_variant or self._config.cv.default_variant
@@ -195,6 +209,7 @@ class LocalApplicationPipelineService:
             review_status = self._status_before_final_export(
                 state=state,
                 match_report_missing_skills_exists=bool(match_report.missing_skills),
+                persisted_application_warning_exists=persisted_warning_exists,
             )
             applications.update_status(
                 application_id=application.id,
@@ -244,9 +259,11 @@ class LocalApplicationPipelineService:
         *,
         state: ApplicationRunState,
         match_report_missing_skills_exists: bool,
+        persisted_application_warning_exists: bool,
     ) -> ApplicationStatus:
         warning_exists = bool(
-            state.warning_codes
+            persisted_application_warning_exists
+            or state.warning_codes
             or state.tailoring_warning_codes
             or match_report_missing_skills_exists
         )
