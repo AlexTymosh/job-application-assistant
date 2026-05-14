@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import dataclass
 
 import yaml
@@ -18,6 +19,7 @@ _EXPECTED_CONFIG_EXCEPTIONS = (
     ValueError,
     ValidationError,
     OSError,
+    sqlite3.DatabaseError,
     SQLAlchemyError,
     yaml.YAMLError,
 )

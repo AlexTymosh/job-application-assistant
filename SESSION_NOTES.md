@@ -48,6 +48,7 @@ Implemented:
 - secret-looking setting keys are rejected, and only boolean OpenAI key metadata may be stored in SQLite;
 - effective runtime config loading overlays supported app-managed settings over the existing file-based YAML/default flow;
 - setup status now checks app settings storage separately from the profile `applications.sqlite3` database;
+- startup error handling catches only expected local setup/storage exceptions while allowing unexpected programming errors to fail loudly;
 - regression tests proving `app_settings` is not part of profile DB metadata and profile application tables are not required in `app.sqlite3`.
 
 Non-goals preserved:

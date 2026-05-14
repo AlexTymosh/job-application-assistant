@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Awaitable, Callable
 
+import yaml
 from fastapi import FastAPI, Request, status
 from fastapi.responses import RedirectResponse, Response
+from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.routes_applications import router as applications_router
 from app.api.routes_dashboard import router as dashboard_router
@@ -28,6 +32,16 @@ _SETUP_GATE_EXEMPT_PATHS = {
     "/openapi.json",
 }
 
+_EXPECTED_STARTUP_SETUP_EXCEPTIONS = (
+    FileNotFoundError,
+    ValueError,
+    ValidationError,
+    OSError,
+    sqlite3.DatabaseError,
+    SQLAlchemyError,
+    yaml.YAMLError,
+)
+
 
 def create_app(config: ProjectConfig | None = None) -> FastAPI:
     app = FastAPI(
@@ -41,14 +55,14 @@ def create_app(config: ProjectConfig | None = None) -> FastAPI:
     app_settings_service = None
     try:
         app_settings_service = initialise_app_settings_storage(app_data_paths)
-    except Exception:
+    except _EXPECTED_STARTUP_SETUP_EXCEPTIONS:
         app_settings_service = None
 
     startup_config = config
     if startup_config is None and app_settings_service is not None:
         try:
             startup_config = load_effective_project_config(app_data_paths)
-        except Exception:
+        except _EXPECTED_STARTUP_SETUP_EXCEPTIONS:
             startup_config = None
 
     setup_initialisation = initialise_setup_state(

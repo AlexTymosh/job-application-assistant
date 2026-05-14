@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import ProjectConfig, load_profile_config
@@ -137,3 +138,58 @@ def test_fresh_app_data_initialises_app_settings_database(
 
     assert client.get("/health/live").status_code == 200
     assert (app_data_dir / "app.sqlite3").is_file()
+
+
+def test_corrupt_app_settings_database_leaves_setup_incomplete(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    app_data_dir = tmp_path / "corrupt-app-data"
+    app_data_dir.mkdir()
+    (app_data_dir / "app.sqlite3").write_bytes(b"not a sqlite database")
+    monkeypatch.setenv("APP_DATA_DIR", str(app_data_dir))
+    monkeypatch.setenv("PROFILE_NAME", "missing")
+    monkeypatch.setenv("PROFILE_DATA_DIR", str(tmp_path / "missing-profile"))
+
+    client = TestClient(create_app())
+
+    response = client.get("/setup")
+    assert response.status_code == 200
+    assert "App settings database" in response.text
+    assert "unreadable" in response.text
+
+
+def test_unexpected_app_settings_startup_error_is_not_hidden(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("APP_DATA_DIR", str(tmp_path / "app-data"))
+
+    def fail_with_programming_error(_app_data_paths):  # type: ignore[no-untyped-def]
+        raise RuntimeError("programming error")
+
+    monkeypatch.setattr(
+        "app.main.initialise_app_settings_storage",
+        fail_with_programming_error,
+    )
+
+    with pytest.raises(RuntimeError, match="programming error"):
+        create_app()
+
+
+def test_unexpected_effective_config_startup_error_is_not_hidden(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("APP_DATA_DIR", str(tmp_path / "app-data"))
+
+    def fail_with_programming_error(_app_data_paths):  # type: ignore[no-untyped-def]
+        raise RuntimeError("overlay programming error")
+
+    monkeypatch.setattr(
+        "app.main.load_effective_project_config",
+        fail_with_programming_error,
+    )
+
+    with pytest.raises(RuntimeError, match="overlay programming error"):
+        create_app()
