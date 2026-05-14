@@ -13,10 +13,11 @@ from app.cv.markdown_loader import load_markdown_file
 from app.cv.models import LoadedCv
 from app.cv.section_parser import parse_cv_sections
 from app.cv.selector import select_cv_variant
-from app.db.models import Application, ApplicationStatus
+from app.db.models import Application, ApplicationStatus, WarningLevel
 from app.db.repositories import (
     ApplicationEventRepository,
     ApplicationRepository,
+    ApplicationWarningRepository,
     ArtifactRepository,
 )
 from app.llm.factory import build_job_extraction_client
@@ -165,8 +166,19 @@ class LocalApplicationPipelineService:
             fact_bank,
             evidence_matrix,
         )
+        match_report_missing_skills_exists = bool(match_report.missing_skills)
+
+        self._persist_qa_warning_reasons(
+            application=application,
+            state=state,
+            match_report_missing_skills_exists=match_report_missing_skills_exists,
+        )
+
         state = state.model_copy(
-            update={"evidence_matrix": evidence_matrix, "match_report": match_report}
+            update={
+                "evidence_matrix": evidence_matrix,
+                "match_report": match_report,
+            }
         )
 
         written_evidence = self._artifact_writer.write_evidence_matrix(
@@ -208,7 +220,7 @@ class LocalApplicationPipelineService:
         if self._config.workflow.require_human_approval_before_export:
             review_status = self._status_before_final_export(
                 state=state,
-                match_report_missing_skills_exists=bool(match_report.missing_skills),
+                match_report_missing_skills_exists=match_report_missing_skills_exists,
                 persisted_application_warning_exists=persisted_warning_exists,
             )
             applications.update_status(
@@ -296,3 +308,51 @@ class LocalApplicationPipelineService:
             raise ValueError("Raw job text artefact is empty.")
 
         return raw_text
+
+    def _persist_qa_warning_reasons(
+        self,
+        *,
+        application: Application,
+        state: ApplicationRunState,
+        match_report_missing_skills_exists: bool,
+    ) -> None:
+        warnings = ApplicationWarningRepository(self._session)
+        existing_codes = {warning.code for warning in application.warnings}
+
+        def create_once(code: str, message: str) -> None:
+            if code in existing_codes:
+                return
+
+            warnings.create(
+                application_id=application.id,
+                code=code,
+                message=message,
+                level=WarningLevel.WARNING,
+            )
+            existing_codes.add(code)
+
+        if state.warning_codes:
+            warning_codes = ", ".join(sorted(set(state.warning_codes)))
+            create_once(
+                code="pipeline_warning",
+                message=f"Pipeline warnings detected: {warning_codes}.",
+            )
+
+        if state.tailoring_warning_codes:
+            warning_codes = ", ".join(sorted(set(state.tailoring_warning_codes)))
+            create_once(
+                code="tailoring_warning",
+                message=(
+                    "CV tailoring produced warnings: "
+                    f"{warning_codes}. Review tailored_cv.md before approval."
+                ),
+            )
+
+        if match_report_missing_skills_exists:
+            create_once(
+                code="match_report_missing_skills",
+                message=(
+                    "CV Match Report found missing skills or uncovered requirements. "
+                    "Review match_report.json and evidence_matrix.json before approval."
+                ),
+            )

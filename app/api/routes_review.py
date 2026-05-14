@@ -41,6 +41,18 @@ async def review_application(
         and artifacts_by_type.get("tailored_cv_docx")
     )
 
+    changed_cv_artifacts = [
+        artifact
+        for artifact in application.artifacts
+        if artifact.artifact_type
+        in {
+            "tailored_cv_markdown",
+            "tailored_cv_html",
+            "tailored_cv_pdf",
+            "tailored_cv_docx",
+        }
+    ]
+
     return templates.TemplateResponse(
         request=request,
         name="review.html",
@@ -52,6 +64,13 @@ async def review_application(
             "artifacts": application.artifacts,
             "extracted_job_artifact": artifacts_by_type.get("extracted_job"),
             "tailored_cv_artifact": artifacts_by_type.get("tailored_cv_markdown"),
+            "tailored_cv_markdown_artifact": artifacts_by_type.get(
+                "tailored_cv_markdown"
+            ),
+            "tailored_cv_html_artifact": artifacts_by_type.get("tailored_cv_html"),
+            "tailored_cv_pdf_artifact": artifacts_by_type.get("tailored_cv_pdf"),
+            "tailored_cv_docx_artifact": artifacts_by_type.get("tailored_cv_docx"),
+            "changed_cv_artifacts": changed_cv_artifacts,
             "match_report_artifact": artifacts_by_type.get("match_report"),
             "final_export_ready": final_export_ready,
             "approval_required": config.workflow.require_human_approval_before_export,

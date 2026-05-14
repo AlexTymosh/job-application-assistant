@@ -225,6 +225,18 @@ async def application_detail(
         and artifacts_by_type.get("tailored_cv_docx")
     )
 
+    changed_cv_artifacts = [
+        artifact
+        for artifact in application.artifacts
+        if artifact.artifact_type
+        in {
+            "tailored_cv_markdown",
+            "tailored_cv_html",
+            "tailored_cv_pdf",
+            "tailored_cv_docx",
+        }
+    ]
+
     return templates.TemplateResponse(
         request=request,
         name="applications_detail.html",
@@ -234,6 +246,7 @@ async def application_detail(
             "warnings": application.warnings,
             "events": application.events,
             "artifacts": application.artifacts,
+            "changed_cv_artifacts": changed_cv_artifacts,
             "has_job_text_hash": application.job_text_hash is not None,
             "final_export_ready": final_export_ready,
             "approval_required": config.workflow.require_human_approval_before_export,

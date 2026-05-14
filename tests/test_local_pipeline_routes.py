@@ -228,3 +228,66 @@ def test_local_pipeline_unknown_application_returns_400(tmp_path: Path) -> None:
 
     assert response.status_code == 400
     assert "Application not found." in response.text
+
+
+def test_qa_warning_status_has_visible_warning_reason(tmp_path: Path) -> None:
+    client = build_test_client(tmp_path)
+    create_application(client)
+
+    client.post("/applications/1/run-local-pipeline", follow_redirects=False)
+
+    with client.app.state.session_factory() as session:
+        application = ApplicationRepository(session).get_by_number_with_related(
+            profile_name="example",
+            application_number=1,
+        )
+
+        assert application is not None
+
+        if application.status == ApplicationStatus.QA_WARNING.value:
+            assert application.warnings != []
+
+    response = client.get("/applications/1/review")
+
+    if "Status" in response.text and "qa_warning" in response.text:
+        assert "No warnings recorded." not in response.text
+        assert (
+            "match_report_missing_skills" in response.text
+            or "tailoring_warning" in response.text
+            or "pipeline_warning" in response.text
+            or "prompt_injection_phrase" in response.text
+        )
+
+
+def test_review_page_shows_changed_cv_download_links(tmp_path: Path) -> None:
+    client = build_test_client(tmp_path)
+    create_application(client)
+
+    client.post("/applications/1/run-local-pipeline", follow_redirects=False)
+
+    response = client.get("/applications/1/review")
+
+    assert response.status_code == 200
+    assert "Changed CV downloads" in response.text
+    assert "tailored_cv.md" in response.text
+    assert "tailored_cv.html" in response.text
+    assert "/applications/1/artifacts/" in response.text
+    assert str(tmp_path) not in response.text
+
+
+def test_application_detail_page_shows_changed_cv_download_links(
+    tmp_path: Path,
+) -> None:
+    client = build_test_client(tmp_path)
+    create_application(client)
+
+    client.post("/applications/1/run-local-pipeline", follow_redirects=False)
+
+    response = client.get("/applications/1")
+
+    assert response.status_code == 200
+    assert "Changed CV downloads" in response.text
+    assert "tailored_cv.md" in response.text
+    assert "tailored_cv.html" in response.text
+    assert "/applications/1/artifacts/" in response.text
+    assert str(tmp_path) not in response.text
