@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Awaitable, Callable
 
+import yaml
 from fastapi import FastAPI, Request, status
 from fastapi.responses import RedirectResponse, Response
+from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.routes_applications import router as applications_router
 from app.api.routes_dashboard import router as dashboard_router
@@ -12,6 +16,8 @@ from app.api.routes_review import router as review_router
 from app.api.routes_setup import router as setup_router
 from app.core.config import ProjectConfig
 from app.db.session import create_session_factory, create_sqlite_engine
+from app.settings.init import initialise_app_settings_storage
+from app.settings.service import load_effective_project_config
 from app.setup.init import initialise_setup_state
 from app.setup.service import SetupStatusService
 from app.storage.bootstrap import bootstrap_app_data_dirs
@@ -26,6 +32,16 @@ _SETUP_GATE_EXEMPT_PATHS = {
     "/openapi.json",
 }
 
+_EXPECTED_STARTUP_SETUP_EXCEPTIONS = (
+    FileNotFoundError,
+    ValueError,
+    ValidationError,
+    OSError,
+    sqlite3.DatabaseError,
+    SQLAlchemyError,
+    yaml.YAMLError,
+)
+
 
 def create_app(config: ProjectConfig | None = None) -> FastAPI:
     app = FastAPI(
@@ -36,14 +52,28 @@ def create_app(config: ProjectConfig | None = None) -> FastAPI:
     )
 
     app_data_paths = bootstrap_app_data_dirs()
+    app_settings_service = None
+    try:
+        app_settings_service = initialise_app_settings_storage(app_data_paths)
+    except _EXPECTED_STARTUP_SETUP_EXCEPTIONS:
+        app_settings_service = None
+
+    startup_config = config
+    if startup_config is None and app_settings_service is not None:
+        try:
+            startup_config = load_effective_project_config(app_data_paths)
+        except _EXPECTED_STARTUP_SETUP_EXCEPTIONS:
+            startup_config = None
+
     setup_initialisation = initialise_setup_state(
         app_data_paths=app_data_paths,
-        config=config,
+        config=startup_config,
     )
 
     app.state.app_data_paths = app_data_paths
     app.state.setup_status = setup_initialisation.status
     app.state.explicit_config = config
+    app.state.app_settings_service = app_settings_service
     app.state.setup_status_service = SetupStatusService(app_data_paths=app_data_paths)
 
     if (

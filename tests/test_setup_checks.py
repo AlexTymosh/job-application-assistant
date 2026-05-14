@@ -8,6 +8,7 @@ from pathlib import Path
 
 from app.core.config import ProjectConfig, load_profile_config
 from app.db.session import create_all_tables, create_sqlite_engine
+from app.settings.migrations import migrate_app_settings_database
 from app.setup.service import SetupStatusService
 from app.storage.app_dirs import build_app_data_paths, resolve_app_data_paths
 from app.storage.bootstrap import bootstrap_app_data_dirs
@@ -20,6 +21,7 @@ def build_service(tmp_path: Path) -> SetupStatusService:
     app_data_paths.profiles_dir.mkdir()
     app_data_paths.logs_dir.mkdir()
     app_data_paths.backups_dir.mkdir()
+    migrate_app_settings_database(app_data_paths.database_file)
     return SetupStatusService(app_data_paths=app_data_paths)
 
 
@@ -101,6 +103,7 @@ from pathlib import Path
 import sys
 
 from app.core.config import ProjectConfig, load_profile_config
+from app.settings.migrations import migrate_app_settings_database
 from app.setup.service import SetupStatusService
 from app.storage.app_dirs import build_app_data_paths
 
@@ -109,8 +112,10 @@ app_data_root = Path(sys.argv[2])
 base_config = load_profile_config(Path('profiles/example/config.example.yaml'))
 config_data = base_config.model_dump()
 config_data['app'] = {'profile_name': 'example', 'data_dir': profile_dir}
+app_data_paths = build_app_data_paths(app_data_root)
+migrate_app_settings_database(app_data_paths.database_file)
 status = SetupStatusService(
-    app_data_paths=build_app_data_paths(app_data_root),
+    app_data_paths=app_data_paths,
 ).build_status(config=ProjectConfig.model_validate(config_data))
 sqlite_check = next(check for check in status.checks if check.code == 'sqlite_database')
 assert sqlite_check.ok is False, sqlite_check.model_dump()

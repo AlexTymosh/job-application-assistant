@@ -38,37 +38,49 @@ Implemented:
 - health and documentation routes remain available while setup is incomplete;
 - tests for setup checks, side-effect boundaries, redirects, and complete/incomplete route behaviour.
 
+### PR 3 — Managed settings storage
+
+Implemented:
+- dedicated app-level SQLite settings database at `Documents/JobApplicationAssistant/app.sqlite3`, or `APP_DATA_DIR/app.sqlite3` when overridden;
+- separate `app/settings/` storage boundary with its own SQLAlchemy metadata, session helpers, schema validation, repository, service, and deterministic schema migration code;
+- `app_settings` key/value table for non-secret JSON settings plus an app settings schema version table;
+- managed settings support for LLM extraction mode, human approval before export, Markdown/HTML/PDF/DOCX export toggles, default file-based profile name/path, and OpenAI API key configured metadata;
+- secret-looking setting keys are rejected, and only boolean OpenAI key metadata may be stored in SQLite;
+- effective runtime config loading overlays supported app-managed settings over the existing file-based YAML/default flow;
+- setup status now checks app settings storage separately from the profile `applications.sqlite3` database;
+- startup error handling catches only expected local setup/storage exceptions while allowing unexpected programming errors to fail loudly;
+- regression tests proving `app_settings` is not part of profile DB metadata and profile application tables are not required in `app.sqlite3`.
+
 Non-goals preserved:
 - no settings UI;
-- no `app_settings` table;
 - no OS keyring integration;
 - no managed profiles table;
 - no managed CV, fact, alias, section, or block tables;
 - no profile import tools;
+- no pipeline database migration;
 - no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, or LangGraph;
-- existing YAML/Markdown file-based profile support remains compatible.
+- existing `.env`, YAML, Markdown, and file-based profile support remains compatible.
 
 Remaining risks:
-- setup status is currently diagnostic only; it does not repair missing profile files or run migrations;
+- setup status is currently diagnostic only; it does not repair missing profile files or run profile migrations;
 - OpenAI API keys still come from the environment until keyring support is added;
-- database readiness checks verify tables but do not yet provide a guided migration button or detailed migration version UI.
+- app settings are stored and overlaid by services, but there is not yet a user-facing settings UI;
+- database readiness checks verify tables/schema but do not yet provide a guided repair or migration button.
 
 ---
 
 ## Next Implementation Plan
 
-### PR 3 — Managed settings storage
+### PR 4 — Settings UI
 
 Goal:
-Introduce the first app-managed settings storage layer while preserving existing file-based profile compatibility.
+Add a web UI for viewing and editing the supported managed app settings while preserving the file-based compatibility bridge.
 
 Recommended scope:
-- add an app-level SQLite settings database under the app data root;
-- add an `app_settings` table via Alembic or a dedicated app-data migration boundary;
-- persist non-secret setup metadata such as selected profile path, selected LLM mode, and whether an OpenAI key is configured;
-- keep raw API keys out of SQLite;
-- continue supporting existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, Markdown CV variants, and YAML fact-bank files;
-- avoid managed CV/fact/profile rewrites until later PRs.
+- add settings/setup forms for LLM mode, export toggles, human approval, and default file-based profile selection;
+- keep raw API keys out of SQLite and defer OS keyring storage to a dedicated PR unless explicitly requested;
+- show clear setup guidance when OpenAI mode is selected without model/API key runtime requirements;
+- continue avoiding managed profile/CV/fact schema rewrites until later PRs.
 
 ---
 

@@ -7,11 +7,11 @@ from pathlib import Path
 
 import yaml
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import (
     ProjectConfig,
     get_default_config_path,
-    load_profile_config,
     validate_llm_runtime_config,
 )
 from app.core.paths import ProfilePaths, build_profile_paths
@@ -21,6 +21,9 @@ from app.cv.selector import select_default_cv_variant
 # Import models so SQLAlchemy metadata is populated for readiness checks.
 from app.db import models  # noqa: F401
 from app.db.base import Base
+from app.settings.init import initialise_app_settings_storage
+from app.settings.migrations import is_app_settings_schema_current
+from app.settings.service import load_effective_project_config
 from app.setup.checks import SetupCheck, SetupStatus
 from app.storage.app_dirs import AppDataPaths
 
@@ -30,6 +33,7 @@ _EXPECTED_SETUP_EXCEPTIONS = (
     ValidationError,
     OSError,
     sqlite3.DatabaseError,
+    SQLAlchemyError,
     yaml.YAMLError,
 )
 
@@ -47,6 +51,7 @@ class SetupStatusService:
     ) -> SetupStatus:
         checks: list[SetupCheck] = []
         checks.extend(self._check_app_data_dirs())
+        checks.append(self._check_app_settings_database())
 
         loaded_config: ProjectConfig | None = config
         config_check, loaded_config = self._check_profile_config(config=loaded_config)
@@ -102,7 +107,11 @@ class SetupStatusService:
         if not status.is_complete:
             return None
 
-        resolved_config = config if config is not None else load_profile_config()
+        resolved_config = (
+            config
+            if config is not None
+            else load_effective_project_config(self._app_data_paths)
+        )
         return resolved_config, build_profile_paths(resolved_config)
 
     def _check_app_data_dirs(self) -> list[SetupCheck]:
@@ -146,6 +155,38 @@ class SetupStatusService:
             action_hint="Restart the app so the approved app data bootstrap can run.",
         )
 
+    def _check_app_settings_database(self) -> SetupCheck:
+        ok, message = is_app_settings_schema_current(self._app_data_paths.database_file)
+        if not ok:
+            return SetupCheck(
+                code="app_settings_database",
+                label="App settings database",
+                ok=False,
+                message=message,
+                action_hint=(
+                    "Restart the app so app settings storage can be initialised."
+                ),
+            )
+
+        try:
+            service = initialise_app_settings_storage(self._app_data_paths)
+            service.get_managed_settings()
+        except _EXPECTED_SETUP_EXCEPTIONS as exc:
+            return SetupCheck(
+                code="app_settings_database",
+                label="App settings database",
+                ok=False,
+                message=str(exc),
+                action_hint="Fix or reset app.sqlite3 in the app data folder.",
+            )
+
+        return SetupCheck(
+            code="app_settings_database",
+            label="App settings database",
+            ok=True,
+            message=message,
+        )
+
     def _check_profile_config(
         self,
         *,
@@ -166,7 +207,7 @@ class SetupStatusService:
         return _check_expected(
             code="profile_config",
             label="Profile config",
-            action=lambda: load_profile_config(),
+            action=lambda: load_effective_project_config(self._app_data_paths),
             success_message=f"Loaded profile config from {config_path.name}.",
             failure_hint=(
                 "Create or connect a file-based profile config, then set "
