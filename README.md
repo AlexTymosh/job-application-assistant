@@ -2,7 +2,7 @@
 
 Local Job Application Assistant is a local-first FastAPI web application for preparing job application materials from a job description and a verified CV profile.
 
-The current developer release works, but it is not yet an end-user product. It is intended for users who are comfortable with Python, PowerShell, `uv`, YAML files, local folders, and manual troubleshooting. A later release should add a setup wizard, managed settings, profile management, and a simpler packaged user experience for non-programmers.
+The current developer release works, but it is not yet an end-user product. It is intended for users who are comfortable with Python, PowerShell, `uv`, YAML files, local folders, and manual troubleshooting. It now includes setup diagnostics, setup redirects, managed settings storage, and a simple Settings UI; later releases should add keyring secrets, profile management, guided repair actions, and a simpler packaged user experience for non-programmers.
 
 The application is not an auto-apply bot. It must not automatically submit applications, automate LinkedIn, send real emails, or apply to jobs without explicit user action.
 
@@ -43,12 +43,16 @@ Implemented today:
 - Evidence Matrix and CV Match Report generation;
 - Markdown, HTML, PDF, and DOCX exporters;
 - safe artefact download routes;
-- dashboard, application detail, and review pages;
+- dashboard, application detail, review, setup, and settings pages;
+- app data folder bootstrap under `Documents/JobApplicationAssistant` with `APP_DATA_DIR` override support;
+- managed app settings storage in `app.sqlite3`;
+- `/settings` UI for supported non-secret settings;
 - release checklist and smoke-test documentation.
 
 The current release is still raw:
 
-- settings are still mostly configured through `.env` and `config.yaml`;
+- raw OpenAI API keys are not managed through the UI yet;
+- settings not listed on `/settings` still use `.env` and `config.yaml`;
 - private CV data is still file-based;
 - CV variants and facts are not yet edited through the web UI;
 - the setup flow is not yet friendly for ordinary users;
@@ -65,7 +69,8 @@ This version can be used by a technical user who can:
 - install Python 3.12;
 - use PowerShell;
 - run `uv`;
-- edit `.env`;
+- use the setup and settings pages for supported local configuration;
+- edit `.env` for developer fallbacks and secrets that are not UI-managed yet;
 - prepare a private profile folder;
 - create `config.yaml`;
 - create Markdown CV variants;
@@ -73,7 +78,7 @@ This version can be used by a technical user who can:
 - run Alembic migrations;
 - inspect logs/errors if something fails.
 
-This version is not yet suitable for a non-technical user. The next product direction is to add a setup wizard, managed settings, managed CV data, and a persistent application data folder under Documents.
+This version is not yet suitable for a non-technical user. The current product direction is to continue from app data bootstrap, setup diagnostics, managed settings storage, and the first Settings UI towards OS keyring secrets, managed profiles, managed CV data, and a persistent application data folder under Documents.
 
 ---
 
@@ -182,9 +187,17 @@ app.sqlite3
 
 The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. Raw API keys are not stored in SQLite; OpenAI mode still requires the runtime `OPENAI_API_KEY` environment variable until OS keyring support is added. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, and Markdown CV behaviour remains compatible.
 
-This still does not implement the setup wizard, settings UI, keyring secret storage, managed profiles, managed CV storage, or profile import yet.
+The setup diagnostics, setup redirect, managed app settings storage, and a simple Settings UI are now implemented. This still does not implement OS keyring secret storage, managed profiles, managed CV storage, data folder picker UI, profile import, or raw OpenAI API key editing.
 
 If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
+
+The Settings page is available at:
+
+```text
+/settings
+```
+
+It edits supported non-secret managed settings: LLM extraction mode, human approval before final export, Markdown/HTML/PDF/DOCX export toggles, and default file-based profile name/path. It remains available when setup is incomplete so the user can repair LLM mode or default profile selection. Raw OpenAI API keys are not accepted on this page; keyring-backed secret storage remains future work.
 
 ---
 
@@ -192,8 +205,10 @@ If the current local installation is incomplete, browser requests for the workin
 
 The current implementation uses:
 
-- `.env` for runtime profile selection and secrets;
-- `config.yaml` for private profile settings;
+- managed app settings storage for supported non-secret settings;
+- `/settings` for editing supported non-secret settings in the app;
+- `.env` for developer fallback profile selection and secrets that are not UI-managed yet;
+- `config.yaml` for private profile settings that are not managed yet;
 - `fact_bank.yaml` for verified user facts;
 - Markdown files under `cv/variants/` as source CV variants;
 - SQLite for applications, events, warnings, artefacts, and history.
@@ -202,9 +217,9 @@ This is acceptable for the current developer release, but it is not the final pr
 
 Target direction:
 
-- create a default application data folder under Documents;
+- continue using the default application data folder under Documents;
 - let the user connect an existing application data folder;
-- store application settings in SQLite;
+- expand application settings stored in SQLite;
 - store CV variants, sections, blocks, aliases, and facts in SQLite;
 - keep generated artefacts as files on disk;
 - keep OpenAI API keys in the OS keyring, not directly in SQLite;
@@ -488,34 +503,35 @@ These may be considered only after the local core workflow is stable.
 - improve human approval/export flow;
 - keep documentation aligned with code.
 
-### 2. Add managed app storage
+### 2. Managed app storage, setup diagnostics, and Settings UI
+
+Implemented foundations:
 
 - create a default `Documents/JobApplicationAssistant` folder;
-- allow overriding or connecting a data folder;
-- bootstrap folders and database automatically;
+- allow overriding the app data folder for tests and local development;
+- bootstrap folders and the app settings database automatically;
+- redirect incomplete installations to setup;
+- store supported non-secret settings in SQLite;
+- edit supported non-secret settings at `/settings`;
+- keep YAML as a compatibility/import layer;
 - keep generated artefacts out of the repository.
 
-### 3. Add setup and settings UI
+Future work in this area includes a data folder picker and guided repair actions.
 
-- redirect incomplete installations to setup;
-- edit settings in the app;
-- store settings in SQLite;
-- keep YAML as compatibility/import layer.
-
-### 4. Add OS keyring secret storage
+### 3. Add OS keyring secret storage
 
 - store OpenAI API key in OS keyring;
 - store only secret metadata in SQLite;
 - keep `.env` as developer fallback.
 
-### 5. Add managed profiles
+### 4. Add managed profiles
 
 - profile table;
 - active profile selection;
 - profile settings;
 - external data folder connection.
 
-### 6. Add managed CV storage
+### 5. Add managed CV storage
 
 - CV variants;
 - aliases;
@@ -525,7 +541,7 @@ These may be considered only after the local core workflow is stable.
 - fact links;
 - import existing Markdown/YAML profile into managed storage.
 
-### 7. Add CV and fact editor UI
+### 6. Add CV and fact editor UI
 
 - edit variants;
 - edit sections and blocks;

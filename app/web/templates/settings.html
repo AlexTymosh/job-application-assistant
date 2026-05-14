@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Settings</h1>
+  <p>Manage non-secret local application settings stored in the app data database.</p>
+
+  {% if error_message %}
+    <section aria-labelledby="settings-error-heading" role="alert">
+      <h2 id="settings-error-heading">Settings were not saved</h2>
+      <p>{{ error_message }}</p>
+    </section>
+  {% endif %}
+
+  <section aria-labelledby="settings-status-heading">
+    <h2 id="settings-status-heading">Current status</h2>
+    <p>Effective LLM extraction mode: <strong>{{ settings.llm_extraction_mode.value if settings.llm_extraction_mode else (effective_config.llm.extraction_mode.value if effective_config else "fake") }}</strong></p>
+    <p>OpenAI API keys are not edited on this page yet. Raw API keys must not be entered here and are not displayed.</p>
+    {% if llm_check and not llm_check.ok %}
+      <p role="alert"><strong>OpenAI/runtime warning:</strong> {{ llm_check.message }} {{ llm_check.action_hint or "" }}</p>
+    {% endif %}
+    {% if not setup_status.is_complete %}
+      <p role="status">Setup is incomplete. Settings remains available so you can repair LLM mode or default profile selection.</p>
+    {% endif %}
+  </section>
+
+  <form method="post" action="/settings">
+    <fieldset>
+      <legend>LLM extraction mode</legend>
+      {% set current_mode = submitted_values.get("llm.extraction_mode", settings.llm_extraction_mode.value if settings.llm_extraction_mode else (effective_config.llm.extraction_mode.value if effective_config else "fake")) %}
+      {% for mode in llm_modes %}
+        <label>
+          <input type="radio" name="llm.extraction_mode" value="{{ mode }}" {% if current_mode == mode %}checked{% endif %}>
+          {{ mode }}
+        </label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset>
+      <legend>Workflow</legend>
+      {% set current_approval = submitted_values.get("workflow.require_human_approval_before_export") if submitted_values else (settings.require_human_approval_before_export if settings.require_human_approval_before_export is not none else (effective_config.workflow.require_human_approval_before_export if effective_config else true)) %}
+      <label>
+        <input type="checkbox" name="workflow.require_human_approval_before_export" value="true" {% if current_approval in [true, "true", "on", "1", "yes"] %}checked{% endif %}>
+        Require human approval before final export
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Export formats</legend>
+      {% set export_values = {
+        "exports.markdown": settings.export_markdown if settings.export_markdown is not none else (effective_config.exports.markdown if effective_config else true),
+        "exports.html": settings.export_html if settings.export_html is not none else (effective_config.exports.html if effective_config else true),
+        "exports.pdf": settings.export_pdf if settings.export_pdf is not none else (effective_config.exports.pdf if effective_config else true),
+        "exports.docx": settings.export_docx if settings.export_docx is not none else (effective_config.exports.docx if effective_config else true),
+      } %}
+      {% for key, label in [("exports.markdown", "Markdown"), ("exports.html", "HTML"), ("exports.pdf", "PDF"), ("exports.docx", "DOCX")] %}
+        {% set current_export = submitted_values.get(key) if submitted_values else export_values[key] %}
+        <label>
+          <input type="checkbox" name="{{ key }}" value="true" {% if current_export in [true, "true", "on", "1", "yes"] %}checked{% endif %}>
+          {{ label }}
+        </label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset>
+      <legend>Default file-based profile</legend>
+      <p>Provide both fields to select a default file-based profile, or leave both blank to clear the managed profile selection.</p>
+      <label for="default-profile-name">Default profile name</label>
+      <input id="default-profile-name" name="profiles.default_profile_name" type="text" value="{{ submitted_values.get("profiles.default_profile_name", settings.default_profile_name or "") }}">
+
+      <label for="default-profile-data-dir">Default profile data directory</label>
+      <input id="default-profile-data-dir" name="profiles.default_profile_data_dir" type="text" value="{{ submitted_values.get("profiles.default_profile_data_dir", settings.default_profile_data_dir.as_posix() if settings.default_profile_data_dir else "") }}">
+      <p>The path is saved without checking it here. Setup reports whether the selected profile is usable.</p>
+    </fieldset>
+
+    <button type="submit">Save settings</button>
+  </form>
+
+  <nav aria-label="Settings secondary navigation">
+    <a href="/setup">Back to setup</a>
+    <a href="/dashboard">Back to dashboard</a>
+    <a href="/">Back to home</a>
+  </nav>
+{% endblock %}

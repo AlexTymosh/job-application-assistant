@@ -13,7 +13,7 @@ Read first:
 
 Move the project from file-based profile configuration to a managed local application setup.
 
-The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, and safe artefact downloads.
+The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, and a simple Settings UI for supported non-secret app settings.
 
 ---
 
@@ -51,36 +51,52 @@ Implemented:
 - startup error handling catches only expected local setup/storage exceptions while allowing unexpected programming errors to fail loudly;
 - regression tests proving `app_settings` is not part of profile DB metadata and profile application tables are not required in `app.sqlite3`.
 
+### PR 4 — Settings UI
+
+Implemented:
+- `/settings` GET and POST routes for supported non-secret managed app settings;
+- a simple Jinja2 settings page for LLM extraction mode, human approval before final export, export format toggles, and default file-based profile selection;
+- form validation for unsupported LLM modes, invalid boolean values, partial default profile selections, unsupported fields, and secret-looking fields;
+- explicit persistence of unchecked checkbox values as `False`;
+- clearing default profile selection when both profile fields are blank;
+- setup gate exemptions so `/settings` remains available while setup is incomplete;
+- runtime state refresh after saving settings, including clearing stale runtime state when saved settings make setup incomplete;
+- tests covering complete and incomplete setup access, settings persistence, OpenAI runtime diagnostics, raw secret rejection, and runtime refresh.
+
 Non-goals preserved:
-- no settings UI;
 - no OS keyring integration;
+- no raw OpenAI API key input;
 - no managed profiles table;
 - no managed CV, fact, alias, section, or block tables;
 - no profile import tools;
 - no pipeline database migration;
+- no data folder picker UI;
 - no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, or LangGraph;
 - existing `.env`, YAML, Markdown, and file-based profile support remains compatible.
 
 Remaining risks:
-- setup status is currently diagnostic only; it does not repair missing profile files or run profile migrations;
+- setup status is still diagnostic; it does not repair missing profile files or run profile migrations;
 - OpenAI API keys still come from the environment until keyring support is added;
-- app settings are stored and overlaid by services, but there is not yet a user-facing settings UI;
-- database readiness checks verify tables/schema but do not yet provide a guided repair or migration button.
+- settings validation rejects raw secrets but cannot configure them yet;
+- database readiness checks verify tables/schema but do not yet provide a guided repair or migration button;
+- the Settings UI saves profile paths as text and relies on setup checks to report whether the selected path is usable.
 
 ---
 
 ## Next Implementation Plan
 
-### PR 4 — Settings UI
+### PR 5 — OS keyring secrets
 
 Goal:
-Add a web UI for viewing and editing the supported managed app settings while preserving the file-based compatibility bridge.
+Add local OS keyring-backed secret storage for OpenAI API keys while keeping SQLite limited to non-secret metadata.
 
 Recommended scope:
-- add settings/setup forms for LLM mode, export toggles, human approval, and default file-based profile selection;
-- keep raw API keys out of SQLite and defer OS keyring storage to a dedicated PR unless explicitly requested;
-- show clear setup guidance when OpenAI mode is selected without model/API key runtime requirements;
-- continue avoiding managed profile/CV/fact schema rewrites until later PRs.
+- add a small secret service boundary for OpenAI API key read/write/delete operations;
+- use OS keyring for the raw key and store only configured/unconfigured metadata in `app_settings`;
+- expose safe Settings UI controls for configuring, replacing, and clearing the OpenAI API key without displaying it;
+- keep `.env` as a developer fallback until the transition is complete;
+- extend setup status so OpenAI mode can pass when a key is available from keyring or the existing environment fallback;
+- add tests that mock keyring and never require a real `OPENAI_API_KEY`.
 
 ---
 
@@ -90,7 +106,7 @@ Recommended scope:
 - User should be able to connect an existing data folder in a future PR.
 - SQLite should become the primary source of app/profile settings later.
 - YAML should remain as example/import/export/fallback only, not the main UI-facing settings store.
-- OpenAI API key should use OS keyring as the preferred storage backend later.
+- OpenAI API key should use OS keyring as the preferred storage backend next.
 - SQLite may store secret metadata only, not the raw API key.
 - Real private profiles must stay outside the repository.
 - The app remains local-first and web-only for v1.

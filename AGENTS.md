@@ -72,6 +72,8 @@ routes -> services/pipeline -> repositories/exporters/LLM clients/artifact write
 Rules:
 
 - routes may parse input, call services, and render/redirect;
+- settings routes must stay thin and must persist settings through `AppSettingsService`/`AppSettingsRepository`;
+- `/settings` must remain available when setup is incomplete if it is needed to repair LLM mode or default profile selection;
 - routes must not call OpenAI directly;
 - routes must not write PDF/DOCX/HTML/Markdown files directly;
 - routes must not mutate CV variants directly;
@@ -158,7 +160,7 @@ Future managed storage should default to a user-visible application folder, for 
 Documents/JobApplicationAssistant/
 ```
 
-OpenAI API keys and other secrets should be stored through OS keyring. SQLite may store only non-secret metadata such as whether a secret is configured.
+OpenAI API keys and other secrets should be stored through OS keyring. SQLite may store only non-secret metadata such as whether a secret is configured. Settings UI code must never store raw secrets in SQLite.
 
 ---
 
