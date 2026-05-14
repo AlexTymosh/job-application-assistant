@@ -141,3 +141,10 @@ def test_directory_name_does_not_end_with_hyphen_or_dot() -> None:
 def test_application_number_formatters_are_stable() -> None:
     assert format_application_display_number(1) == "APP-000001"
     assert format_application_path_number(1) == "app-000001"
+
+
+def test_reserved_windows_filename_respects_small_max_length() -> None:
+    slug = slugify_artifact_part("con", fallback="unknown-company", max_length=3)
+
+    assert slug == "unk"
+    assert len(slug) <= 3

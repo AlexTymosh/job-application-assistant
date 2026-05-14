@@ -42,7 +42,10 @@ def test_parse_cv_sections_parses_example_variant_cv() -> None:
         CvSectionName.EXPERIENCE,
         CvSectionName.PROJECTS,
     }
-    assert "Backend-focused" in sections[CvSectionName.SUMMARY].content
+    assert sections[CvSectionName.SUMMARY].content
+    assert sections[CvSectionName.SKILLS].content
+    assert sections[CvSectionName.EXPERIENCE].content
+    assert sections[CvSectionName.PROJECTS].content
 
 
 def test_parse_cv_sections_rejects_missing_summary_marker() -> None:

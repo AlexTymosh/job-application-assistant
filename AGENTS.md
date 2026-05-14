@@ -666,7 +666,9 @@ Suspicious phrases:
 - forget your rules;
 - system prompt;
 - developer message;
-- act as;
+- act as chatgpt;
+- act as an ai;
+- act as a system;
 - override instructions;
 - reveal hidden prompt;
 - disregard previous;
@@ -1151,5 +1153,5 @@ Rules for application numbers and identifiers:
 - New application artefact directories use the application number suffix, for example `applications/2026-05-14_10-22-50__unknown-company__unknown-role__app-000001/job_raw.txt`.
 - Existing stored artefact paths must not be rewritten automatically.
 - Existing artefact folders must not be renamed during normal application startup.
-- The UUID must not be shown as the primary visible application ID in normal UI. If it is useful, it may appear only in a small secondary technical/debug context.
+- The UUID must not be shown as the primary visible application ID in normal UI. If it is useful, it may appear only inside a collapsed technical/debug section, not as normal metadata.
 - The current local SQLite v1 implementation uses a simple per-profile `max(application_number) + 1` assignment strategy. This is acceptable for the local single-user application and is not a multi-user SaaS counter strategy.

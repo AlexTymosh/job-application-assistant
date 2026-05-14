@@ -20,7 +20,7 @@ uv run --env-file .env -- alembic upgrade head
 uv run --env-file .env -- uvicorn app.main:app --reload
 ```
 
-Open the local web app at <http://127.0.0.1:8000/> and the dashboard at <http://127.0.0.1:8000/dashboard>. Application pages use short human numbers such as `APP-000001`, and public URLs use numbers such as `/applications/1`; the internal UUID still exists for database identity but is not normally needed by the user.
+Open the local web app at <http://127.0.0.1:8000/> and the dashboard at <http://127.0.0.1:8000/dashboard>. Application pages use short human numbers such as `APP-000001`, and public URLs use numbers such as `/applications/1`; the internal UUID remains the database identity and is kept out of normal user-facing metadata.
 
 Existing local databases need `uv run --env-file .env -- alembic upgrade head` so Alembic can add and backfill application numbers before normal use.
 
@@ -39,7 +39,7 @@ Tests must not call the real OpenAI API and must not require `OPENAI_API_KEY`.
 
 ---
 
-## 0. Current Status
+## Current Status
 
 The project has completed:
 
@@ -112,7 +112,7 @@ The CV architecture is role-variant based: CV variants under `cv/variants/` are 
 - the correct CV package marker at `app/cv/__init__.py`;
 - bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, Stage 7 reports tests, and Stage 8A and Stage 8B export tests.
 
-Application UUIDs remain the stable internal database identifiers, while per-profile application numbers such as `APP-000001` are the normal public identifiers. Artefact folder names are generated once at intake time for human readability only, using a Windows-safe and length-limited path such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`; long company and title values are truncated safely and database artefact rows store relative paths only.
+Application UUIDs remain the stable internal database identifiers and are not shown as normal user-facing metadata, while per-profile application numbers such as `APP-000001` are the normal public identifiers. Artefact folder names are generated once at intake time for human readability only, using a Windows-safe and length-limited path such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`; long company and title values are truncated safely and database artefact rows store relative paths only.
 
 Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 7 adds strict in-memory report models plus deterministic Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`. Stage 8A adds Markdown and HTML export foundation. Stage 8B adds PDF and DOCX export foundation with ReportLab and python-docx. Markdown remains the source document format for tailored CV artefacts. HTML, PDF, and DOCX exports are artefacts written through `ArtifactWriter`, with database rows storing privacy-safe relative paths only. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, FastAPI export routes, or new database tables. The rule remains: no `fact_id` means no claim.
 
@@ -120,7 +120,7 @@ The first release remains web-only through FastAPI/Jinja2. CLI commands are not 
 
 ---
 
-## 1. The Problem
+## The Problem
 
 Preparing a quality job application typically requires manual effort:
 
@@ -140,7 +140,7 @@ The goal of the project is to build a local tool that helps adapt a CV quickly, 
 
 ---
 
-## 2. The Core Principle of the Project
+## The Core Principle of the Project
 
 > Find the maximum honest match between the user's real experience and the job requirements.
 
@@ -167,7 +167,7 @@ The LLM must not:
 
 ---
 
-## 3. What the Application Does
+## What the Application Does
 
 Basic workflow:
 
@@ -187,11 +187,11 @@ Job posting URL or text
 
 ---
 
-## 4. Current v1.0 Scope
+## Current v1.0 Scope
 
 The current local web-only v1.0 scope is:
 
-- FastAPI/Jinja2 web intake, dashboard, detail, and read-only review pages;
+- FastAPI/Jinja2 web intake, dashboard, detail, read-only review pages, and simple HTML 404 pages for unknown application detail/review URLs;
 - manual job text intake;
 - SQLite persistence managed by Alembic;
 - fake example profile support plus external private profile support;
@@ -212,7 +212,7 @@ Not implemented in this release:
 - CLI commands as a product interface;
 - fake ATS scoring.
 
-## 5. MVP Target
+## MVP Target
 
 The first working release target includes:
 
@@ -244,7 +244,7 @@ The first release is considered complete only when the user is able to download 
 
 ---
 
-## 5. What Is Not in the MVP but May Be Developed Later
+## What Is Not in the MVP but May Be Developed Later
 
 The MVP does not include:
 
@@ -265,7 +265,7 @@ These features may be added later once the core pipeline becomes stable.
 
 ---
 
-## 6. Technical Stack
+## Technical Stack
 
 Planned stack:
 
@@ -284,7 +284,7 @@ Planned stack:
 
 ---
 
-## 7. Why Markdown CV
+## Why Markdown CV
 
 Markdown is used as the primary working CV format because it:
 
@@ -301,7 +301,7 @@ All tailored CV versions must be generated separately as application artefacts i
 
 ---
 
-## 8. CV Sections
+## CV Sections
 
 Stage 5 CV loading reads Markdown files only and is read-only. The CV package marker is `app/cv/__init__.py`. It validates that the selected CV variant exists, parses required section markers, and does not mutate source variant files. Stage 6 adds only the safe tailoring contract, deterministic fake tailoring, diff support, and an in-memory pipeline step. It does not add real OpenAI tailoring, does not mutate selected CV variants, and does not write tailored CV artefacts to disk. Stage 7 report builders are also in-memory and read-only: they link extracted job requirements to verified fact bank facts, calculate coverage and overclaiming risk, and explicitly avoid fake ATS scores. Group 7 adds web intake, application detail, a read-only review surface, and a dashboard. No exporters, LangGraph, CLI commands, URL scraping, authentication, cloud deployment, or external integrations are added in Group 7.
 
@@ -329,7 +329,7 @@ The LLM must only work with permitted sections.
 
 ---
 
-## 9. Fact Bank
+## Fact Bank
 
 The `fact_bank.yaml` file is the source of verified facts about the user.
 
@@ -356,7 +356,7 @@ If the required fact is not present in `fact_bank.yaml`, the application must no
 
 ---
 
-## 10. Reports Foundation
+## Reports Foundation
 
 Stage 7 adds in-memory reporting models and pure builder functions:
 
@@ -371,7 +371,7 @@ Report artefact persistence and export are not added in Stage 7. Reports remain 
 
 ---
 
-## 11. Export Foundation
+## Export Foundation
 
 Stage 8A adds Markdown and HTML export foundation:
 
@@ -400,7 +400,7 @@ No CLI commands are added, and v1.0 remains web-only through FastAPI/Jinja2.
 
 ---
 
-## 12. SQLite
+## SQLite
 
 SQLite is the primary source of truth.
 
@@ -424,7 +424,7 @@ Future stages will add:
 
 ---
 
-## 13. CV Match Report
+## CV Match Report
 
 The project must not use a fake "ATS score 0–100" as its primary metric.
 
@@ -443,7 +443,7 @@ The purpose of the report is not to imitate closed ATS algorithms, but to show t
 
 ---
 
-## 14. Evidence Matrix
+## Evidence Matrix
 
 The Evidence Matrix must link job posting requirements to verified facts from the CV/fact bank. The fact bank is the source of verified facts for future CV tailoring and must reject malformed facts, duplicate fact IDs, and empty fact banks. Fact text fields are normalised by trimming surrounding whitespace.
 
@@ -461,7 +461,7 @@ The Evidence Matrix is needed to protect against hallucinations and to allow man
 
 ---
 
-## 15. CV Change Log
+## CV Change Log
 
 Every CV change must have a record containing:
 
@@ -478,7 +478,7 @@ This makes it possible to understand exactly what the LLM changed and why.
 
 ---
 
-## 16. Prompt Injection Protection
+## Prompt Injection Protection
 
 The job posting text is treated as untrusted input.
 
@@ -498,7 +498,9 @@ Examples of suspicious phrases:
 - `forget your rules`;
 - `system prompt`;
 - `developer message`;
-- `act as`;
+- `act as chatgpt`;
+- `act as an ai`;
+- `act as a system`;
 - `override instructions`;
 - `reveal hidden prompt`.
 
@@ -506,7 +508,7 @@ The presence of a warning must not always halt the pipeline. Behaviour must be c
 
 ---
 
-## 17. Human Approval Step
+## Human Approval Step
 
 The Human Approval Step must be optional.
 
@@ -526,7 +528,7 @@ If Human Approval is disabled, the application may create artefacts immediately,
 
 ---
 
-## 18. Profiles
+## Profiles
 
 The repository contains fake example profile data only:
 
@@ -593,7 +595,7 @@ job-application-assistant-data/
 
 ---
 
-## 18. Future Project Structure
+## Future Project Structure
 
 ```text
 local-job-application-assistant/
@@ -667,7 +669,7 @@ local-job-application-assistant/
 
 ---
 
-## 19. Pipeline
+## Pipeline
 
 Planned pipeline:
 
@@ -689,7 +691,7 @@ Input
 
 ---
 
-## 20. LangGraph-Ready Approach
+## LangGraph-Ready Approach
 
 LangGraph is not used in the MVP.
 
@@ -712,7 +714,7 @@ async def run(state: ApplicationRunState) -> ApplicationRunState:
 
 ---
 
-## 21. OpenAI API
+## OpenAI API
 
 The OpenAI API is used for:
 
@@ -732,7 +734,7 @@ Structured Outputs and JSON Schema must be used for structured responses. Extrac
 
 ---
 
-## 22. Config
+## Config
 
 Example private `config.yaml`:
 
@@ -790,7 +792,7 @@ future_integrations:
 
 ---
 
-## 23. Application Statuses
+## Application Statuses
 
 Planned statuses:
 
@@ -819,7 +821,7 @@ Application statuses are informational and are not used in the application busin
 
 ---
 
-## 24. Release Plan
+## Release Plan
 
 The first release is web-only through FastAPI/Jinja2. CLI commands are intentionally outside the v1.0 plan.
 
@@ -850,15 +852,15 @@ The first release is web-only through FastAPI/Jinja2. CLI commands are intention
 
 ---
 
-## 24.1. Current Web Pages
+## Current Web Pages
 
 The current FastAPI/Jinja2 web vertical slice includes:
 
 - `/` — home page with navigation links;
 - `/applications/new` — manual job intake form with optional source URL metadata and CV variant selection;
 - `POST /applications` — creates an application record through `ApplicationIntakeService`, writes the raw job text artefact through the existing artefact boundary, persists preflight warnings, and redirects to the number-based detail page, for example `/applications/1`;
-- `/applications/{application_number}` — application detail page with metadata, status, source URL, normalised URL, selected CV variant, job text hash presence, warnings, events, and privacy-safe relative artefact paths;
-- `/applications/{application_number}/review` — read-only review surface that shows existing records and clearly states that it does not generate extraction, tailoring, OpenAI calls, reports, or exports;
+- `/applications/{application_number}` — application detail page with the application number as the normal ID, metadata, status, source URL, normalised URL, selected CV variant, job text hash presence, warnings, events, and privacy-safe relative artefact paths; unknown application numbers return a simple HTML 404 page;
+- `/applications/{application_number}/review` — read-only review surface that shows existing records and clearly states that it does not generate extraction, tailoring, OpenAI calls, reports, or exports; unknown application numbers return a simple HTML 404 page;
 - `/dashboard` — newest-first application list with status, CV variant, warning count, artefact count, and links to detail and review pages.
 
 The web routes do not call OpenAI, do not run CV tailoring, do not scrape URLs, and do not run Markdown/HTML/PDF/DOCX exporters. The production application initialises a SQLite session factory in `app.state`, but Alembic remains responsible for schema creation and migrations. Tests may create temporary tables explicitly.
@@ -877,7 +879,7 @@ Known limitation: if the raw job text artefact is written successfully but the l
 
 ---
 
-## 25. Definition of Done for the First Release
+## Definition of Done for the First Release
 
 The first release is considered complete when the user is able to:
 

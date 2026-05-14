@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_session
 from app.core.config import ProjectConfig
 from app.db.repositories import ApplicationRepository
-from app.web.templates import templates
+from app.web.templating import render_error_page, templates
 
 router = APIRouter(tags=["review"])
 
@@ -27,7 +27,11 @@ async def review_application(
     )
 
     if application is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        return render_error_page(
+            request=request,
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="Application not found.",
+        )
 
     artifacts_by_type = {
         artifact.artifact_type: artifact for artifact in application.artifacts

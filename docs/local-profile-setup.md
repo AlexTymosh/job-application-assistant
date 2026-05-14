@@ -168,11 +168,11 @@ uv run --env-file .env -- uvicorn app.main:app --reload
 Run from the repository root:
 
 ```powershell
+git ls-files -- profiles/alex
 git status --short
-git ls-files -- profiles/alex C:/Users/<user>/job-application-assistant-data/alex
 ```
 
-The private external directory should not be inside the repository, so Git should not list those files.
+These commands are repository-local checks only. Also verify the private profile directory manually by confirming it is physically outside the repository root, for example under `C:/Users/<user>/job-application-assistant-data/alex/`. Real private profile files must not be committed.
 
 ## What not to commit
 
@@ -199,4 +199,11 @@ Copy-Item profiles/example/blacklist.example.txt C:/Users/<user>/job-application
 Copy-Item profiles/example/cv -Destination C:/Users/<user>/job-application-assistant-data/alex/cv -Recurse
 ```
 
-After copying, rename `.example` CV files to private filenames and replace fake content with your own verified private facts outside the repository. Never copy real private data back into `profiles/example`.
+After copying, rename the example CV files to private filenames outside the repository:
+
+- rename `cv/fact_bank.example.yaml` to `cv/fact_bank.yaml`;
+- rename `cv/variants/backend_developer.example.md` to `cv/variants/backend_developer.md`;
+- replace the fake fact-bank content with private verified facts;
+- replace the fake CV variant content with private verified CV content.
+
+The selected CV variants are the only source CV documents used for tailoring, `fact_bank.yaml` is the claim authority, source variants remain read-only, and generated tailored CV files are written separately as application artefacts. Never copy real private data back into `profiles/example`.

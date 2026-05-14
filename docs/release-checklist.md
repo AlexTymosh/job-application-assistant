@@ -50,7 +50,7 @@ $env:PROFILE_NAME = "example"
 $env:PROFILE_DATA_DIR = "profiles/example"
 ```
 
-The example profile uses files with `.example` suffixes, such as `config.example.yaml`, `blacklist.example.txt`, `fact_bank.example.yaml`, and `backend_developer.example.md`. Selected CV variants are the only source documents for tailoring; there is no separate root-level source CV requirement.
+The example profile uses files with `.example` suffixes, such as `config.example.yaml`, `blacklist.example.txt`, `fact_bank.example.yaml`, and `backend_developer.example.md`. When copying to an external private profile, rename `cv/fact_bank.example.yaml` to `cv/fact_bank.yaml`, rename `cv/variants/backend_developer.example.md` to `cv/variants/backend_developer.md`, and replace fake content with private verified facts and CV variant content. Selected CV variants are the only source documents for tailoring; there is no separate root-level source CV requirement.
 
 ## Real external private profile
 
@@ -134,6 +134,7 @@ Open these local URLs:
 - Open `/dashboard`.
 - Confirm the empty state renders on a clean example database.
 - After creating a sample application, confirm the newest application appears with warning and artefact counts.
+- Confirm application numbers such as `APP-000001` are the normal visible identifiers and route links use numeric application URLs.
 - Confirm links to the detail and review pages work.
 
 ## Manual sample application
@@ -153,12 +154,14 @@ Submit the form and open the application detail page.
 ## Warning verification
 
 - Confirm prompt-injection warnings render on the detail and review pages.
+- Confirm `act as a liaison` does not create a prompt-injection warning, while `act as ChatGPT` does.
 - Confirm blacklist or duplicate warnings render if you deliberately create matching data in the fake profile.
 - Confirm warnings are persisted and do not silently discard the application record.
 
 ## Artefact verification
 
 - Confirm artefact paths shown in the UI are relative paths such as `applications/2026-05-14_10-22-50__unknown-company__unknown-role__app-000001/job_raw.txt`.
+- Confirm the internal UUID is not shown as normal application metadata on detail or review pages.
 - Confirm absolute private paths are not shown in the UI or stored in database artefact records.
 - Confirm generated application artefacts live under the active profile data directory.
 
@@ -200,6 +203,7 @@ The generated SQLite files, `.env`, and private profile files must be ignored. I
 - [ ] `uv run --env-file .env -- alembic upgrade head` passed for the active profile.
 - [ ] The local app starts with `uv run --env-file .env -- uvicorn app.main:app --reload`.
 - [ ] Home, dashboard, new application, detail, and review pages render.
+- [ ] Unknown detail and review pages return simple HTML 404 pages.
 - [ ] Manual job text intake works.
 - [ ] Warning rendering works.
 - [ ] Artefact paths are relative and privacy-safe.

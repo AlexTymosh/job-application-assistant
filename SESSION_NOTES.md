@@ -37,7 +37,7 @@ Completed:
 Current release hardening task state:
 
 - current corrective architecture task: remove the previous root-level source CV concept; CV variants are now the only source CV documents used for tailoring, the fact bank remains the claim authority, selected source variants remain read-only, and generated tailored CVs remain separate application artefacts;
-- completed after implementation: per-profile sequential application numbers are assigned, public routes use numbers, UUIDs remain internal primary keys, and new artefact folders use an `app-000001` suffix such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`;
+- completed after implementation: per-profile sequential application numbers are assigned, public routes use numbers, normal UI uses display numbers instead of UUID metadata, UUIDs remain internal primary keys, and new artefact folders use an `app-000001` suffix such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`;
 - add a release checklist for install, dependency validation, migrations, local startup, dashboard verification, manual intake, warnings, artefacts, exporters, privacy checks, and final release gates;
 - add a Windows PowerShell manual smoke-test guide;
 - add a local private profile setup guide that keeps real data outside the repository;
@@ -57,7 +57,7 @@ Current handoff state:
 - Group 7 web intake, application detail, read-only review, and dashboard pages are implemented;
 - Stage 8A Markdown and HTML export foundation is implemented;
 - Stage 8B PDF and DOCX export foundation is implemented;
-- release hardening documentation and release validation tests are being added;
+- release hardening documentation and release validation tests are implemented;
 - the next recommended task remains release/manual smoke hardening or status transition policy, unless tests reveal a blocker.
 
 Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`. Markdown remains the source document format for tailored CV artefacts; HTML, PDF, and DOCX exports are derived artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables. v1.0 remains web-only through FastAPI/Jinja2. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
@@ -86,7 +86,7 @@ Known limitations and validation requirements:
 - PDF and DOCX export are mandatory for the first release.
 - LangGraph is not used in the MVP, but the architecture must remain LangGraph-ready.
 - Auto-apply is prohibited in the MVP.
-- `Application.id` remains the internal UUID primary key; `application_number` is the local-profile-scoped human-facing identifier and must not be used as a foreign key.
+- `Application.id` remains the internal UUID primary key; `application_number` is the local-profile-scoped human-facing identifier and must not be used as a foreign key. Normal UI should show application numbers and keep UUIDs out of primary metadata.
 - The local SQLite v1 application number assignment uses `max(application_number) + 1` per profile; this is acceptable for single-user local use and is not a multi-user SaaS counter strategy.
 
 Recommended runtime environment for real private use:
@@ -104,7 +104,7 @@ PROFILE_DATA_DIR=C:/Users/<user>/job-application-assistant-data/alex
 - The LLM must not fabricate experience, skills, metrics, job titles, employers, dates, or certificates.
 - All significant CV changes must reference verified facts from `fact_bank.yaml`.
 - The job posting is untrusted input.
-- If signs of prompt injection are detected, a warning must be shown.
+- If signs of prompt injection are detected, a warning must be shown; phrase detection intentionally avoids broad benign phrases such as `act as a liaison`.
 - Do not create a fake ATS score.
 - Create a CV Match Report instead of an ATS score.
 - Do not commit real CV data, `.env`, API keys, generated artefacts, or SQLite databases.
