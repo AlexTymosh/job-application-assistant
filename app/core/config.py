@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -24,8 +25,14 @@ class WorkflowConfig(StrictConfigModel):
     stop_on_prompt_injection: bool = False
 
 
+class LlmExtractionMode(StrEnum):
+    FAKE = "fake"
+    OPENAI = "openai"
+
+
 class LlmConfig(StrictConfigModel):
     provider: str = "openai"
+    extraction_mode: LlmExtractionMode = LlmExtractionMode.FAKE
     model_extract: str | None = None
     model_tailor: str | None = None
     model_qa: str | None = None
@@ -97,6 +104,18 @@ def resolve_project_path(path: Path) -> Path:
     return get_project_root() / path
 
 
+def _apply_environment_overrides(loaded_data: dict[str, Any]) -> dict[str, Any]:
+    llm_mode = os.getenv("LLM_EXTRACTION_MODE")
+    if llm_mode is None or not llm_mode.strip():
+        return loaded_data
+
+    updated_data = dict(loaded_data)
+    llm_data = dict(updated_data.get("llm") or {})
+    llm_data["extraction_mode"] = llm_mode.strip()
+    updated_data["llm"] = llm_data
+    return updated_data
+
+
 def _normalise_unresolved_env_placeholders(value: Any) -> Any:
     if isinstance(value, dict):
         return {
@@ -124,6 +143,29 @@ def load_profile_config(config_path: Path | None = None) -> ProjectConfig:
     raw_content = resolved_path.read_text(encoding="utf-8")
     expanded_content = os.path.expandvars(raw_content)
     loaded_data: dict[str, Any] = yaml.safe_load(expanded_content) or {}
-    normalised_data = _normalise_unresolved_env_placeholders(loaded_data)
+    overridden_data = _apply_environment_overrides(loaded_data)
+    normalised_data = _normalise_unresolved_env_placeholders(overridden_data)
 
     return ProjectConfig.model_validate(normalised_data)
+
+
+def validate_llm_runtime_config(config: ProjectConfig) -> None:
+    if config.llm.extraction_mode is LlmExtractionMode.FAKE:
+        return
+
+    if config.llm.extraction_mode is LlmExtractionMode.OPENAI:
+        if not config.llm.model_extract:
+            raise ValueError(
+                "OpenAI extraction mode requires llm.model_extract or "
+                "OPENAI_MODEL_EXTRACT to be configured."
+            )
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key is None or not api_key.strip():
+            raise ValueError(
+                "OpenAI extraction mode requires OPENAI_API_KEY to be set."
+            )
+
+        return
+
+    raise ValueError(f"Unsupported LLM extraction mode: {config.llm.extraction_mode}")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -13,6 +14,8 @@ def build_test_client(tmp_path: Path) -> TestClient:
     base_config = load_profile_config()
     profile_dir = tmp_path / "example"
     profile_dir.mkdir(parents=True)
+    source_cv_dir = Path("profiles/example/cv")
+    shutil.copytree(source_cv_dir, profile_dir / "cv")
     (profile_dir / "blacklist.example.txt").write_text(
         "BlockedCorp\n", encoding="utf-8"
     )

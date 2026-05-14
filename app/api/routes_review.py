@@ -47,7 +47,7 @@ async def review_application(
             "events": application.events,
             "artifacts": application.artifacts,
             "extracted_job_artifact": artifacts_by_type.get("extracted_job"),
-            "tailored_cv_artifact": artifacts_by_type.get("tailored_cv"),
+            "tailored_cv_artifact": artifacts_by_type.get("tailored_cv_markdown"),
             "match_report_artifact": artifacts_by_type.get("match_report"),
         },
     )

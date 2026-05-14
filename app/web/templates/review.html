@@ -3,7 +3,11 @@
 {% block content %}
   <h1>Application Review</h1>
 
-  <p>This page is a read-only review surface. It does not run extraction, tailoring, OpenAI calls, or exporters.</p>
+  <p>This page shows persisted review materials and can trigger the local release pipeline with fake clients by default. It does not auto-apply or submit applications.</p>
+
+  <form method="post" action="/applications/{{ application.application_number }}/run-local-pipeline">
+    <button type="submit">Run local fake pipeline</button>
+  </form>
 
   <section>
     <h2>Application metadata</h2>
@@ -62,7 +66,7 @@
     {% if artifacts %}
       <ul>
         {% for artifact in artifacts %}
-          <li><strong>{{ artifact.artifact_type }}</strong>: <code>{{ artifact.path }}</code></li>
+          <li><strong>{{ artifact.artifact_type }}</strong>: <code>{{ artifact.path }}</code> — <a href="/applications/{{ application.application_number }}/artifacts/{{ artifact.id }}/download">Download</a></li>
         {% endfor %}
       </ul>
     {% else %}

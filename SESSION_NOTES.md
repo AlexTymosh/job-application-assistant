@@ -14,7 +14,7 @@ Before starting work, read:
 
 ## 1. Current Stage
 
-Release hardening is the current stage for the first local web-only release. Stages through Stage 8B are complete. The next stage after release hardening should be either human approval hardening or final release candidate validation, depending on the user decision.
+P1 local web release hardening is the current stage for the first usable local web release. Stages through Stage 8B and release documentation hardening are complete; this stage adds release-safe LLM mode selection, safe artefact downloads, and a local fake-client pipeline action. The next stage should be final release candidate validation or human approval hardening, depending on the user decision.
 
 Completed:
 
@@ -32,18 +32,19 @@ Completed:
 - Stage 7 — reports foundation;
 - Group 7 — web intake, review, and dashboard foundation;
 - Stage 8A — Markdown and HTML export foundation;
-- Stage 8B — PDF and DOCX export foundation.
+- Stage 8B — PDF and DOCX export foundation;
+- release documentation hardening;
+- P1 local web release hardening for fake/demo LLM mode, safe downloads, and the local pipeline action.
 
 Current release hardening task state:
 
-- current corrective architecture task: remove the previous root-level source CV concept; CV variants are now the only source CV documents used for tailoring, the fact bank remains the claim authority, selected source variants remain read-only, and generated tailored CVs remain separate application artefacts;
-- completed after implementation: per-profile sequential application numbers are assigned, public routes use numbers, normal UI uses display numbers instead of UUID metadata, UUIDs remain internal primary keys, and new artefact folders use an `app-000001` suffix such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`;
-- add a release checklist for install, dependency validation, migrations, local startup, dashboard verification, manual intake, warnings, artefacts, exporters, privacy checks, and final release gates;
-- add a Windows PowerShell manual smoke-test guide;
-- add a local private profile setup guide that keeps real data outside the repository;
-- add release validation tests for required release docs, documentation safety, external private profile guidance, locked `uv` workflow guidance, and real OpenAI test prohibition;
+- fake/demo extraction mode is the release-safe default and allows local startup without `OPENAI_API_KEY`;
+- OpenAI extraction mode is opt-in and fails clearly if the extraction model or API key is missing;
+- safe artefact download routing verifies active profile/application ownership, resolves paths under `profile_paths.applications_dir`, and rejects absolute paths or path traversal;
+- a thin web action can run the local pipeline for one application using configured extraction, read-only CV loading, fake safe tailoring, deterministic reports, and Markdown/HTML/PDF/DOCX export persistence;
+- real private profile data must remain external to the repository; any `profiles/alex/` references are legacy/reference-only safety examples and must not be presented as a path to create or commit;
 - keep v1.0 web-only through FastAPI/Jinja2;
-- do not add product features, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, auto-apply, or new database tables.
+- do not add auto-apply, LinkedIn automation, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, or new database tables.
 
 Current handoff state:
 
@@ -54,13 +55,14 @@ Current handoff state:
 - Stage 5 CV loading foundation is complete with read-only Markdown CV loading, section marker validation, fact bank validation, and CV variant selection;
 - Stage 6 safe CV tailoring contract and fake tailoring pipeline are implemented;
 - Stage 7 reports foundation is implemented with in-memory Evidence Matrix and CV Match Report builders;
-- Group 7 web intake, application detail, read-only review, and dashboard pages are implemented;
+- Group 7 web intake, application detail, review, and dashboard pages are implemented;
 - Stage 8A Markdown and HTML export foundation is implemented;
 - Stage 8B PDF and DOCX export foundation is implemented;
 - release hardening documentation and release validation tests are implemented;
-- the next recommended task remains release/manual smoke hardening or status transition policy, unless tests reveal a blocker.
+- P1 local web hardening adds safe downloads, fake/demo LLM mode, OpenAI mode validation, and a local fake-client pipeline action;
+- the next recommended task is final release candidate validation or human approval hardening, unless tests reveal a blocker.
 
-Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`. Markdown remains the source document format for tailored CV artefacts; HTML, PDF, and DOCX exports are derived artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, route handlers, dashboard functionality, Alembic migrations, or new database tables. v1.0 remains web-only through FastAPI/Jinja2. Dashboard pages remain read-only and do not generate artefacts. Tests must not perform real OpenAI API calls or require a real API key.
+Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTML artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.md` and `applications/<artifact_dir_name>/tailored_cv.html`. Stage 8B adds isolated PDF and DOCX exporters using ReportLab and python-docx, tailored CV PDF and DOCX artefact writing through `ArtifactWriter`, and privacy-safe database artefact paths such as `applications/<artifact_dir_name>/tailored_cv.pdf` and `applications/<artifact_dir_name>/tailored_cv.docx`. Markdown remains the source document format for tailored CV artefacts; HTML, PDF, and DOCX exports are derived artefacts. WeasyPrint is intentionally not used in Stage 8B because the project targets a Windows-friendly local setup and WeasyPrint adds extra native dependency complexity on Windows. Stage 8B did not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, URL scraping, LangGraph, CLI commands, authentication, cloud deployment, Alembic migrations, or new database tables. P1 local web hardening now adds a service-backed route action for the existing local pipeline and safe artefact downloads without changing those prohibitions. v1.0 remains web-only through FastAPI/Jinja2. Tests must not perform real OpenAI API calls or require a real API key.
 
 Known limitations and validation requirements:
 
@@ -76,7 +78,7 @@ Known limitations and validation requirements:
 - Python version: `3.12`.
 - Backend stack: FastAPI, Jinja2, SQLite, SQLAlchemy 2.x, Pydantic v2.
 - Migration tool: Alembic.
-- LLM provider: OpenAI API.
+- LLM provider: fake/demo extraction by default, with optional OpenAI API extraction mode only when explicitly configured.
 - Primary CV format: Markdown.
 - Primary storage: SQLite.
 - Public repository contains only fake example profile data.
@@ -563,6 +565,7 @@ Check ignored private files:
 git check-ignore -v .env
 git check-ignore -v .idea/workspace.xml
 git check-ignore -v _local/text.md
+# Legacy/reference-only safety check; do not create profiles/alex/.
 git check-ignore -v profiles/alex/applications.sqlite3
 git check-ignore -v profiles/alex/config.yaml
 git check-ignore -v profiles/alex/blacklist.txt
@@ -871,7 +874,7 @@ Group 7 is complete when:
 - `/applications/new` renders a manual job intake form;
 - `POST /applications` validates form input with `JobInput`, uses `ApplicationIntakeService`, persists the application record, raw job artefact metadata, events, and warnings, then redirects to application detail;
 - `/applications/{application_number}` renders application metadata, warnings, events, and relative artefact paths;
-- `/applications/{application_number}/review` renders a read-only review surface and does not run extraction, OpenAI, tailoring, reports, or exporters;
+- `/applications/{application_number}/review` renders persisted review information and offers the service-backed local fake pipeline action;
 - `/dashboard` lists applications newest first with warning and artefact counts, detail links, and review links;
 - empty dashboard state is rendered;
 - tests cover intake, detail, review, dashboard, validation failure, 404 behaviour, and relative artefact paths;

@@ -8,6 +8,8 @@ TAILORED_CV_MARKDOWN_FILENAME = "tailored_cv.md"
 TAILORED_CV_HTML_FILENAME = "tailored_cv.html"
 TAILORED_CV_PDF_FILENAME = "tailored_cv.pdf"
 TAILORED_CV_DOCX_FILENAME = "tailored_cv.docx"
+EVIDENCE_MATRIX_FILENAME = "evidence_matrix.json"
+MATCH_REPORT_FILENAME = "match_report.json"
 APPLICATIONS_ARTEFACT_ROOT = "applications"
 
 
@@ -134,3 +136,41 @@ def build_tailored_cv_docx_relative_path(*, artifact_dir_name: str) -> str:
     return (
         f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{TAILORED_CV_DOCX_FILENAME}"
     )
+
+
+def build_evidence_matrix_path(
+    *,
+    applications_dir: Path,
+    artifact_dir_name: str,
+) -> Path:
+    return (
+        build_application_artifact_dir(
+            applications_dir=applications_dir,
+            artifact_dir_name=artifact_dir_name,
+        )
+        / EVIDENCE_MATRIX_FILENAME
+    )
+
+
+def build_evidence_matrix_relative_path(*, artifact_dir_name: str) -> str:
+    return (
+        f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{EVIDENCE_MATRIX_FILENAME}"
+    )
+
+
+def build_match_report_path(
+    *,
+    applications_dir: Path,
+    artifact_dir_name: str,
+) -> Path:
+    return (
+        build_application_artifact_dir(
+            applications_dir=applications_dir,
+            artifact_dir_name=artifact_dir_name,
+        )
+        / MATCH_REPORT_FILENAME
+    )
+
+
+def build_match_report_relative_path(*, artifact_dir_name: str) -> str:
+    return f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{MATCH_REPORT_FILENAME}"
