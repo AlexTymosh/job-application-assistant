@@ -1,24 +1,24 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from uuid import UUID
 
 from app.artifacts.naming import (
     MAX_ARTIFACT_DIR_NAME_LENGTH,
-    SHORT_ID_LENGTH,
     build_application_artifact_dir_name,
+    format_application_display_number,
+    format_application_path_number,
     slugify_artifact_part,
 )
 
 CREATED_AT = datetime(2026, 5, 14, 9, 26, 1, tzinfo=UTC)
-APPLICATION_ID = UUID("a5c19f0a-1234-4567-89ab-cdef01234567")
+APPLICATION_NUMBER = 1
 UNSAFE_WINDOWS_CHARS = set('<>:"/\\|?*')
 
 
 def test_application_artifact_dir_name_uses_normal_company_and_title() -> None:
     dir_name = build_application_artifact_dir_name(
         created_at=CREATED_AT,
-        application_id=APPLICATION_ID,
+        application_number=APPLICATION_NUMBER,
         company_name="IBM",
         job_title="Software Engineer",
     )
@@ -29,7 +29,7 @@ def test_application_artifact_dir_name_uses_normal_company_and_title() -> None:
 def test_application_artifact_dir_name_uses_unknown_fallbacks() -> None:
     dir_name = build_application_artifact_dir_name(
         created_at=CREATED_AT,
-        application_id=APPLICATION_ID,
+        application_number=APPLICATION_NUMBER,
         company_name=None,
         job_title=None,
     )
@@ -80,7 +80,7 @@ def test_long_company_and_role_names_are_truncated() -> None:
 def test_final_directory_name_length_is_limited() -> None:
     dir_name = build_application_artifact_dir_name(
         created_at=CREATED_AT,
-        application_id=APPLICATION_ID,
+        application_number=APPLICATION_NUMBER,
         company_name="Very Long Company Name " * 30,
         job_title="Very Long Role Title " * 40,
     )
@@ -88,21 +88,21 @@ def test_final_directory_name_length_is_limited() -> None:
     assert len(dir_name) <= MAX_ARTIFACT_DIR_NAME_LENGTH
 
 
-def test_short_uuid_suffix_is_preserved() -> None:
+def test_application_number_suffix_is_preserved() -> None:
     dir_name = build_application_artifact_dir_name(
         created_at=CREATED_AT,
-        application_id=APPLICATION_ID,
+        application_number=APPLICATION_NUMBER,
         company_name="IBM",
         job_title="Software Engineer",
     )
 
-    assert dir_name.endswith(APPLICATION_ID.hex[:SHORT_ID_LENGTH])
+    assert dir_name.endswith("app-000001")
 
 
 def test_timestamp_prefix_is_preserved() -> None:
     dir_name = build_application_artifact_dir_name(
         created_at=CREATED_AT,
-        application_id=APPLICATION_ID,
+        application_number=APPLICATION_NUMBER,
         company_name="IBM",
         job_title="Software Engineer",
     )
@@ -113,13 +113,13 @@ def test_timestamp_prefix_is_preserved() -> None:
 def test_directory_name_is_deterministic_for_same_inputs() -> None:
     first = build_application_artifact_dir_name(
         created_at=CREATED_AT,
-        application_id=APPLICATION_ID,
+        application_number=APPLICATION_NUMBER,
         company_name="IBM",
         job_title="Software Engineer",
     )
     second = build_application_artifact_dir_name(
         created_at=CREATED_AT,
-        application_id=APPLICATION_ID,
+        application_number=APPLICATION_NUMBER,
         company_name="IBM",
         job_title="Software Engineer",
     )
@@ -130,9 +130,14 @@ def test_directory_name_is_deterministic_for_same_inputs() -> None:
 def test_directory_name_does_not_end_with_hyphen_or_dot() -> None:
     dir_name = build_application_artifact_dir_name(
         created_at=CREATED_AT,
-        application_id=APPLICATION_ID,
+        application_number=APPLICATION_NUMBER,
         company_name="Example...---",
         job_title="Role...---",
     )
 
     assert not dir_name.endswith(("-", "."))
+
+
+def test_application_number_formatters_are_stable() -> None:
+    assert format_application_display_number(1) == "APP-000001"
+    assert format_application_path_number(1) == "app-000001"

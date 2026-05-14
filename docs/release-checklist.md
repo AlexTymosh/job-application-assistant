@@ -111,7 +111,7 @@ task pre-commit
 Apply Alembic migrations to the active profile database:
 
 ```powershell
-uv run alembic upgrade head
+uv run --env-file .env -- alembic upgrade head
 ```
 
 With the example profile active, this may create `profiles/example/applications.sqlite3`. That file is generated local data and must remain ignored by Git.
@@ -119,7 +119,7 @@ With the example profile active, this may create `profiles/example/applications.
 ## Start the local web app
 
 ```powershell
-uv run uvicorn app.main:app --reload
+uv run --env-file .env -- uvicorn app.main:app --reload
 ```
 
 Open these local URLs:
@@ -158,7 +158,7 @@ Submit the form and open the application detail page.
 
 ## Artefact verification
 
-- Confirm artefact paths shown in the UI are relative paths such as `applications/<application_id>/job_raw.txt`.
+- Confirm artefact paths shown in the UI are relative paths such as `applications/2026-05-14_10-22-50__unknown-company__unknown-role__app-000001/job_raw.txt`.
 - Confirm absolute private paths are not shown in the UI or stored in database artefact records.
 - Confirm generated application artefacts live under the active profile data directory.
 
@@ -198,8 +198,8 @@ The generated SQLite files, `.env`, and private profile files must be ignored. I
 - [ ] `uv run ruff check .` passed.
 - [ ] `uv run pytest` passed.
 - [ ] `uv run pre-commit run --all-files` passed.
-- [ ] `uv run alembic upgrade head` passed for the active profile.
-- [ ] The local app starts with `uv run uvicorn app.main:app --reload`.
+- [ ] `uv run --env-file .env -- alembic upgrade head` passed for the active profile.
+- [ ] The local app starts with `uv run --env-file .env -- uvicorn app.main:app --reload`.
 - [ ] Home, dashboard, new application, detail, and review pages render.
 - [ ] Manual job text intake works.
 - [ ] Warning rendering works.

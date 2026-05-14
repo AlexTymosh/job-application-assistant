@@ -65,6 +65,7 @@ REQUIRED_PROJECT_FILES = [
     "alembic/versions/.gitkeep",
     "alembic/versions/20260512_0001_initial_application_tables.py",
     "alembic/versions/20260514_0002_add_application_artifact_dir_name.py",
+    "alembic/versions/20260514_0003_add_application_numbers.py",
     "tests/test_alembic_setup.py",
     "app/jobs/__init__.py",
     "app/jobs/hashing.py",

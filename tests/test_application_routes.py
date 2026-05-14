@@ -63,12 +63,13 @@ def test_post_valid_manual_text_creates_application_and_redirects(
     )
 
     assert response.status_code == 303
-    assert response.headers["location"].startswith("/applications/")
+    assert response.headers["location"] == "/applications/1"
 
     detail_response = client.get(response.headers["location"])
 
     assert detail_response.status_code == 200
     assert "Application Detail" in detail_response.text
+    assert "APP-000001" in detail_response.text
     assert "backend_developer" in detail_response.text
     assert "https://example.test/jobs/backend" in detail_response.text
     assert "Present" in detail_response.text
@@ -126,6 +127,6 @@ def test_get_application_detail_displays_warnings_events_and_artifacts(
 def test_get_unknown_application_returns_404(tmp_path: Path) -> None:
     client = build_test_client(tmp_path)
 
-    response = client.get("/applications/00000000-0000-0000-0000-000000000000")
+    response = client.get("/applications/999")
 
     assert response.status_code == 404

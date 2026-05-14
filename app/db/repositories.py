@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.artifacts.naming import build_application_artifact_dir_name
@@ -30,8 +30,12 @@ class ApplicationRepository:
         source_url: str | None = None,
         selected_cv_variant: str | None = None,
     ) -> Application:
+        # This local SQLite application uses a simple per-profile max+1 counter.
+        # It is not intended as a multi-user SaaS sequence strategy.
+        application_number = self.next_application_number(profile_name)
         application = Application(
             profile_name=profile_name,
+            application_number=application_number,
             status=ApplicationStatus.DRAFT.value,
             job_title=job_title,
             company_name=company_name,
@@ -44,7 +48,7 @@ class ApplicationRepository:
 
         application.artifact_dir_name = build_application_artifact_dir_name(
             created_at=application.created_at,
-            application_id=application.id,
+            application_number=application_number,
             company_name=application.company_name,
             job_title=application.job_title,
         )
@@ -52,13 +56,47 @@ class ApplicationRepository:
 
         return application
 
+    def next_application_number(self, profile_name: str) -> int:
+        statement = select(func.max(Application.application_number)).where(
+            Application.profile_name == profile_name
+        )
+        current_max = self._session.scalar(statement)
+        return (current_max or 0) + 1
+
     def get(self, application_id: UUID) -> Application | None:
         return self._session.get(Application, application_id)
+
+    def get_by_number(
+        self, *, profile_name: str, application_number: int
+    ) -> Application | None:
+        statement = select(Application).where(
+            Application.profile_name == profile_name,
+            Application.application_number == application_number,
+        )
+        return self._session.scalars(statement).one_or_none()
 
     def get_with_related(self, application_id: UUID) -> Application | None:
         statement = (
             select(Application)
             .where(Application.id == application_id)
+            .options(
+                selectinload(Application.artifacts),
+                selectinload(Application.events),
+                selectinload(Application.warnings),
+            )
+        )
+
+        return self._session.scalars(statement).one_or_none()
+
+    def get_by_number_with_related(
+        self, *, profile_name: str, application_number: int
+    ) -> Application | None:
+        statement = (
+            select(Application)
+            .where(
+                Application.profile_name == profile_name,
+                Application.application_number == application_number,
+            )
             .options(
                 selectinload(Application.artifacts),
                 selectinload(Application.events),

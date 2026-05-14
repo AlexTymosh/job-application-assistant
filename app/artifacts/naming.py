@@ -3,11 +3,11 @@ from __future__ import annotations
 import re
 import unicodedata
 from datetime import datetime
-from uuid import UUID
 
 MAX_COMPANY_SLUG_LENGTH = 48
 MAX_ROLE_SLUG_LENGTH = 64
-SHORT_ID_LENGTH = 8
+APPLICATION_NUMBER_WIDTH = 6
+APPLICATION_NUMBER_PREFIX = "app"
 MAX_ARTIFACT_DIR_NAME_LENGTH = 160
 
 UNKNOWN_COMPANY_SLUG = "unknown-company"
@@ -50,17 +50,36 @@ def slugify_artifact_part(value: str | None, fallback: str, max_length: int) -> 
     return _avoid_reserved_windows_name(slug, fallback_slug)
 
 
+def format_application_display_number(application_number: int) -> str:
+    """Return the public application number used in normal UI text."""
+
+    _validate_application_number(application_number)
+    return (
+        f"{APPLICATION_NUMBER_PREFIX.upper()}-"
+        f"{application_number:0{APPLICATION_NUMBER_WIDTH}d}"
+    )
+
+
+def format_application_path_number(application_number: int) -> str:
+    """Return the public application number suffix used in artefact paths."""
+
+    _validate_application_number(application_number)
+    return (
+        f"{APPLICATION_NUMBER_PREFIX}-{application_number:0{APPLICATION_NUMBER_WIDTH}d}"
+    )
+
+
 def build_application_artifact_dir_name(
     *,
     created_at: datetime,
-    application_id: UUID,
+    application_number: int,
     company_name: str | None,
     job_title: str | None,
 ) -> str:
     """Build the stable human-readable artefact directory name for an application."""
 
     timestamp = created_at.strftime("%Y-%m-%d_%H-%M-%S")
-    short_id = application_id.hex[:SHORT_ID_LENGTH]
+    path_number = format_application_path_number(application_number)
     company_slug = slugify_artifact_part(
         company_name,
         fallback=UNKNOWN_COMPANY_SLUG,
@@ -76,7 +95,7 @@ def build_application_artifact_dir_name(
         timestamp=timestamp,
         company_slug=company_slug,
         role_slug=role_slug,
-        short_id=short_id,
+        path_number=path_number,
     )
 
 
@@ -107,14 +126,19 @@ def _avoid_reserved_windows_name(slug: str, fallback_slug: str) -> str:
     return fallback_slug
 
 
+def _validate_application_number(application_number: int) -> None:
+    if application_number < 1:
+        raise ValueError("application_number must be at least 1.")
+
+
 def _fit_artifact_dir_name(
     *,
     timestamp: str,
     company_slug: str,
     role_slug: str,
-    short_id: str,
+    path_number: str,
 ) -> str:
-    fixed_length = len(timestamp) + len(short_id) + (len(_SEPARATOR) * 3)
+    fixed_length = len(timestamp) + len(path_number) + (len(_SEPARATOR) * 3)
     available_for_slugs = MAX_ARTIFACT_DIR_NAME_LENGTH - fixed_length
 
     if available_for_slugs < len(UNKNOWN_COMPANY_SLUG) + len(UNKNOWN_ROLE_SLUG):
@@ -137,7 +161,7 @@ def _fit_artifact_dir_name(
 
     company_slug = company_slug or UNKNOWN_COMPANY_SLUG
     role_slug = role_slug or UNKNOWN_ROLE_SLUG
-    dir_name = _SEPARATOR.join([timestamp, company_slug, role_slug, short_id])
+    dir_name = _SEPARATOR.join([timestamp, company_slug, role_slug, path_number])
 
     if len(dir_name) > MAX_ARTIFACT_DIR_NAME_LENGTH:
         raise ValueError("Application artefact directory name exceeds the limit.")

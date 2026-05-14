@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Annotated
 from urllib.parse import parse_qs
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -93,18 +92,22 @@ async def create_application(
     )
 
     return RedirectResponse(
-        url=f"/applications/{result.application.id}",
+        url=f"/applications/{result.application.application_number}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
-@router.get("/applications/{application_id}", response_class=HTMLResponse)
+@router.get("/applications/{application_number}", response_class=HTMLResponse)
 async def application_detail(
     request: Request,
-    application_id: UUID,
+    application_number: int,
     session: Annotated[Session, Depends(get_session)],
 ) -> HTMLResponse:
-    application = ApplicationRepository(session).get_with_related(application_id)
+    config: ProjectConfig = request.app.state.config
+    application = ApplicationRepository(session).get_by_number_with_related(
+        profile_name=config.app.profile_name,
+        application_number=application_number,
+    )
 
     if application is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")

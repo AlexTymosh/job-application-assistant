@@ -16,11 +16,13 @@ Use the committed fake example profile for public release verification:
 $env:PROFILE_NAME = "example"
 $env:PROFILE_DATA_DIR = "profiles/example"
 uv sync --locked --group dev
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
+uv run --env-file .env -- alembic upgrade head
+uv run --env-file .env -- uvicorn app.main:app --reload
 ```
 
-Open the local web app at <http://127.0.0.1:8000/> and the dashboard at <http://127.0.0.1:8000/dashboard>.
+Open the local web app at <http://127.0.0.1:8000/> and the dashboard at <http://127.0.0.1:8000/dashboard>. Application pages use short human numbers such as `APP-000001`, and public URLs use numbers such as `/applications/1`; the internal UUID still exists for database identity but is not normally needed by the user.
+
+Existing local databases need `uv run --env-file .env -- alembic upgrade head` so Alembic can add and backfill application numbers before normal use.
 
 Run automated checks with:
 
@@ -66,14 +68,14 @@ The current implementation includes:
 - basic Jinja2 home page;
 - profile config loading;
 - profile path resolution;
-- SQLite persistence foundation;
+- SQLite persistence foundation with internal UUID primary keys and per-profile human-facing application numbers;
 - initial SQLAlchemy models and repositories;
 - SQLite session hardening;
 - SQLite foreign key enforcement;
 - external private profile directory support;
 - Alembic migration baseline with an integration test that upgrades a temporary profile database to `head`;
 - initial job input foundation;
-- privacy-aware raw job artefact path handling through an artefact writer boundary;
+- privacy-aware raw job artefact path handling through an artefact writer boundary, for example `applications/2026-05-14_10-22-50__unknown-company__unknown-role__app-000001/job_raw.txt`;
 - preflight foundation for prompt-injection phrase checks, blacklist matching, and duplicate detection;
 - preflight warning persistence;
 - duplicate self-match protection;
@@ -108,7 +110,7 @@ The current implementation includes:
 - the correct CV package marker at `app/cv/__init__.py`;
 - bootstrap, Stage 1, database, Alembic, job input, artefact, preflight, intake, schema, fake extraction client, OpenAI client contract, extraction persistence, pipeline state, job extraction step, Stage 5 CV foundation tests, Stage 6 safe tailoring tests, Stage 7 reports tests, and Stage 8A and Stage 8B export tests.
 
-Application UUIDs remain the stable database identifiers. Artefact folder names are generated once at intake time for human readability only, using a Windows-safe and length-limited path such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__a5c19f0a/job_raw.txt`; long company and title values are truncated safely and database artefact rows store relative paths only.
+Application UUIDs remain the stable internal database identifiers, while per-profile application numbers such as `APP-000001` are the normal public identifiers. Artefact folder names are generated once at intake time for human readability only, using a Windows-safe and length-limited path such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`; long company and title values are truncated safely and database artefact rows store relative paths only.
 
 Stage 4 extraction schemas, fake extraction client, and serialisable pipeline state are implemented. Stage 4.5 adds the real OpenAI client wrapper and extracted job JSON artefact persistence. Stage 5 adds a read-only CV loading foundation for Markdown CV files, fact bank validation, required section marker validation, and CV variant selection, with the correct package marker at `app/cv/__init__.py`. Stage 6 adds safe CV tailoring schemas, a deterministic fake tailoring client, Markdown diff helpers, and an in-memory pipeline contract. Stage 7 adds strict in-memory report models plus deterministic Evidence Matrix and CV Match Report builders based on `ExtractedJob` and `FactBank`. Stage 8A adds Markdown and HTML export foundation. Stage 8B adds PDF and DOCX export foundation with ReportLab and python-docx. Markdown remains the source of truth. HTML, PDF, and DOCX exports are artefacts written through `ArtifactWriter`, with database rows storing privacy-safe relative paths only. Stage 8B does not implement real OpenAI calls, real OpenAI tailoring, CV file mutation, CLI commands, URL scraping, LangGraph, authentication, cloud deployment, FastAPI export routes, or new database tables. The rule remains: no `fact_id` means no claim.
 
@@ -726,7 +728,7 @@ The model must be configurable via `config.yaml` or environment variables.
 
 The API key must not be committed to the repository. Tests must mock OpenAI clients, must not call the real API, and must not require `OPENAI_API_KEY`.
 
-Structured Outputs and JSON Schema must be used for structured responses. Extracted job artefacts are stored as relative paths such as `applications/<application_id>/extracted_job.json`, not absolute private profile paths.
+Structured Outputs and JSON Schema must be used for structured responses. Extracted job artefacts are stored as relative paths such as `applications/<artifact_dir_name>/extracted_job.json`, not absolute private profile paths. New artefact directories use the human-facing application number suffix, for example `applications/2026-05-14_10-22-50__unknown-company__unknown-role__app-000001/job_raw.txt`.
 
 ---
 
@@ -854,9 +856,9 @@ The current FastAPI/Jinja2 web vertical slice includes:
 
 - `/` — home page with navigation links;
 - `/applications/new` — manual job intake form with optional source URL metadata and CV variant selection;
-- `POST /applications` — creates an application record through `ApplicationIntakeService`, writes the raw job text artefact through the existing artefact boundary, persists preflight warnings, and redirects to the detail page;
-- `/applications/{application_id}` — application detail page with metadata, status, source URL, normalised URL, selected CV variant, job text hash presence, warnings, events, and privacy-safe relative artefact paths;
-- `/applications/{application_id}/review` — read-only review surface that shows existing records and clearly states that it does not generate extraction, tailoring, OpenAI calls, reports, or exports;
+- `POST /applications` — creates an application record through `ApplicationIntakeService`, writes the raw job text artefact through the existing artefact boundary, persists preflight warnings, and redirects to the number-based detail page, for example `/applications/1`;
+- `/applications/{application_number}` — application detail page with metadata, status, source URL, normalised URL, selected CV variant, job text hash presence, warnings, events, and privacy-safe relative artefact paths;
+- `/applications/{application_number}/review` — read-only review surface that shows existing records and clearly states that it does not generate extraction, tailoring, OpenAI calls, reports, or exports;
 - `/dashboard` — newest-first application list with status, CV variant, warning count, artefact count, and links to detail and review pages.
 
 The web routes do not call OpenAI, do not run CV tailoring, do not scrape URLs, and do not run Markdown/HTML/PDF/DOCX exporters. The production application initialises a SQLite session factory in `app.state`, but Alembic remains responsible for schema creation and migrations. Tests may create temporary tables explicitly.

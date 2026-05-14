@@ -36,8 +36,8 @@ Completed:
 
 Current release hardening task state:
 
-- current task: add human-readable application artefact directories while keeping UUIDs as stable database identifiers;
-- completed after implementation: artefact directory naming is stable, length-limited, Windows-safe, and privacy-safe, with relative database artefact paths such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__a5c19f0a/job_raw.txt`;
+- current task: application number migration and public route update;
+- completed after implementation: per-profile sequential application numbers are assigned, public routes use numbers, UUIDs remain internal primary keys, and new artefact folders use an `app-000001` suffix such as `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`;
 - add a release checklist for install, dependency validation, migrations, local startup, dashboard verification, manual intake, warnings, artefacts, exporters, privacy checks, and final release gates;
 - add a Windows PowerShell manual smoke-test guide;
 - add a local private profile setup guide that keeps real data outside the repository;
@@ -64,7 +64,7 @@ Stage 8A adds isolated Markdown and HTML exporters, tailored CV Markdown and HTM
 
 Known limitations and validation requirements:
 
-- Filesystem artefact writes and database transactions are not fully atomic. File writing is isolated behind `ArtifactWriter`, and database artefact paths remain privacy-safe relative paths.
+- Application numbers are per-profile and are not globally unique. Filesystem artefact writes and database transactions are not fully atomic. File writing is isolated behind `ArtifactWriter`, and database artefact paths remain privacy-safe relative paths.
 - Full locked dependency validation must be run in an environment with package index access. If `uv sync --locked --group dev` cannot download packages in the current environment, CI or a local environment with package index access must rerun it before release.
 
 ---
@@ -86,6 +86,8 @@ Known limitations and validation requirements:
 - PDF and DOCX export are mandatory for the first release.
 - LangGraph is not used in the MVP, but the architecture must remain LangGraph-ready.
 - Auto-apply is prohibited in the MVP.
+- `Application.id` remains the internal UUID primary key; `application_number` is the local-profile-scoped human-facing identifier and must not be used as a foreign key.
+- The local SQLite v1 application number assignment uses `max(application_number) + 1` per profile; this is acceptable for single-user local use and is not a multi-user SaaS counter strategy.
 
 Recommended runtime environment for real private use:
 
@@ -790,7 +792,7 @@ Stage 4.5 is complete when:
 - tests use fake SDK objects and do not call the real OpenAI API;
 - tests do not require `OPENAI_API_KEY`;
 - `extracted_job.json` is written through the artefact boundary;
-- the database stores a relative `applications/<application_id>/extracted_job.json` artefact path;
+- the database stores a relative `applications/<artifact_dir_name>/extracted_job.json` artefact path;
 - no database migration is required;
 - no CV loading, CV tailoring, exporters, dashboard functionality, URL scraping, CLI commands, LangGraph, or external integrations are added.
 
@@ -869,8 +871,8 @@ Group 7 is complete when:
 - a route/session dependency opens a SQLAlchemy session, commits successful requests, rolls back failed requests, and closes the session;
 - `/applications/new` renders a manual job intake form;
 - `POST /applications` validates form input with `JobInput`, uses `ApplicationIntakeService`, persists the application record, raw job artefact metadata, events, and warnings, then redirects to application detail;
-- `/applications/{application_id}` renders application metadata, warnings, events, and relative artefact paths;
-- `/applications/{application_id}/review` renders a read-only review surface and does not run extraction, OpenAI, tailoring, reports, or exporters;
+- `/applications/{application_number}` renders application metadata, warnings, events, and relative artefact paths;
+- `/applications/{application_number}/review` renders a read-only review surface and does not run extraction, OpenAI, tailoring, reports, or exporters;
 - `/dashboard` lists applications newest first with warning and artefact counts, detail links, and review links;
 - empty dashboard state is rendered;
 - tests cover intake, detail, review, dashboard, validation failure, 404 behaviour, and relative artefact paths;

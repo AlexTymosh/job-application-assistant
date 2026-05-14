@@ -126,3 +126,59 @@ def test_session_scope_rolls_back_failed_transaction(tmp_path: Path) -> None:
         applications = ApplicationRepository(session)
 
         assert applications.list_by_profile("example") == []
+
+
+def test_application_numbers_are_sequential_per_profile(tmp_path: Path) -> None:
+    database_file = tmp_path / "applications.sqlite3"
+    engine = create_sqlite_engine(database_file)
+    create_all_tables(engine)
+    session_factory = create_session_factory(engine)
+
+    with session_factory() as session:
+        applications = ApplicationRepository(session)
+        first_example = applications.create(profile_name="example")
+        second_example = applications.create(profile_name="example")
+        first_other = applications.create(profile_name="other")
+        session.commit()
+
+        assert first_example.application_number == 1
+        assert first_example.display_number == "APP-000001"
+        assert second_example.application_number == 2
+        assert second_example.display_number == "APP-000002"
+        assert first_other.application_number == 1
+        assert first_other.display_number == "APP-000001"
+
+
+def test_application_repository_fetches_by_profile_number_and_uuid(
+    tmp_path: Path,
+) -> None:
+    database_file = tmp_path / "applications.sqlite3"
+    engine = create_sqlite_engine(database_file)
+    create_all_tables(engine)
+    session_factory = create_session_factory(engine)
+
+    with session_factory() as session:
+        applications = ApplicationRepository(session)
+        application = applications.create(profile_name="example")
+        application_id = application.id
+        session.commit()
+
+    with session_factory() as session:
+        applications = ApplicationRepository(session)
+        by_number = applications.get_by_number(
+            profile_name="example",
+            application_number=1,
+        )
+        by_uuid = applications.get(application_id)
+
+        assert by_number is not None
+        assert by_number.id == application_id
+        assert by_uuid is not None
+        assert by_uuid.application_number == 1
+        assert (
+            applications.get_by_number(
+                profile_name="other",
+                application_number=1,
+            )
+            is None
+        )

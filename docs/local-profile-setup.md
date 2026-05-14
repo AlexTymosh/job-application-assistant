@@ -150,8 +150,8 @@ Then run:
 
 ```powershell
 uv sync --locked --group dev
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
+uv run --env-file .env -- alembic upgrade head
+uv run --env-file .env -- uvicorn app.main:app --reload
 ```
 
 ## Verify that no real profile files are tracked

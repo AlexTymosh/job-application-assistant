@@ -781,7 +781,7 @@ FastAPI routes must not contain export logic directly.
 Each application must have a dedicated directory under the active profile data directory. For real private profiles, that directory must be outside the repository, for example:
 
 ```text
-C:/Users/<user>/job-application-assistant-data/alex/applications/<application_id>/
+C:/Users/<user>/job-application-assistant-data/alex/applications/<artifact_dir_name>/
 ```
 
 The committed `profiles/example/` tree is for fake examples only.
@@ -790,7 +790,7 @@ Application identity and artefact directory rules:
 
 - `Application.id` remains the stable UUID primary identifier for database identity, links, and relationships.
 - Application artefact directory names are human-readable convenience labels only; they are not primary identifiers.
-- New application artefact directories use the stable intake-time format `YYYY-MM-DD_HH-MM-SS__company-slug__role-slug__shortid`, for example `applications/2026-05-14_09-26-01__unknown-company__unknown-role__a5c19f0a/job_raw.txt`.
+- New application artefact directories use the stable intake-time format `YYYY-MM-DD_HH-MM-SS__company-slug__role-slug__app-000001`, for example `applications/2026-05-14_09-26-01__unknown-company__unknown-role__app-000001/job_raw.txt`.
 - Artefact directory names must be Windows-safe and length-limited.
 - Database artefact paths must remain privacy-safe relative paths and must never store absolute private profile paths.
 - Artefact directories must not be renamed after later LLM extraction unless a future explicit migration task handles it.
@@ -811,7 +811,7 @@ match_report.json
 diff.patch
 ```
 
-The agent must not overwrite existing artefacts without good reason. Database artefact metadata must store privacy-safe relative paths such as `applications/<application_id>/extracted_job.json`, not absolute private profile paths.
+The agent must not overwrite existing artefacts without good reason. Database artefact metadata must store privacy-safe relative paths such as `applications/<artifact_dir_name>/extracted_job.json`, not absolute private profile paths.
 
 ---
 
@@ -1134,3 +1134,24 @@ Rules for release hardening and later release work:
 - Manual smoke testing must verify that UI artefact paths are privacy-safe relative paths, not absolute private filesystem paths.
 
 Status: release hardening documentation and release validation tests are implemented.
+
+---
+## 47. Human-Facing Application Numbers
+
+Application numbering is implemented for normal user-facing application identity.
+
+Rules for application numbers and identifiers:
+
+- `Application.id` remains the internal UUID primary key.
+- Existing UUID foreign keys remain unchanged and must not be replaced by application numbers.
+- `Application.application_number` is the human-facing identifier shown in normal UI.
+- Display numbers use the `APP-000001` format.
+- Public web routes use application numbers where practical, for example `/applications/1` and `/applications/1/review`.
+- Application numbers are sequential per profile.
+- Application numbers are local-profile scoped and are not globally unique.
+- Do not use `application_number` as a foreign key.
+- New application artefact directories use the application number suffix, for example `applications/2026-05-14_10-22-50__unknown-company__unknown-role__app-000001/job_raw.txt`.
+- Existing stored artefact paths must not be rewritten automatically.
+- Existing artefact folders must not be renamed during normal application startup.
+- The UUID must not be shown as the primary visible application ID in normal UI. If it is useful, it may appear only in a small secondary technical/debug context.
+- The current local SQLite v1 implementation uses a simple per-profile `max(application_number) + 1` assignment strategy. This is acceptable for the local single-user application and is not a multi-user SaaS counter strategy.

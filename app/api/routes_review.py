@@ -1,26 +1,30 @@
 from __future__ import annotations
 
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_session
+from app.core.config import ProjectConfig
 from app.db.repositories import ApplicationRepository
 from app.web.templates import templates
 
 router = APIRouter(tags=["review"])
 
 
-@router.get("/applications/{application_id}/review", response_class=HTMLResponse)
+@router.get("/applications/{application_number}/review", response_class=HTMLResponse)
 async def review_application(
     request: Request,
-    application_id: UUID,
+    application_number: int,
     session: Annotated[Session, Depends(get_session)],
 ) -> HTMLResponse:
-    application = ApplicationRepository(session).get_with_related(application_id)
+    config: ProjectConfig = request.app.state.config
+    application = ApplicationRepository(session).get_by_number_with_related(
+        profile_name=config.app.profile_name,
+        application_number=application_number,
+    )
 
     if application is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
