@@ -57,22 +57,6 @@ Target behaviour:
 
 ---
 
-## Known Documentation Conflict
-
-`AGENTS.md` currently says settings must be stored in profile `config.yaml`.
-
-This is now outdated for the next architecture.
-
-Next documentation update must change that rule to:
-- current compatibility layer: `config.yaml`;
-- target source of truth: managed settings in SQLite;
-- secrets: OS keyring preferred;
-- YAML: example/import/export/fallback only.
-
-Do not silently implement settings changes without updating `AGENTS.md` and `README.md`.
-
----
-
 ## Next Implementation Plan
 
 ### PR 1 — App data directory bootstrap
