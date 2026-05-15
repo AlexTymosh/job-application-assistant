@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Import CV and Fact Bank</h1>
+
+  <p>
+    Import existing file-based Markdown CV variants and YAML fact-bank records into
+    managed CV storage. The current local pipeline still uses the file-based Markdown
+    CV and YAML fact bank until a future migration changes that behaviour.
+  </p>
+
+  {% if error_message %}
+    <section role="alert" aria-label="Import error">
+      <h2>Import cannot continue</h2>
+      <p>{{ error_message }}</p>
+    </section>
+  {% endif %}
+
+  {% if success_message %}
+    <section role="status" aria-label="Import result">
+      <h2>Import result</h2>
+      <p>{{ success_message }}</p>
+    </section>
+  {% endif %}
+
+  <form method="post" action="/profiles/import/preview">
+    <button type="submit">Preview import</button>
+  </form>
+
+  {% if preview %}
+    <section aria-label="Import preview">
+      <h2>Preview</h2>
+      <p>
+        Source profile: <strong>{{ preview.source_profile_name }}</strong>
+        ({{ preview.source_profile_path_label }})
+      </p>
+      <p>
+        Apply allowed:
+        <strong>{% if preview.apply_allowed %}Yes{% else %}No{% endif %}</strong>
+      </p>
+
+      <h3>Summary</h3>
+      <ul>
+        <li>Variants to create: {{ preview.totals.variants_create }}</li>
+        <li>Variants to skip: {{ preview.totals.variants_skip }}</li>
+        <li>Sections to create: {{ preview.totals.sections_create }}</li>
+        <li>Sections to skip: {{ preview.totals.sections_skip }}</li>
+        <li>Blocks to create: {{ preview.totals.blocks_create }}</li>
+        <li>Blocks to skip: {{ preview.totals.blocks_skip }}</li>
+        <li>Facts to create: {{ preview.totals.facts_create }}</li>
+        <li>Facts to skip: {{ preview.totals.facts_skip }}</li>
+        <li>Conflicts: {{ preview.totals.conflicts }}</li>
+      </ul>
+
+      {% if preview.conflicts %}
+        <h3>Conflicts requiring user action</h3>
+        <ul>
+          {% for conflict in preview.conflicts %}
+            <li>{{ conflict }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      <h3>Markdown CV variants</h3>
+      {% for variant in preview.cv_variants %}
+        <article data-variant-name="{{ variant.name }}">
+          <h4>{{ variant.display_name }} ({{ variant.name }}) — {{ variant.action.value }}</h4>
+          <p>Source file: {{ variant.source_filename }}</p>
+          {% if variant.message %}<p>{{ variant.message }}</p>{% endif %}
+          <ul>
+            {% for section in variant.sections %}
+              <li>
+                {{ section.title }} ({{ section.section_key }}) — {{ section.action.value }};
+                blocks:
+                <ul>
+                  {% for block in section.blocks %}
+                    <li>{{ block.block_key }} — {{ block.action.value }}</li>
+                  {% endfor %}
+                </ul>
+              </li>
+            {% endfor %}
+          </ul>
+        </article>
+      {% endfor %}
+
+      <h3>YAML facts</h3>
+      <ul>
+        {% for fact in preview.facts %}
+          <li data-fact-key="{{ fact.fact_key }}">
+            {{ fact.fact_key }} — {{ fact.name }} — {{ fact.category.value }} — {{ fact.action.value }}
+            {% if fact.message %} — {{ fact.message }}{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      <form method="post" action="/profiles/import/apply">
+        <button type="submit" {% if not preview.apply_allowed %}disabled{% endif %}>Apply import</button>
+      </form>
+    </section>
+  {% endif %}
+{% endblock %}
