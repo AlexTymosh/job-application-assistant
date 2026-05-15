@@ -120,6 +120,7 @@ Release validation documents:
 - `docs/manual-smoke-test.md`
 - `docs/local-profile-setup.md`
 
+The manual smoke test must cover the managed product path, not only the legacy file-based flow: connect an active managed profile, preview/apply CV/fact import, inspect or edit managed CV/fact records, run the local pipeline, and verify that generated artefacts come from managed CV/fact storage when a valid managed source exists.
 Tests must not call the real OpenAI API and must not require `OPENAI_API_KEY`.
 
 ---

@@ -213,6 +213,7 @@ REQUIRED_PROJECT_FILES = [
     "app/pipeline/local_web_pipeline.py",
     "tests/test_artifact_download_routes.py",
     "tests/test_local_pipeline_routes.py",
+    "tests/test_release_smoke.py",
     "tests/test_markdown_exporter.py",
     "tests/test_html_exporter.py",
     "tests/test_export_markdown_html.py",
