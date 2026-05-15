@@ -51,6 +51,7 @@ Implemented the managed profiles foundation:
 - active managed profiles are preferred for effective config loading and setup diagnostics;
 - existing `.env`, managed settings default profile values, YAML config, Markdown CV variants, and YAML fact bank fallback remain compatible when no managed profile is active;
 - profile application history remains in each profile-specific `applications.sqlite3`.
+- Effective config loading revalidates active managed profile identity before using it.
 
 Non-goals preserved:
 - no managed CV model yet;

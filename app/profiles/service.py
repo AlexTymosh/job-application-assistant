@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import sqlite3
 import uuid
 from pathlib import Path
@@ -11,7 +10,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_project_root, load_profile_config
-from app.core.paths import build_profile_paths
 from app.profiles.repository import (
     DuplicateProfileNameError,
     ManagedProfileRepository,
@@ -21,6 +19,12 @@ from app.profiles.schema import (
     ManagedProfileType,
     ProfileValidationResult,
 )
+from app.profiles.validation import (
+    normalise_profile_name as _normalise_profile_name,
+)
+from app.profiles.validation import (
+    validate_profile_config_identity,
+)
 from app.settings.schema import (
     SETTING_DEFAULT_PROFILE_DATA_DIR,
     SETTING_DEFAULT_PROFILE_NAME,
@@ -28,7 +32,6 @@ from app.settings.schema import (
 from app.settings.service import AppSettingsService
 from app.storage.location import normalise_app_data_root
 
-_PROFILE_NAME_PATTERN = re.compile(r"[^a-z0-9_.-]+")
 _EXPECTED_PROFILE_CONFIG_EXCEPTIONS = (
     FileNotFoundError,
     ValueError,
@@ -151,23 +154,17 @@ class ManagedProfileService:
 
         try:
             config = load_profile_config(config_file)
-            config_profile_dir = normalise_app_data_root(
-                build_profile_paths(config).profile_dir
-            )
         except _EXPECTED_PROFILE_CONFIG_EXCEPTIONS as exc:
             raise ManagedProfileError(f"Profile config is not readable: {exc}") from exc
 
-        config_profile_name = normalise_profile_name(config.app.profile_name)
-        if config_profile_name != profile_name:
-            raise ManagedProfileError(
-                "Profile config app.profile_name must match the managed profile "
-                f"name: expected {profile_name!r}, found {config.app.profile_name!r}."
+        try:
+            validate_profile_config_identity(
+                config,
+                expected_profile_name=profile_name,
+                expected_data_dir=resolved_dir,
             )
-        if config_profile_dir != resolved_dir:
-            raise ManagedProfileError(
-                "Profile config app.data_dir must resolve to the selected profile "
-                f"folder: expected {resolved_dir}, found {config_profile_dir}."
-            )
+        except ValueError as exc:
+            raise ManagedProfileError(str(exc)) from exc
 
     def _sync_default_profile_bridge(self, record: ManagedProfileRecord) -> None:
         if self._app_settings_service is None:
@@ -193,13 +190,10 @@ def build_managed_profile_service(
 
 
 def normalise_profile_name(name: str) -> str:
-    stripped = name.strip().lower()
-    if not stripped:
-        raise ManagedProfileError("Profile name must not be blank.")
-    normalised = _PROFILE_NAME_PATTERN.sub("-", stripped).strip("-._")
-    if not normalised:
-        raise ManagedProfileError("Profile name must include letters or numbers.")
-    return normalised
+    try:
+        return _normalise_profile_name(name)
+    except ValueError as exc:
+        raise ManagedProfileError(str(exc)) from exc
 
 
 def _normalise_optional_text(value: str | None) -> str | None:

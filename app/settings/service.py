@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import ProjectConfig, load_profile_config
 from app.profiles.repository import ManagedProfileRepository
+from app.profiles.validation import validate_profile_config_identity
 from app.settings.repository import AppSettingsRepository
 from app.settings.schema import (
     ManagedAppSettings,
@@ -59,6 +60,11 @@ class AppSettingsService:
                     profile_name=active_profile.name,
                     profile_data_dir=active_profile.data_dir,
                 )
+            )
+            validate_profile_config_identity(
+                base_config,
+                expected_profile_name=active_profile.name,
+                expected_data_dir=active_profile.data_dir,
             )
         else:
             base_config = _load_base_config(managed_settings)

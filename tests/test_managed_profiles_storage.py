@@ -8,27 +8,24 @@ import pytest
 from app.profiles.service import ManagedProfileError, build_managed_profile_service
 from app.settings.init import initialise_app_settings_storage
 from app.settings.migrations import CURRENT_APP_SETTINGS_SCHEMA_VERSION
+from app.setup.service import SetupStatusService
 from app.storage.app_dirs import build_app_data_paths
+from app.storage.bootstrap import bootstrap_app_data_dirs_for_paths
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _write_profile(
+def _rewrite_profile_config(
     path: Path,
     *,
     name: str = "alex",
-    marker: str = "Alex",
     config_profile_name: str | None = None,
     config_data_dir: Path | None = None,
 ) -> None:
-    (path / "cv" / "variants").mkdir(parents=True)
     config_name = "config.example.yaml" if name == "example" else "config.yaml"
-    fact_name = "fact_bank.example.yaml" if name == "example" else "fact_bank.yaml"
-    variant_name = (
-        "backend_developer.example.md" if name == "example" else "backend_developer.md"
-    )
     config_profile_name = config_profile_name or name
     config_data_dir = config_data_dir or path
+
     (path / config_name).write_text(
         f"""
 app:
@@ -49,6 +46,30 @@ future_integrations: {{}}
         + "\n",
         encoding="utf-8",
     )
+
+
+def _write_profile(
+    path: Path,
+    *,
+    name: str = "alex",
+    marker: str = "Alex",
+    config_profile_name: str | None = None,
+    config_data_dir: Path | None = None,
+) -> None:
+    (path / "cv" / "variants").mkdir(parents=True, exist_ok=True)
+
+    fact_name = "fact_bank.example.yaml" if name == "example" else "fact_bank.yaml"
+    variant_name = (
+        "backend_developer.example.md" if name == "example" else "backend_developer.md"
+    )
+
+    _rewrite_profile_config(
+        path,
+        name=name,
+        config_profile_name=config_profile_name,
+        config_data_dir=config_data_dir,
+    )
+
     (path / "cv" / fact_name).write_text(
         """
 facts:
@@ -60,6 +81,7 @@ facts:
 """.lstrip(),
         encoding="utf-8",
     )
+
     cv_content = (
         f"# {marker} — Backend Developer CV Variant\n\n"
         "<!-- SECTION: SUMMARY_START -->\n"
@@ -77,6 +99,7 @@ facts:
         "- Built a local backend application using FastAPI.\n"
         "<!-- SECTION: PROJECTS_END -->\n"
     )
+
     (path / "cv" / "variants" / variant_name).write_text(
         cv_content,
         encoding="utf-8",
@@ -94,6 +117,10 @@ def _service(tmp_path: Path):  # type: ignore[no-untyped-def]
         app_settings,
         paths,
     )
+
+
+def _check_by_code(status, code: str):  # type: ignore[no-untyped-def]
+    return next(check for check in status.checks if check.code == code)
 
 
 def test_profile_table_schema_migrates_from_v1_to_v2(tmp_path: Path) -> None:
@@ -152,9 +179,12 @@ def test_create_list_duplicate_and_active_profiles(tmp_path: Path) -> None:
     assert profile.is_active is True
     assert service.list_profiles() == [profile]
     assert service.get_active_profile() == profile
+
     with pytest.raises(ManagedProfileError, match="already exists"):
         service.create_file_based_profile(
-            name="alex", display_name=None, data_dir=profile_dir
+            name="alex",
+            display_name=None,
+            data_dir=profile_dir,
         )
 
 
@@ -165,7 +195,9 @@ def test_profile_name_must_match_profile_config(tmp_path: Path) -> None:
 
     with pytest.raises(ManagedProfileError, match="app.profile_name"):
         service.create_file_based_profile(
-            name="sam", display_name=None, data_dir=profile_dir
+            name="sam",
+            display_name=None,
+            data_dir=profile_dir,
         )
 
 
@@ -177,7 +209,9 @@ def test_profile_data_dir_must_match_profile_config(tmp_path: Path) -> None:
 
     with pytest.raises(ManagedProfileError, match="app.data_dir"):
         service.create_file_based_profile(
-            name="sam", display_name=None, data_dir=profile_dir
+            name="sam",
+            display_name=None,
+            data_dir=profile_dir,
         )
 
 
@@ -187,7 +221,9 @@ def test_matching_profile_identity_connects_successfully(tmp_path: Path) -> None
     _write_profile(profile_dir, name="sam")
 
     profile = service.create_file_based_profile(
-        name="sam", display_name=None, data_dir=profile_dir
+        name="sam",
+        display_name=None,
+        data_dir=profile_dir,
     )
 
     assert profile.name == "sam"
@@ -201,12 +237,16 @@ def test_invalid_and_repository_internal_profile_folders_are_rejected(
 
     with pytest.raises(ManagedProfileError, match="must exist"):
         service.create_file_based_profile(
-            name="alex", display_name=None, data_dir=tmp_path / "missing"
+            name="alex",
+            display_name=None,
+            data_dir=tmp_path / "missing",
         )
 
     with pytest.raises(ManagedProfileError, match="outside this repository"):
         service.create_file_based_profile(
-            name="example", display_name=None, data_dir=ROOT / "profiles" / "example"
+            name="example",
+            display_name=None,
+            data_dir=ROOT / "profiles" / "example",
         )
 
 
@@ -216,11 +256,17 @@ def test_only_one_active_profile_exists(tmp_path: Path) -> None:
     sam_dir = tmp_path / "private" / "sam"
     _write_profile(alex_dir, name="alex", marker="Alex")
     _write_profile(sam_dir, name="sam", marker="Sam")
+
     alex = service.create_file_based_profile(
-        name="alex", display_name=None, data_dir=alex_dir, make_active=True
+        name="alex",
+        display_name=None,
+        data_dir=alex_dir,
+        make_active=True,
     )
     sam = service.create_file_based_profile(
-        name="sam", display_name=None, data_dir=sam_dir
+        name="sam",
+        display_name=None,
+        data_dir=sam_dir,
     )
 
     active = service.set_active_profile(sam.id)
@@ -231,22 +277,29 @@ def test_only_one_active_profile_exists(tmp_path: Path) -> None:
     assert alex.id != sam.id
 
 
-def test_active_managed_profile_drives_effective_config_loading(tmp_path: Path) -> None:
+def test_active_managed_profile_drives_effective_config_loading(
+    tmp_path: Path,
+) -> None:
     service, app_settings, _ = _service(tmp_path)
     profile_dir = tmp_path / "private" / "sam"
     _write_profile(profile_dir, name="sam", marker="Sam")
 
     service.create_file_based_profile(
-        name="sam", display_name=None, data_dir=profile_dir, make_active=True
+        name="sam",
+        display_name=None,
+        data_dir=profile_dir,
+        make_active=True,
     )
 
     config = app_settings.load_effective_config()
+
     assert config.app.profile_name == "sam"
     assert config.app.data_dir == profile_dir
 
 
 def test_no_managed_profile_preserves_file_based_fallback(
-    monkeypatch, tmp_path: Path
+    monkeypatch,
+    tmp_path: Path,
 ) -> None:
     _, app_settings, _ = _service(tmp_path)
     profile_dir = tmp_path / "private" / "alex"
@@ -268,9 +321,79 @@ def test_profile_management_does_not_create_private_profile_files(
     _write_profile(profile_dir)
 
     service.create_file_based_profile(
-        name="alex", display_name=None, data_dir=profile_dir, make_active=True
+        name="alex",
+        display_name=None,
+        data_dir=profile_dir,
+        make_active=True,
     )
 
     assert not paths.profiles_dir.exists() or list(paths.profiles_dir.iterdir()) == []
     assert not (paths.root / "applications.sqlite3").exists()
     assert not (profile_dir / "applications.sqlite3").exists()
+
+
+def test_active_profile_config_name_mismatch_fails_effective_config_and_setup(
+    tmp_path: Path,
+) -> None:
+    service, app_settings, paths = _service(tmp_path)
+    bootstrap_app_data_dirs_for_paths(paths)
+
+    profile_dir = tmp_path / "private" / "sam"
+    _write_profile(profile_dir, name="sam")
+
+    service.create_file_based_profile(
+        name="sam",
+        display_name=None,
+        data_dir=profile_dir,
+        make_active=True,
+    )
+
+    _rewrite_profile_config(
+        profile_dir,
+        name="sam",
+        config_profile_name="alex",
+    )
+
+    with pytest.raises(ValueError, match="app.profile_name"):
+        app_settings.load_effective_config()
+
+    status = SetupStatusService(app_data_paths=paths).build_status()
+    profile_config_check = _check_by_code(status, "profile_config")
+
+    assert status.is_complete is False
+    assert profile_config_check.ok is False
+    assert "app.profile_name" in profile_config_check.message
+
+
+def test_active_profile_config_data_dir_mismatch_fails_effective_config_and_setup(
+    tmp_path: Path,
+) -> None:
+    service, app_settings, paths = _service(tmp_path)
+    bootstrap_app_data_dirs_for_paths(paths)
+
+    profile_dir = tmp_path / "private" / "sam"
+    other_dir = tmp_path / "private" / "other"
+    _write_profile(profile_dir, name="sam")
+
+    service.create_file_based_profile(
+        name="sam",
+        display_name=None,
+        data_dir=profile_dir,
+        make_active=True,
+    )
+
+    _rewrite_profile_config(
+        profile_dir,
+        name="sam",
+        config_data_dir=other_dir,
+    )
+
+    with pytest.raises(ValueError, match="app.data_dir"):
+        app_settings.load_effective_config()
+
+    status = SetupStatusService(app_data_paths=paths).build_status()
+    profile_config_check = _check_by_code(status, "profile_config")
+
+    assert status.is_complete is False
+    assert profile_config_check.ok is False
+    assert "app.data_dir" in profile_config_check.message

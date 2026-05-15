@@ -65,6 +65,7 @@ REQUIRED_PROJECT_FILES = [
     "app/profiles/repository.py",
     "app/profiles/schema.py",
     "app/profiles/service.py",
+    "app/profiles/validation.py",
     "app/secrets/__init__.py",
     "app/secrets/openai_key.py",
     "tests/test_openai_secret_service.py",

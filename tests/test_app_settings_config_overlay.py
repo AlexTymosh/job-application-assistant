@@ -29,7 +29,8 @@ def copy_example_profile(tmp_path: Path) -> Path:
     config_path = profile_dir / "config.example.yaml"
     content = config_path.read_text(encoding="utf-8")
     content = content.replace(
-        'data_dir: "profiles/example"', f'data_dir: "{profile_dir}"'
+        'data_dir: "profiles/example"',
+        f'data_dir: "{profile_dir.as_posix()}"',
     )
     config_path.write_text(content, encoding="utf-8")
     return profile_dir

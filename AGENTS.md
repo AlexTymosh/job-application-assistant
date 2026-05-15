@@ -155,6 +155,7 @@ Real private profile data must live outside the repository.
 Private app data must be created through the storage/bootstrap boundary in `app/storage/`, not ad hoc in routes, tests, or pipeline code. Setup, settings, and Data Folder UI code must use this boundary when resolving or creating app-owned folders.
 
 Managed profiles live in `app_data_root/app.sqlite3`. Profile application history remains in the profile-specific `applications.sqlite3` database for now; do not migrate application records automatically. Profile records must not store raw secrets or real CV/fact content. Connected file-based profile records must match the loaded profile config identity: `app.profile_name` and `app.data_dir` must resolve to the managed profile name and selected folder.
+Effective config loading must revalidate active managed profile identity before using it, not only during connect or activate actions.
 
 The active app data folder location must be resolved by `app/storage/`. `APP_DATA_DIR` remains the highest-priority developer override. When `APP_DATA_DIR` is not set, any user-selected app data folder pointer must be stored outside the app data folder itself through the `app/storage/` location boundary. Do not store the active app data folder path in `app_settings` or in `app_data_root/app.sqlite3`, because that database lives inside the folder being selected.
 

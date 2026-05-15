@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -196,7 +195,7 @@ def test_profile_activation_repair_post_bypasses_setup_gate(
         data={"name": "broken", "data_dir": str(broken_dir), "make_active": "on"},
     )
     client.post("/profiles", data={"name": "valid", "data_dir": str(valid_dir)})
-    shutil.rmtree(broken_dir)
+    (broken_dir / "config.yaml").unlink()
 
     dashboard_response = client.get("/dashboard", follow_redirects=False)
     profiles_page = client.get("/profiles")
