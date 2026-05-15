@@ -193,7 +193,7 @@ README.txt
 
 The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. The app-managed `profiles` table stores connected file-based profile records and the active managed profile selection. Managed CV tables in the same app-level database provide the first storage model for variants, aliases, sections, blocks, facts, and block-fact links. Profile records contain metadata such as name, display name, type, data directory, and active status; they do not store raw secrets or application history. Raw API keys are not stored in SQLite; OpenAI mode prefers the OS keyring value and falls back to the runtime `OPENAI_API_KEY` environment variable for developer workflows. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, YAML fact bank, and Markdown CV behaviour remains compatible.
 
-The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, Data Folder UI, managed profile selection, managed CV storage foundation, and previewable import tools are now implemented. This still does not implement CV/fact editing, automatic profile application database migration, or pipeline migration to managed CV storage.
+The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, Data Folder UI, managed profile selection, managed CV storage foundation, previewable import tools, and Managed CV editor are now implemented. This still does not implement automatic profile application database migration or pipeline migration to managed CV storage.
 
 If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
 
@@ -230,6 +230,15 @@ The Import CV/Facts page is available at:
 
 It previews and then explicitly applies imports from the active managed file-based profile. Markdown CV variant files are copied into managed variants, sections, and single imported-content blocks; YAML fact-bank entries are copied into managed facts. Re-running the same import skips matching records, reports conflicts instead of overwriting them, rejects empty or ambiguous CV sources, writes only to `app_data_root/app.sqlite3`, does not mutate source Markdown/YAML files, and does not change the current pipeline source. Normal import UI errors use safe labels instead of absolute private profile paths. The local pipeline still reads file-based Markdown CV variants and YAML fact banks until a future explicit pipeline migration.
 
+The Managed CV editor pages are available at:
+
+```text
+/profiles/cv
+/profiles/facts
+```
+
+They let the active managed profile view imported managed CV variants, sections, and blocks; edit block Markdown, display order, enabled state, and selected fact links; list managed facts; create verified facts; and edit fact category, name, allowed claim level, evidence, and active state. The editor updates only app-managed imported CV/fact records in `app_data_root/app.sqlite3`; it does not mutate source Markdown CV files, source YAML fact-bank files, or profile-specific `applications.sqlite3`. Fact keys are required and unique on create, immutable on edit, and the UI states that facts must represent verified experience only. The current pipeline still uses file-based Markdown/YAML until the pipeline migration stage.
+
 ---
 
 ## Current Configuration Model
@@ -243,6 +252,7 @@ The current implementation uses:
 - OS keyring for the raw OpenAI API key, with `app_settings` storing only configured/unconfigured metadata;
 - app-level managed CV storage for variants, aliases, sections, blocks, facts, and block-fact links;
 - previewable import tools for copying file-based Markdown CV variants and YAML facts into managed CV storage;
+- Managed CV editor pages for editing imported app-managed CV blocks, facts, and block-fact links;
 - `.env` for developer fallback profile selection and `OPENAI_API_KEY` fallback when no active managed profile overrides profile selection;
 - `config.yaml` for private file-based profile settings that are not migrated yet;
 - `fact_bank.yaml` for verified user facts used by the current pipeline;
@@ -257,7 +267,7 @@ Target direction:
 - let the user connect an existing application data folder;
 - let the user connect existing file-based profile folders as managed profile records;
 - expand application settings stored in SQLite where useful;
-- add editor workflows and pipeline migration for the managed CV/fact storage foundation;
+- migrate the local pipeline to managed CV/fact storage when explicitly implemented;
 - keep generated artefacts as files on disk;
 - keep OpenAI API keys in the OS keyring, not directly in SQLite;
 - keep YAML/Markdown as import/export and compatibility formats.
@@ -282,7 +292,7 @@ Documents/
     └── README.txt
 ```
 
-The user can now connect this folder, connect existing file-based profiles, and import Markdown/YAML CV data into managed storage from the application UI. CV/fact editing, pipeline migration, and automatic profile application database migration are still future work.
+The user can now connect this folder, connect existing file-based profiles, import Markdown/YAML CV data into managed storage, and edit imported managed CV blocks and facts from the application UI. Pipeline migration and automatic profile application database migration are still future work.
 
 Rationale:
 

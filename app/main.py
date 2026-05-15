@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.routes_applications import router as applications_router
+from app.api.routes_cv_editor import router as cv_editor_router
 from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_data_folder import router as data_folder_router
 from app.api.routes_health import router as health_router
@@ -136,6 +137,7 @@ def create_app(
     app.include_router(data_folder_router)
     app.include_router(profiles_router)
     app.include_router(import_router)
+    app.include_router(cv_editor_router)
     app.include_router(applications_router)
     app.include_router(review_router)
     app.include_router(dashboard_router)

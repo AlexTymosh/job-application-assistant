@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Edit CV block</h1>
+  <p><a href="/profiles/cv/variants/{{ state.variant.id }}">Back to variant</a></p>
+
+  <p>
+    Edit only verified CV content. Link facts that support this block where possible.
+    If no facts are linked, this block cannot support strengthened claims in a later
+    managed pipeline migration.
+  </p>
+
+  {% if error_message %}
+    <section role="alert" aria-label="Block edit error">
+      <h2>Block was not saved</h2>
+      <p>{{ error_message }}</p>
+    </section>
+  {% endif %}
+  {% if success_message %}
+    <p role="status">{{ success_message }}</p>
+  {% endif %}
+
+  {% set submitted_fact_ids = submitted_values.get('selected_fact_ids') %}
+  {% if submitted_fact_ids is string %}
+    {% set selected_fact_ids = [submitted_fact_ids] %}
+  {% elif submitted_fact_ids %}
+    {% set selected_fact_ids = submitted_fact_ids %}
+  {% else %}
+    {% set selected_fact_ids = state.linked_fact_ids %}
+  {% endif %}
+
+  <form method="post" action="/profiles/cv/blocks/{{ state.block.id }}">
+    <div>
+      <label for="block_key">Block key</label>
+      <input id="block_key" value="{{ state.block.block_key }}" disabled>
+    </div>
+    <div>
+      <label for="content_markdown">Markdown content</label><br>
+      <textarea id="content_markdown" name="content_markdown" rows="14" cols="90" required>{{ submitted_values.get('content_markdown', state.block.content_markdown) }}</textarea>
+    </div>
+    <div>
+      <label for="display_order">Display order</label>
+      <input id="display_order" name="display_order" type="number" min="0" value="{{ submitted_values.get('display_order', state.block.display_order) }}" required>
+    </div>
+    <div>
+      <label>
+        <input type="checkbox" name="is_enabled" {% if submitted_values %}{% if submitted_values.get('is_enabled') == 'on' %}checked{% endif %}{% elif state.block.is_enabled %}checked{% endif %}>
+        Enabled
+      </label>
+    </div>
+
+    <fieldset>
+      <legend>Linked verified facts</legend>
+      {% if state.facts %}
+        {% for fact in state.facts %}
+          <label>
+            <input type="checkbox" name="selected_fact_ids" value="{{ fact.id }}" {% if fact.id in selected_fact_ids %}checked{% endif %}>
+            {{ fact.fact_key }} — {{ fact.name }} ({{ fact.category.value }}, {{ fact.allowed_claim_level.value }})
+            {% if not fact.is_active %} — inactive{% endif %}
+          </label><br>
+        {% endfor %}
+      {% else %}
+        <p>No managed facts exist yet. Create facts before linking evidence to this block.</p>
+      {% endif %}
+    </fieldset>
+
+    <p><strong>Warning:</strong> saving with no linked facts is allowed, but this block will not support strengthened claims later.</p>
+    <button type="submit">Save block</button>
+  </form>
+{% endblock %}
