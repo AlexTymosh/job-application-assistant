@@ -13,7 +13,7 @@ Read first:
 
 Move the project from file-based profile configuration to a managed local application setup.
 
-The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, a Data Folder UI for connecting the app data root safely, managed profile records for selecting existing file-based profile folders, the app-managed CV storage model, and previewable Markdown/YAML import tools.
+The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, a Data Folder UI for connecting the app data root safely, managed profile records for selecting existing file-based profile folders, the app-managed CV storage model, previewable Markdown/YAML import tools, and simple managed CV/fact editor pages.
 
 ---
 
@@ -98,27 +98,52 @@ Non-goals preserved:
 
 Remaining risks:
 
-- imports currently create one coarse block per parsed Markdown section; finer editable blocks belong to the editor stage;
+- imports currently create one coarse block per parsed Markdown section; finer block splitting remains out of scope;
 - conflicts require manual resolution outside the import tool because destructive overwrite is intentionally not implemented.
-
-## Next Implementation Plan
 
 ### PR 10 — CV/fact editor UI
 
+Completed simple managed CV/fact editor screens on top of existing managed storage:
+
+- `/profiles/cv` lists active-profile managed variants and facts summary, with clear empty-state links to Profiles, Import CV/Facts, and Facts;
+- `/profiles/cv/variants/{variant_id}` lists sections and blocks in deterministic order;
+- `/profiles/cv/blocks/{block_id}/edit` edits block Markdown, display order, enabled state, and selected same-profile fact links;
+- `/profiles/facts` lists active-profile facts only;
+- `/profiles/facts/new` and `/profiles/facts/{fact_id}/edit` create and edit managed facts with enum validation, immutable fact keys on edit, duplicate-key rejection, and active-state support;
+- editor writes remain limited to app-level managed CV storage in `app_data_root/app.sqlite3`; source Markdown CV files, source YAML fact-bank files, profile `applications.sqlite3`, OpenAI, secrets, and the current file-based pipeline are not touched.
+
+Non-goals preserved:
+
+- no automatic splitting of imported coarse `imported_content` blocks;
+- no hard delete flows; blocks use `is_enabled` and facts use `is_active`;
+- no pipeline migration to DB-backed CV/fact storage;
+- no automatic profile application database migration;
+- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
+
+Remaining risks:
+
+- imported CV sections are still coarse blocks, so the editor can modify only those imported block units until a later refinement;
+- managed block-fact links are captured for future claim integrity, but the active pipeline does not consume them yet;
+- safe repair guidance for missing app settings storage remains minimal.
+
+## Next Implementation Plan
+
+### PR 11 — Pipeline migration
+
 Goal:
-Add simple managed CV/fact editor screens on top of the existing managed storage without changing the active local pipeline yet.
+Move the local CV tailoring pipeline from file-based Markdown CV variants and YAML fact banks to managed CV/fact storage after the editor has populated reviewed data.
 
 Recommended scope:
-- list managed variants, sections, blocks, and facts for the active managed profile;
-- add safe create/edit flows with validation and no fact fabrication;
-- keep source Markdown/YAML import/export compatibility;
-- do not make the local pipeline read managed CV/fact records yet.
+- load selected managed CV variants, sections, enabled blocks, managed facts, and block-fact links for the active managed profile;
+- preserve claim integrity: no verified fact means no strengthened CV claim;
+- keep Markdown/YAML compatibility for import/export and fallback until explicitly retired;
+- avoid automatic profile application database migration.
 
 ## Key Decisions
 
 - Default app data folder should be visible and user-owned: `Documents/JobApplicationAssistant/`.
 - Users can connect an existing app data folder through `/data-folder`; `APP_DATA_DIR` remains the highest-priority developer override.
-- Supported app settings, managed profile records, managed CV records, and import tools already live in SQLite; future work should focus on editor workflows, pipeline migration, and guided repair.
+- Supported app settings, managed profile records, managed CV records, import tools, and editor workflows already live in SQLite; future work should focus on pipeline migration and guided repair.
 - YAML should remain as example/import/export/fallback only, not the main UI-facing settings store.
 - OpenAI API key uses OS keyring as the preferred storage backend, with `OPENAI_API_KEY` retained as a developer fallback.
 - SQLite may store secret metadata only, not the raw API key.

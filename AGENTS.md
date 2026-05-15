@@ -161,6 +161,8 @@ Managed CV storage lives in the app-level settings database, `app_data_root/app.
 
 Managed CV import tools must be previewable and idempotent. They may copy existing Markdown CV variants and YAML fact-bank records into `app_data_root/app.sqlite3`, but must not mutate source Markdown/YAML files, must not call OpenAI, must not write managed CV data to profile-specific `applications.sqlite3`, and must not silently overwrite conflicting managed records.
 
+The managed CV/fact editor may create and edit only app-level managed CV blocks, fact records, and block-fact links in `app_data_root/app.sqlite3`. It must not mutate source Markdown CV files, source YAML fact-bank files, or profile-specific `applications.sqlite3` databases. The active local pipeline remains file-based until an explicit pipeline migration changes that source.
+
 The active app data folder location must be resolved by `app/storage/`. `APP_DATA_DIR` remains the highest-priority developer override. When `APP_DATA_DIR` is not set, any user-selected app data folder pointer must be stored outside the app data folder itself through the `app/storage/` location boundary. Do not store the active app data folder path in `app_settings` or in `app_data_root/app.sqlite3`, because that database lives inside the folder being selected.
 
 Managed storage defaults to a user-visible application folder, for example:

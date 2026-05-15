@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -169,6 +169,11 @@ class ManagedCvRepository:
             )
             return [_section_record(row) for row in rows]
 
+    def get_cv_section(self, section_id: str) -> ManagedCvSectionRecord | None:
+        with self._session_factory() as session:
+            row = session.get(ManagedCvSection, section_id)
+            return _section_record(row) if row is not None else None
+
     def create_cv_block(
         self,
         *,
@@ -210,6 +215,76 @@ class ManagedCvRepository:
             )
             return [_block_record(row) for row in rows]
 
+    def get_cv_block(self, block_id: str) -> ManagedCvBlockRecord | None:
+        with self._session_factory() as session:
+            row = session.get(ManagedCvBlock, block_id)
+            return _block_record(row) if row is not None else None
+
+    def update_cv_block(
+        self,
+        *,
+        block_id: str,
+        content_markdown: str,
+        display_order: int,
+        is_enabled: bool,
+        fact_ids: list[str],
+        expected_profile_id: str,
+    ) -> ManagedCvBlockRecord:
+        requested_fact_ids = list(dict.fromkeys(fact_ids))
+        with self._session_factory() as session:
+            block = _require_row(session, ManagedCvBlock, block_id, "CV block")
+            section = _require_row(
+                session, ManagedCvSection, block.section_id, "CV section"
+            )
+            variant = _require_row(
+                session, ManagedCvVariant, section.variant_id, "CV variant"
+            )
+            if variant.profile_id != expected_profile_id:
+                raise RelatedManagedCvRecordNotFoundError(
+                    "CV block was not found for the active managed profile."
+                )
+
+            facts_by_id = (
+                {
+                    fact.id: fact
+                    for fact in session.scalars(
+                        select(ManagedFact).where(
+                            ManagedFact.id.in_(requested_fact_ids)
+                        )
+                    )
+                }
+                if requested_fact_ids
+                else {}
+            )
+            missing_fact_ids = [
+                fact_id for fact_id in requested_fact_ids if fact_id not in facts_by_id
+            ]
+            if missing_fact_ids:
+                raise RelatedManagedCvRecordNotFoundError(
+                    "Selected fact was not found for the active managed profile."
+                )
+            for fact in facts_by_id.values():
+                if fact.profile_id != expected_profile_id:
+                    raise CrossProfileFactLinkError(
+                        "Selected facts must belong to the active managed profile."
+                    )
+
+            block.content_markdown = content_markdown
+            block.display_order = display_order
+            block.is_enabled = is_enabled
+            session.execute(
+                delete(ManagedCvBlockFactLink).where(
+                    ManagedCvBlockFactLink.block_id == block.id
+                )
+            )
+            session.add_all(
+                ManagedCvBlockFactLink(block_id=block.id, fact_id=fact_id)
+                for fact_id in requested_fact_ids
+            )
+            session.commit()
+            session.refresh(block)
+            return _block_record(block)
+
     def create_fact(
         self,
         *,
@@ -241,6 +316,37 @@ class ManagedCvRepository:
                 _raise_fact_create_error(session, profile_id, fact_key, exc)
             session.refresh(row)
             return _fact_record(row)
+
+    def get_fact(self, fact_id: str) -> ManagedFactRecord | None:
+        with self._session_factory() as session:
+            row = session.get(ManagedFact, fact_id)
+            return _fact_record(row) if row is not None else None
+
+    def update_fact(
+        self,
+        *,
+        fact_id: str,
+        category: FactCategory,
+        name: str,
+        allowed_claim_level: AllowedClaimLevel,
+        evidence: str,
+        is_active: bool,
+        expected_profile_id: str,
+    ) -> ManagedFactRecord:
+        with self._session_factory() as session:
+            fact = _require_row(session, ManagedFact, fact_id, "Fact")
+            if fact.profile_id != expected_profile_id:
+                raise RelatedManagedCvRecordNotFoundError(
+                    "Managed fact was not found for the active managed profile."
+                )
+            fact.category = category.value
+            fact.name = name
+            fact.allowed_claim_level = allowed_claim_level.value
+            fact.evidence = evidence
+            fact.is_active = is_active
+            session.commit()
+            session.refresh(fact)
+            return _fact_record(fact)
 
     def list_facts(self, profile_id: str) -> list[ManagedFactRecord]:
         with self._session_factory() as session:
