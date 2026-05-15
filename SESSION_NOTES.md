@@ -1,190 +1,590 @@
 # SESSION_NOTES.md
 
-Purpose: short handoff state for the next Codex/AI session. This is not product documentation.
+Назначение: короткое состояние проекта для следующей AI/Codex-сессии. Это не пользовательская документация.
 
-Read first:
+Читать сначала:
+
 1. `AGENTS.md`
 2. `SESSION_NOTES.md`
-3. files directly related to the current task
+3. `README.md`, 
+4. документы, связанные с текущей задачей
 
 ---
 
-## Current Stage
+## Текущий статус
 
-Move the project from file-based profile configuration to a managed local application setup.
+Проект прошёл через несколько технических этапов: app data folder, setup diagnostics, settings, keyring, managed profiles, managed CV storage, import tools, editor, managed-first pipeline, final export и smoke tests.
 
-The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, managed CV/fact pipeline loading with Markdown/YAML fallback, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, a Data Folder UI for connecting the app data root safely, managed profile records for selecting existing file-based profile folders, the app-managed CV storage model, previewable Markdown/YAML import tools, and simple managed CV/fact editor pages.
+Но продуктовая модель оказалась неправильной.
+
+Старый курс был слишком завязан на:
+
+- file-based profiles;
+- YAML config;
+- YAML fact bank;
+- Markdown CV variants;
+- import from old files;
+- pipeline compatibility with legacy data.
+
+Это не соответствует новой цели.
+
+Новая цель:
+
+```text
+SQL-first Resume Builder + AI Tailoring + Review/Export
+```
+
+Программу ещё никто не использовал, поэтому можно радикально переделывать модель без миграционных обязательств и без страха потерять реальные пользовательские данные.
 
 ---
 
-## Completed Current Tasks
+## Главный продуктовый вывод
 
-### PR 1 — App data directory bootstrap
+Текущий проект не нужно удалять полностью, потому что полезная инфраструктура уже есть:
 
-Implemented the default `Documents/JobApplicationAssistant` app data root, `APP_DATA_DIR` override support, and idempotent creation of only `profiles/`, `logs/`, and `backups/` without private profile files.
+- FastAPI/Jinja2 каркас;
+- SQLite;
+- app data folder;
+- OS keyring для OpenAI key;
+- PDF/DOCX/HTML/Markdown exporters;
+- artefact writer/download safety;
+- тесты, CI, ruff, pre-commit;
+- часть settings/setup shell.
 
-### PR 2 — Setup status and setup redirect
+Но текущую YAML/Markdown-oriented продуктовую модель нужно заменить в корне.
 
-Implemented setup diagnostics for app data folders, file-based profile config, active profile readiness, profile SQLite tables, LLM mode, default CV variant, and fact-bank validation, plus `/setup` and the setup redirect gate.
+Решение:
 
-### PR 3 — Managed settings storage
+```text
+Не начинать новый репозиторий.
+Сделать архитектурный reset внутри текущего проекта.
+```
 
-Implemented `app_data_root/app.sqlite3` for non-secret app settings, deterministic settings schema migration, managed settings overlay onto runtime config, and setup checks proving app settings storage is separate from profile databases.
+---
 
-### PR 4 — Settings UI
+## Новые продуктовые принципы
 
-Implemented `/settings` for supported non-secret managed settings, default file-based profile selection, validation, setup-gate exemption, and runtime refresh after saves.
+### 1. YAML удалить из пользовательского source of truth
 
-### PR 5 — OS keyring secrets
+Удалить как целевой пользовательский механизм:
 
-Implemented `app/secrets/` for OpenAI API key storage through an injectable OS keyring boundary, kept SQLite limited to key-configured metadata, preserved `OPENAI_API_KEY` as a developer fallback, and updated setup/settings/runtime tests for safe secret handling.
+- YAML settings;
+- YAML fact bank;
+- Markdown CV as source of truth;
+- старые import flows;
+- обязательную поддержку старых CV.
 
-### PR 6 — Data Folder UI
+### 2. SQLite — основной источник данных
 
-Implemented safe app data folder connection and creation through `/data-folder`. The UI now rejects broad or high-risk folder selections such as filesystem roots, home/Documents roots, repository paths, repository parents, and unrelated non-empty folders that are not recognisable app data folders. Existing non-empty folders require strong app-data evidence: the README marker, a current readable `app.sqlite3`, or the complete `profiles/`, `logs/`, and `backups/` structure. Existing `README.txt` files are preserved when connecting an existing folder.
+Все основные сущности должны жить в SQL:
 
-### PR 7 — Managed profiles
+- profiles/persons;
+- private contact layer;
+- resumes;
+- sections;
+- blocks;
+- bullets;
+- skills;
+- facts;
+- block/bullet AI policies;
+- prompt templates/keys;
+- applications;
+- job requirements;
+- AI change proposals;
+- accepted/rejected changes;
+- cover letters;
+- artefacts.
 
-Implemented the managed profiles foundation:
-- app-managed `profiles` records live in `app_data_root/app.sqlite3`;
-- `/profiles` lists connected file-based profiles, validates their folder status and config identity, connects existing profile folders, and permits activation repair actions while setup is incomplete;
-- active managed profiles are preferred for effective config loading and setup diagnostics;
-- existing `.env`, managed settings default profile values, YAML config, Markdown CV variants, and YAML fact bank fallback remain compatible when no managed profile is active;
-- profile application history remains in each profile-specific `applications.sqlite3`.
-- Effective config loading revalidates active managed profile identity before using it.
+### 3. Профиль — это человек
 
-### PR 8 — Managed CV model
+Профиль должен представлять человека, а не папку с YAML.
 
-Implemented the app-managed CV storage foundation:
-- app settings schema version 3 adds app-level tables for CV variants, variant aliases, sections, blocks, facts, and block-fact links in `app_data_root/app.sqlite3`;
-- managed CV SQLAlchemy models use `SettingsBase` and stay out of the profile application database metadata;
-- repository operations create/list managed CV records and return Pydantic records rather than raw SQLAlchemy rows;
-- duplicate variant names, aliases, fact keys, and block-fact links have explicit domain errors;
-- profile deletion cascades managed CV records through app-level foreign keys;
-- profile database setup readiness now verifies expected columns, not only table names, without creating or migrating tables during diagnostics;
-- existing Markdown CV variants, YAML fact banks, selectors, and local pipeline behaviour remain unchanged.
+Один профиль может иметь много резюме, например:
 
-Non-goals preserved:
-- no import tools;
-- no CV/fact editor;
-- no pipeline migration to DB-backed CV/fact storage;
-- no automatic profile application database migration;
-- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
+```text
+Alex
+├── Software Engineer
+├── Backend Developer
+├── Automation Engineer
+└── Data Analyst
+```
 
-Remaining risks:
-- setup status is still diagnostic; it does not repair missing profile files or run profile migrations;
-- if the host OS keyring backend is missing or unavailable, Settings reports a safe keyring error and `OPENAI_API_KEY` remains the developer fallback;
-- database readiness checks verify expected tables and columns but do not yet provide a guided repair or migration button;
-- profile and data folder UIs use text path inputs for this local developer release and do not provide OS-native folder pickers.
+### 4. Резюме — это конструктор
 
-### PR 9 — Import tools
+Резюме должно состоять из секций, блоков и bullet points.
 
-Completed safe import tools for existing active managed file-based profiles:
+Пользователь должен уметь:
 
-- `/profiles/import` renders a simple preview/apply UI;
-- Markdown CV variants are loaded with existing Markdown and section parsers, then imported into managed variants, sections, and one deterministic `imported_content` block per section;
-- YAML fact banks are loaded with the existing fact-bank validator, then imported into managed facts;
-- previews perform no writes, report planned creates/skips/conflicts, avoid showing unnecessary absolute paths in the normal UI, reject empty or ambiguous CV sources, and block apply when conflicts exist;
-- apply uses one SQLAlchemy transaction, is idempotent for matching records, does not overwrite conflicts, and writes only to `app_data_root/app.sqlite3`;
-- source Markdown/YAML files, profile `applications.sqlite3`, current file-based pipeline loading, and block-fact links remain unchanged.
+- создавать резюме;
+- добавлять стандартные и custom sections;
+- менять порядок секций;
+- менять порядок блоков;
+- создавать разные версии резюме;
+- выбирать, какие блоки может менять AI.
 
-Non-goals preserved:
+### 5. Приватный слой не попадает в AI
 
-- no CV/fact editor UI;
-- no pipeline migration to DB-backed CV/fact storage;
-- no automatic profile application database migration;
-- no automatic block-fact links;
-- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
+Phone, email, address, private links и другие private data не должны включаться в AI prompts.
 
-Remaining risks:
+Финальный документ собирается после AI review:
 
-- imports currently create one coarse block per parsed Markdown section; finer block splitting remains out of scope;
-- conflicts require manual resolution outside the import tool because destructive overwrite is intentionally not implemented.
+```text
+Private contact layer
++ approved tailored resume content
+→ final PDF/DOCX/HTML/Markdown
+```
 
-### PR 10 — CV/fact editor UI
+### 6. AI меняет не всё резюме, а разрешённые units
 
-Completed simple managed CV/fact editor screens on top of existing managed storage:
+Базовые единицы редактирования:
 
-- `/profiles/cv` lists active-profile managed variants and facts summary, with clear empty-state links to Profiles, Import CV/Facts, and Facts;
-- `/profiles/cv/variants/{variant_id}` lists sections and blocks in deterministic order;
-- `/profiles/cv/blocks/{block_id}/edit` edits block Markdown, display order, enabled state, and selected same-profile fact links;
-- `/profiles/facts` lists active-profile facts only;
-- `/profiles/facts/new` and `/profiles/facts/{fact_id}/edit` create and edit managed facts with enum validation, immutable fact keys on edit, duplicate-key rejection, and active-state support;
-- editor writes remain limited to app-level managed CV storage in `app_data_root/app.sqlite3`; source Markdown CV files, source YAML fact-bank files, profile `applications.sqlite3`, OpenAI, secrets, and the current file-based pipeline are not touched.
+| Область | Единица AI-редактирования |
+|---|---|
+| Summary / Description | весь блок |
+| Job title / Resume title | всё название, если разрешено |
+| Skills | весь набор skills |
+| Work Experience | отдельный bullet |
+| Projects | bullet или description по настройке |
+| Education / Certifications / Languages / References | обычно readonly, если пользователь не разрешил |
 
-Non-goals preserved:
+Для каждого типа блока нужен отдельный prompt.
 
-- no automatic splitting of imported coarse `imported_content` blocks;
-- no hard delete flows; blocks use `is_enabled` and facts use `is_active`;
-- no pipeline migration to DB-backed CV/fact storage;
-- no automatic profile application database migration;
-- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
+### 7. AI может менять job title
 
-Remaining risks:
+Job title можно менять, если пользователь разрешил это для данного поля/блока.
 
-- imported CV sections are still coarse blocks, so the editor can modify only those imported block units until a later refinement;
-- managed block-fact links are captured for future claim integrity, but the active pipeline does not consume them yet;
-- safe repair guidance for missing app settings storage remains minimal.
+### 8. AI может создавать новые bullets
 
-### PR 11 — Pipeline migration
+Разрешено, если:
 
-Completed managed CV/fact pipeline source migration:
+- политика блока это позволяет;
+- есть supporting facts или пользователь отключил обязательный fact link;
+- change proposal помечает risk level;
+- пользователь видит before/after и принимает изменение.
 
-- added a testable pipeline CV source loader that resolves the selected CV variant and facts from app-managed storage when a valid active managed profile source exists;
-- composed managed Markdown from active variants, deterministic sections, and enabled blocks while preserving the required section marker contract used by `parse_cv_sections()`;
-- converted active managed facts into the existing `FactBank` model using `fact_key` as the stable pipeline/report fact id;
-- added an active managed profile identity guard so the pipeline cannot combine one profile's application database with another profile's managed CV/fact records;
-- validated selected managed sources clearly: missing selected variants, missing required sections, required sections without enabled content, no active facts, and inactive or stale block-fact links fail without silent file fallback;
-- preserved deterministic file-based Markdown/YAML fallback when no active managed profile exists or the active managed profile has no managed CV variants yet;
-- updated `LocalApplicationPipelineService` to consume the new source loader and emit `pipeline_cv_source_loaded` events;
-- aligned setup diagnostics with effective pipeline source readiness;
-- preserved source records: pipeline execution does not mutate managed CV/fact storage, source Markdown/YAML files, or profile `applications.sqlite3`.
+### 9. AI может скрывать нерелевантные bullets
 
-Non-goals preserved:
+Опционально. Скрытие должно быть change proposal, а не silent deletion.
 
-- no PR 12 release polish;
-- no backup/export profile flow;
-- no automatic profile application database migration;
-- no destructive deletion of managed CV/fact records;
-- no real OpenAI tailoring;
-- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
+### 10. Accepted/rejected changes нужно хранить
 
-Remaining risks:
+Каждое AI-предложение должно иметь статус:
 
-- managed block-fact links are validated for profile/active-fact integrity, but full block-level claim filtering is intentionally deferred;
-- imported CV sections may still be coarse `imported_content` blocks until a later refinement;
-- setup repair guidance remains text-based and does not yet provide one-click repair flows.
+- proposed;
+- accepted;
+- rejected;
+- superseded, если будет нужно позже.
 
-## Next Implementation Plan
+Не использовать ENUM чтобы не ограничивать возможность удаления.
 
-### PR 12 — Release polish
+Review page должна показывать before/after. Git-like diff желателен, но можно начать с простого old/new comparison.
 
-Recommended scope:
+### 11. Cover letter — отдельная сущность
 
-- improve user-facing setup and repair guidance for managed CV/fact readiness failures;
-- harden release smoke tests and final review/export user flows;
-- polish documentation and release checklist without changing the pipeline source architecture;
-- preserve managed-first pipeline source precedence and file-based fallback compatibility.
+Cover letter нужно создавать по описанию вакансии на основе отдельного prompt.
 
-Release polish progress:
-- Added explicit human approval final export action for applications waiting for approval.
-- The action generates PDF/DOCX final artefacts from the persisted Markdown review artefact.
-- QA warning applications are blocked from final export until reviewed.
-- Repeated approval/export attempts do not duplicate final artefact records.
+Cover letter должен храниться отдельно от CV и иметь собственный review/edit/export flow.
 
-Smoke-test polish completed:
-- added release-smoke coverage for the managed user path: connect active managed profile, preview/apply import, inspect managed CV/fact editor pages, edit an imported managed block, run the local pipeline, and verify managed-source artefact output;
-- updated manual smoke and release checklist docs so release validation covers the managed-first pipeline path, not only the legacy file-based flow;
-- preserved file-based fallback compatibility and did not change production pipeline behaviour.
+### 12. Один простой стиль PDF/DOCX на первом этапе
 
-## Key Decisions
+Не делать красивую типографику и несколько templates сейчас.
 
-- Default app data folder should be visible and user-owned: `Documents/JobApplicationAssistant/`.
-- Users can connect an existing app data folder through `/data-folder`; `APP_DATA_DIR` remains the highest-priority developer override.
-- Supported app settings, managed profile records, managed CV records, import tools, editor workflows, and managed-first pipeline loading already live in SQLite; future work should focus on release polish and guided repair.
-- YAML should remain as example/import/export/fallback only, not the main UI-facing settings store.
-- OpenAI API key uses OS keyring as the preferred storage backend, with `OPENAI_API_KEY` retained as a developer fallback.
-- SQLite may store secret metadata only, not the raw API key.
-- Real private profiles must stay outside the repository.
-- The app remains local-first and web-only for v1.
-- Do not add auto-apply, LinkedIn automation, email sending, cloud deployment, auth, or LangGraph.
+Фокус: корректная модель данных, AI changes, review, export.
+
+---
+
+## Что НЕ нужно сейчас
+
+- Не нужно поддерживать импорт старых Markdown/YAML CV.
+- Не нужно делать функцию для сокращения CV до 1–2 страниц.
+- Не нужно делать несколько красивых шаблонов PDF/DOCX.
+- Не нужно делать русскую локализацию UI сейчас.
+- Не нужно делать auto-apply.
+- Не нужно делать LinkedIn automation.
+- Не нужно делать email sending.
+- Не нужно делать full frontend framework.
+- Не нужно делать cloud/multi-user auth.
+- Не нужно делать LangGraph.
+
+---
+
+## Детальный план архитектурной перестройки
+
+### Phase 0 — Freeze and reset decision
+
+Цель: создать новую логику работы программы, путем выполнения всех описанных ниже этапов (phase) работ в полном объеме за один раз.
+
+Можно Составить список файлов/пакетов, которые можно сохранить и которые нужно удалить/переписать.
+
+Кандидаты сохранить:
+
+- `app/main.py` shell;
+- `app/storage/`;
+- `app/secrets/`;
+- exporters;
+- artifact writer;
+- CI/test infra;
+- settings shell, если можно адаптировать.
+
+Кандидаты удалить/переписать:
+
+- YAML config loading как основной путь;
+- file-based profile assumptions;
+- old import tools;
+- old managed CV model, если проще заменить;
+- old pipeline source loader;
+- old fake tailoring model.
+
+---
+
+### Phase 1 — SQL data model design
+
+Цель: создать новую SQL-доменную модель.
+
+Минимальные сущности:
+
+```text
+Profile
+ProfileContact
+Resume
+ResumeSection
+ResumeBlock
+ResumeBullet
+SkillSet / SkillItem
+Fact
+ResumeBulletFactLink
+AiEditPolicy
+PromptTemplate
+Application
+JobRequirement
+AiChangeProposal
+TailoredResumeSnapshot
+CoverLetter
+Artifact
+```
+
+Особое внимание:
+
+- порядок секций;
+- порядок блоков;
+- порядок bullets;
+- включён/выключен блок;
+- editable/readonly fields;
+- fact link required flag;
+- prompt key per block type;
+- application history per profile.
+
+Acceptance criteria:
+
+- SQL schema создаётся детерминированно;
+- нет YAML dependency;
+- тесты покрывают create/list/update/order/visibility;
+- private contact layer отделён от AI-safe content.
+
+---
+
+### Phase 2 — Settings and first-run setup
+
+Цель: сделать настройки без YAML.
+
+Settings page должна позволять:
+
+- выбрать app data folder;
+- ввести/заменить/удалить OpenAI API key через OS keyring;
+- выбрать export formats;
+- создать profile;
+- открыть profile/resume management.
+
+Важно:
+
+- raw OpenAI key не хранится в SQLite;
+- settings не требуют YAML;
+- app должен стартовать без созданного профиля и показывать setup/settings.
+
+---
+
+### Phase 3 — Profile manager
+
+Цель: создать профили разных людей.
+
+Пользователь должен уметь:
+
+- создать profile;
+- добавить contact/private data;
+- выбрать active profile;
+- видеть application history по профилю;
+- создать несколько profiles для разных людей.
+
+Private contact data не должно попадать в AI prompt.
+
+---
+
+### Phase 4 — Resume builder
+
+Цель: сделать конструктор резюме.
+
+Пользователь должен уметь:
+
+- создать resume внутри profile;
+- создать стандартные sections;
+- создать custom sections;
+- создать blocks;
+- создать bullets;
+- менять порядок;
+- включать/выключать blocks;
+- задавать AI policy для blocks/fields;
+- создавать разные resume variants.
+
+На первом этапе UI должен быть современнее старого:
+
+- нормальная навигация;
+- карточки;
+- таблицы;
+- понятные формы;
+- кнопки действий;
+- empty states.
+
+---
+
+### Phase 5 — Facts and evidence
+
+Цель: хранить verified facts в SQL.
+
+Пользователь должен уметь:
+
+- создавать facts;
+- редактировать facts;
+- включать/выключать facts;
+- связывать facts с bullets;
+- включать/выключать обязательность fact links для AI changes.
+
+Default policy:
+
+```text
+No verified fact → no strong verified claim.
+```
+
+Но это должна быть настройка, которую можно отключить для конкретного блока/resume/prompt, если пользователь осознанно хочет больше свободы.
+
+---
+
+### Phase 6 — Application intake
+
+Цель: новая страница создания заявки.
+
+Страница должна иметь:
+
+1. выбор profile;
+2. выбор resume из этого profile;
+3. поле для текста вакансии;
+4. future placeholder для source URL, если понадобится позже.
+
+После submit:
+
+- сохранить job text;
+- создать application;
+- извлечь requirements;
+- открыть analysis/review page.
+
+---
+
+### Phase 7 — AI prompt system
+
+Цель: AI должен редактировать отдельные layers/blocks по отдельным prompts.
+
+Нужно создать prompt registry:
+
+```text
+summary_rewrite
+skills_rewrite
+job_title_rewrite
+work_experience_bullet_rewrite
+project_bullet_rewrite
+cover_letter_generate
+```
+
+Каждый prompt должен иметь:
+
+- input schema;
+- output schema;
+- allowed actions;
+- forbidden actions;
+- fact policy;
+- risk labels;
+- tests with fake client.
+
+AI должен возвращать structured output, а не готовый uncontrolled document.
+
+---
+
+### Phase 8 — AI tailoring and structured diffs
+
+Цель: создать предложения изменений.
+
+Поток:
+
+```text
+Application + selected resume
+→ job requirements
+→ editable blocks
+→ facts
+→ prompt per block
+→ AI change proposals
+→ review page
+```
+
+Change proposal должен хранить:
+
+- target type;
+- target id;
+- before text;
+- after text;
+- action: rewrite/add/hide/change_title/change_skills;
+- reason;
+- job requirement ids;
+- fact ids;
+- risk level;
+- warning codes;
+- status accepted/rejected/proposed.
+
+---
+
+### Phase 9 — Review page
+
+Цель: пользователь принимает или отклоняет каждое изменение.
+
+Минимальный UI:
+
+- grouping by section/block;
+- before/after;
+- reason;
+- facts used;
+- risk level;
+- accept/reject buttons;
+- apply accepted changes;
+- preview final tailored resume.
+
+Git-like diff можно отложить, если будет простой before/after.
+
+---
+
+### Phase 10 — Final resume snapshot and export
+
+Цель: экспортировать только approved tailored resume.
+
+Поток:
+
+```text
+accepted changes
+→ tailored resume snapshot
+→ add private contact layer
+→ render one simple style
+→ PDF/DOCX/HTML/Markdown
+```
+
+Export formats из settings должны реально работать.
+
+---
+
+### Phase 11 — Cover letter
+
+Цель: создавать cover letter отдельно от CV.
+
+Поток:
+
+```text
+Application
+→ selected profile/resume
+→ job requirements
+→ cover letter prompt
+→ draft
+→ review/edit
+→ export/save
+```
+
+Cover letter должен:
+
+- не выдумывать опыт;
+- ссылаться только на allowed facts/resume content;
+- храниться в application history;
+- быть редактируемым пользователем.
+
+---
+
+### Phase 12 — Smoke tests and release docs
+
+Цель: подготовить первый новый developer release.
+
+Smoke test должен проверять:
+
+- first-run setup;
+- settings;
+- create profile;
+- create resume;
+- create facts;
+- link bullet to fact;
+- create application;
+- choose profile/resume;
+- run AI fake tailoring;
+- review before/after;
+- accept/reject changes;
+- generate cover letter;
+- export final CV;
+- private layer not sent to AI;
+- no YAML required.
+
+---
+
+## P0 / P1 / P2 на текущий момент
+
+### P0
+
+Нет P0 для продолжения, если принято решение делать архитектурный reset.
+
+### P1
+
+| Приоритет | Проблема | Решение |
+|---|---|---|
+| P1 | YAML/Markdown модель не соответствует продукту | Удалить из source of truth |
+| P1 | Нет полноценного SQL resume builder | Спроектировать и реализовать новую модель |
+| P1 | AI не редактирует block-level units | Ввести prompt per block type и structured changes |
+| P1 | Private contact layer не отделён как first-class model | Ввести отдельную таблицу/слой и запретить попадание в AI payload |
+| P1 | Review flow должен хранить accepted/rejected changes | Реализовать change proposal model |
+| P1 | Cover letter нужен как отдельный flow | Добавить после базового tailoring flow |
+
+### P2
+
+| Приоритет | Проблема | Решение |
+|---|---|---|
+| P2 | Git-like diff может быть сложным | Начать с before/after, git-like diff позже |
+| P2 | Несколько красивых templates не нужны сейчас | Один простой стиль export |
+| P2 | Русская локализация UI не нужна сейчас | Предусмотреть архитектурно, не реализовывать |
+| P2 | CV shortening to 1–2 pages не нужен сейчас | Не включать в scope |
+
+---
+
+## Следующий конкретный шаг
+
+Сделать PR/задачу:
+
+```text
+Architecture Reset Phase 0: document SQL-first Resume Builder direction and remove YAML-first assumptions from project docs.
+```
+
+После этого:
+
+```text
+Phase 1: implement new SQL domain model for profiles, resumes, sections, blocks, bullets, facts, AI policies, applications, and change proposals.
+```
+
+---
+
+## Рекомендуемый commit message для Phase 0
+
+```text
+🏗 refactor(project): reset direction to SQL-first resume builder
+
+- replace YAML-first product model with SQL-first resume builder architecture
+- define profile, resume, block, bullet, fact, AI policy and review flows
+- document privacy layer and structured AI change proposal rules
+```
