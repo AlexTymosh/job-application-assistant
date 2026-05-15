@@ -197,10 +197,16 @@ Submit the form and open the application detail page.
 Verify Markdown, HTML, PDF, and DOCX exporters through automated tests:
 
 ```powershell
-uv run pytest tests/test_markdown_exporter.py tests/test_html_exporter.py tests/test_pdf_exporter.py tests/test_docx_exporter.py tests/test_export_markdown_html.py tests/test_export_pdf_docx.py
+## Exporter verification
+
+Verify Markdown, HTML, PDF, and DOCX exporters through automated tests:
+
+```powershell
+uv run pytest tests/unit/exporters
 ```
 
-Existing export flows must write files through `ArtifactWriter`, store only relative database paths, and must not mutate selected source CV variants.
+Existing export flows must write files through ArtifactWriter, store only relative database paths, and must not mutate selected source CV variants.
+
 
 ## Git ignore and privacy checks
 
