@@ -11,8 +11,9 @@ from app.settings.migrations import CURRENT_APP_SETTINGS_SCHEMA_VERSION
 from app.setup.service import SetupStatusService
 from app.storage.app_dirs import build_app_data_paths
 from app.storage.bootstrap import bootstrap_app_data_dirs_for_paths
+from tests.support.paths import PROJECT_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = PROJECT_ROOT
 
 
 def _rewrite_profile_config(
@@ -83,7 +84,7 @@ facts:
     )
 
     cv_content = (
-        f"# {marker} — Backend Developer CV Variant\n\n"
+        f"# {marker} â€” Backend Developer CV Variant\n\n"
         "<!-- SECTION: SUMMARY_START -->\n"
         "Backend-focused software developer with practical experience in Python.\n"
         "<!-- SECTION: SUMMARY_END -->\n\n"
@@ -91,7 +92,7 @@ facts:
         "- Python\n- FastAPI\n"
         "<!-- SECTION: SKILLS_END -->\n\n"
         "<!-- SECTION: EXPERIENCE_START -->\n"
-        "## Example Company — Operations Analyst\n\n"
+        "## Example Company â€” Operations Analyst\n\n"
         "- Built small Python automation scripts.\n"
         "<!-- SECTION: EXPERIENCE_END -->\n\n"
         "<!-- SECTION: PROJECTS_START -->\n"

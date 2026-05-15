@@ -1,6 +1,6 @@
-from pathlib import Path
+from tests.support.paths import PROJECT_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = PROJECT_ROOT
 
 
 def test_alembic_environment_files_exist() -> None:

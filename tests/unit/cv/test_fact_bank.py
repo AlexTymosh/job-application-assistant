@@ -4,8 +4,9 @@ import pytest
 
 from app.cv.fact_bank import load_fact_bank
 from app.cv.models import AllowedClaimLevel, FactCategory
+from tests.support.paths import PROJECT_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = PROJECT_ROOT
 EXAMPLE_FACT_BANK = ROOT / "profiles" / "example" / "cv" / "fact_bank.example.yaml"
 
 VALID_FACT_BANK = """

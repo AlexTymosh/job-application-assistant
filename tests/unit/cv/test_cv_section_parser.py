@@ -1,11 +1,10 @@
-from pathlib import Path
-
 import pytest
 
 from app.cv.models import CvSectionName
 from app.cv.section_parser import parse_cv_sections
+from tests.support.paths import PROJECT_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = PROJECT_ROOT
 EXAMPLE_VARIANT_CV = (
     ROOT / "profiles" / "example" / "cv" / "variants" / "backend_developer.example.md"
 )
