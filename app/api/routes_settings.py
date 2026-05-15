@@ -1,142 +1,53 @@
 from __future__ import annotations
 
-from urllib.parse import parse_qsl
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
 
-from fastapi import APIRouter, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from pydantic import ValidationError
-
-from app.core.config import LlmExtractionMode
-from app.runtime import refresh_runtime_state
-from app.secrets.openai_key import SecretStorageError, get_environment_openai_api_key
-from app.settings.form_models import (
-    SettingsFormError,
-    parse_settings_form,
-    persist_settings_form,
-)
-from app.settings.schema import ManagedAppSettings
-from app.settings.secret_form import (
-    OpenAISecretFormError,
-    persist_openai_secret_form,
-    split_openai_secret_form_fields,
-)
-from app.settings.service import AppSettingsService
-from app.setup.checks import SetupCheck, SetupStatus
+from app.api.dependencies import form_bool, get_session, read_form_data
+from app.settings.service import SettingsService
 from app.web.templating import templates
 
-router = APIRouter(tags=["settings"])
+router = APIRouter(prefix="/settings", tags=["settings"])
 
 
-@router.get("/settings", response_class=HTMLResponse)
-async def settings(request: Request) -> HTMLResponse:
-    return _render_settings(request, status_code=status.HTTP_200_OK)
-
-
-@router.post("/settings", response_class=HTMLResponse)
-async def save_settings(request: Request) -> Response:
-    form = await _read_urlencoded_form(request)
-    service: AppSettingsService | None = request.app.state.app_settings_service
-    if service is None:
-        return _render_settings(
-            request,
-            error_message=(
-                "App settings storage is not available. Restart the app so settings "
-                "storage can be initialised."
-            ),
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    openai_secret_service = request.app.state.openai_secret_service
-
+@router.get("")
+def settings_page(request: Request, session: Session = Depends(get_session)):
+    settings = SettingsService(session).effective()
+    secret_service = request.app.state.openai_secret_service
     try:
-        settings_form, secret_result = split_openai_secret_form_fields(form)
-        result = parse_settings_form(settings_form)
-        persist_settings_form(service, result)
-        persist_openai_secret_form(
-            app_settings_service=service,
-            openai_secret_service=openai_secret_service,
-            result=secret_result,
-        )
-    except (SettingsFormError, OpenAISecretFormError) as exc:
-        return _render_settings(
-            request,
-            submitted_values=_safe_submitted_values(form),
-            error_message=str(exc),
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    except SecretStorageError as exc:
-        return _render_settings(
-            request,
-            submitted_values=_safe_submitted_values(form),
-            error_message=str(exc),
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    refresh_runtime_state(request.app)
-    return RedirectResponse(url="/settings", status_code=status.HTTP_303_SEE_OTHER)
-
-
-async def _read_urlencoded_form(request: Request) -> dict[str, str]:
-    body = await request.body()
-    return dict(parse_qsl(body.decode("utf-8"), keep_blank_values=True))
-
-
-def _render_settings(
-    request: Request,
-    *,
-    submitted_values: dict[str, object] | None = None,
-    error_message: str | None = None,
-    status_code: int,
-) -> HTMLResponse:
-    service: AppSettingsService | None = request.app.state.app_settings_service
-    managed_settings = ManagedAppSettings()
-    if service is not None:
-        try:
-            managed_settings = service.get_managed_settings()
-        except (ValueError, ValidationError) as exc:
-            error_message = error_message or f"Stored app settings are invalid: {exc}"
-    setup_status: SetupStatus = request.app.state.setup_status
-    llm_check = _check_by_code(setup_status, "llm_mode")
-    openai_key_status = _openai_key_status(request)
-
+        key_status = "configured" if secret_service.get_api_key() else "not configured"
+    except Exception:
+        key_status = "unavailable"
     return templates.TemplateResponse(
-        request=request,
-        name="settings.html",
-        context={
-            "project_name": "Local Job Application Assistant",
-            "settings": managed_settings,
-            "effective_config": getattr(request.app.state, "config", None),
-            "llm_modes": [mode.value for mode in LlmExtractionMode],
-            "llm_check": llm_check,
-            "openai_key_status": openai_key_status,
-            "setup_status": setup_status,
-            "submitted_values": submitted_values or {},
-            "error_message": error_message,
-        },
-        status_code=status_code,
+        "settings.html",
+        {"request": request, "settings": settings, "key_status": key_status},
     )
 
 
-def _check_by_code(setup_status: SetupStatus, code: str) -> SetupCheck | None:
-    return next((check for check in setup_status.checks if check.code == code), None)
-
-
-def _safe_submitted_values(form: dict[str, str]) -> dict[str, str]:
-    return {key: value for key, value in form.items() if key != "openai_api_key"}
-
-
-def _openai_key_status(request: Request) -> str:
-    secret_service = request.app.state.openai_secret_service
-    try:
-        if secret_service.is_configured():
-            return "OpenAI API key configured in keyring"
-    except SecretStorageError as exc:
-        if get_environment_openai_api_key() is not None:
-            return "OpenAI API key available from environment fallback"
-        return str(exc)
-
-    if get_environment_openai_api_key() is not None:
-        return "OpenAI API key available from environment fallback"
-
-    return "OpenAI API key not configured"
+@router.post("")
+async def update_settings(request: Request, session: Session = Depends(get_session)):
+    data = await read_form_data(request)
+    service = SettingsService(session)
+    service.set(
+        "exports",
+        {
+            "markdown": form_bool(data, "export_markdown"),
+            "html": form_bool(data, "export_html"),
+            "pdf": form_bool(data, "export_pdf"),
+            "docx": form_bool(data, "export_docx"),
+        },
+    )
+    service.set(
+        "ai_policy_defaults",
+        {
+            "fact_links_required": form_bool(data, "fact_links_required"),
+            "allow_new_bullets": form_bool(data, "allow_new_bullets"),
+            "allow_hide_bullets": form_bool(data, "allow_hide_bullets"),
+            "allow_title_edits": form_bool(data, "allow_title_edits"),
+        },
+    )
+    service.set("locale", data.get("locale") or "en")
+    if data.get("openai_api_key", "").strip():
+        request.app.state.openai_secret_service.set_api_key(data["openai_api_key"].strip())
+    return RedirectResponse("/settings", status_code=303)

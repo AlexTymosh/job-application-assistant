@@ -1,274 +1,105 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Protocol
+from dataclasses import dataclass, field
 
-from app.llm.errors import JobExtractionError
-from app.llm.schemas import (
-    ExtractedJob,
-    ExtractionWarning,
-    ExtractionWarningCode,
-    JobRequirement,
-    RequirementCategory,
-    RequirementPriority,
-    SeniorityLevel,
-    WorkArrangement,
-)
-
-SUSPICIOUS_PHRASES = (
-    "ignore previous instructions",
-    "forget your rules",
-    "system prompt",
-    "developer message",
-    "act as chatgpt",
-    "act as an ai",
-    "act as a system",
-    "override instructions",
-    "reveal hidden prompt",
-    "disregard previous",
-    "you are chatgpt",
-    "hidden instructions",
-)
+from app.llm.prompts.cover_letter import build_cover_letter_prompt
+from app.llm.prompts.tailoring import PromptPayload
+from app.tailoring.schema import AiChangeProposalSchema
 
 
-class JobExtractionClient(Protocol):
-    def extract_job(self, job_text: str) -> ExtractedJob:
-        """Extract structured job information from untrusted job text."""
-
-
-@dataclass(frozen=True)
-class KeywordRule:
-    token: str
-    technology: str
-    requirement_text: str
-    category: RequirementCategory
-    priority: RequirementPriority = RequirementPriority.UNKNOWN
-
-
-KEYWORD_RULES = (
-    KeywordRule(
-        token="python",
-        technology="Python",
-        requirement_text="Work with Python.",
-        category=RequirementCategory.PROGRAMMING_LANGUAGE,
-        priority=RequirementPriority.MUST_HAVE,
-    ),
-    KeywordRule(
-        token="fastapi",
-        technology="FastAPI",
-        requirement_text="Build backend services with FastAPI.",
-        category=RequirementCategory.FRAMEWORK,
-        priority=RequirementPriority.MUST_HAVE,
-    ),
-    KeywordRule(
-        token="sqlite",
-        technology="SQLite",
-        requirement_text="Work with SQLite databases.",
-        category=RequirementCategory.DATABASE,
-    ),
-    KeywordRule(
-        token="postgresql",
-        technology="PostgreSQL",
-        requirement_text="Work with PostgreSQL databases.",
-        category=RequirementCategory.DATABASE,
-    ),
-    KeywordRule(
-        token="sql",
-        technology="SQL",
-        requirement_text="Use SQL for data storage and querying.",
-        category=RequirementCategory.DATABASE,
-    ),
-    KeywordRule(
-        token="docker",
-        technology="Docker",
-        requirement_text="Use Docker in the development workflow.",
-        category=RequirementCategory.DEVOPS,
-    ),
-    KeywordRule(
-        token="testing",
-        technology="Testing",
-        requirement_text="Write and maintain automated tests.",
-        category=RequirementCategory.TESTING,
-    ),
-    KeywordRule(
-        token="api",
-        technology="API",
-        requirement_text="Design and maintain APIs.",
-        category=RequirementCategory.ARCHITECTURE,
-    ),
-    KeywordRule(
-        token="backend",
-        technology="Backend",
-        requirement_text="Develop backend application features.",
-        category=RequirementCategory.RESPONSIBILITY,
-    ),
-)
-
-
+@dataclass
 class FakeJobExtractionClient:
-    """Deterministic local extraction client for tests and pipeline contracts."""
+    captured_texts: list[str] = field(default_factory=list)
 
-    def extract_job(self, job_text: str) -> ExtractedJob:
-        normalised_text = " ".join(job_text.strip().split())
-
-        if not normalised_text:
-            raise JobExtractionError("Job text must not be empty.")
-
-        lowered_text = normalised_text.lower()
-        requirements = self._build_requirements(lowered_text, normalised_text)
-        technologies = self._build_technologies(lowered_text)
-        warnings = self._build_warnings(lowered_text, normalised_text)
-
-        return ExtractedJob(
-            job_title=self._infer_job_title(lowered_text),
-            seniority_level=self._infer_seniority_level(lowered_text),
-            work_arrangement=self._infer_work_arrangement(lowered_text),
-            requirements=requirements,
-            responsibilities=self._build_responsibilities(lowered_text),
-            technologies=technologies,
-            warnings=warnings,
-        )
-
-    def _build_requirements(
-        self,
-        lowered_text: str,
-        normalised_text: str,
-    ) -> list[JobRequirement]:
-        requirements: list[JobRequirement] = []
-        seen_requirement_ids: set[str] = set()
-
-        for rule in KEYWORD_RULES:
-            if rule.token not in lowered_text:
-                continue
-
-            requirement_id = f"req_{rule.token.replace(' ', '_')}"
-
-            if requirement_id in seen_requirement_ids:
-                continue
-
-            seen_requirement_ids.add(requirement_id)
-            requirements.append(
-                JobRequirement(
-                    id=requirement_id,
-                    text=rule.requirement_text,
-                    priority=rule.priority,
-                    category=rule.category,
-                    keywords=[rule.technology],
-                    source_excerpt=_source_excerpt(normalised_text, rule.token),
-                )
-            )
-
-        if requirements:
-            return requirements
-
+    def extract(self, job_text: str) -> list[dict[str, object]]:
+        self.captured_texts.append(job_text)
+        words = [word.strip(".,:;()[]").lower() for word in job_text.split()]
+        keywords = []
+        for candidate in [
+            "python",
+            "fastapi",
+            "sql",
+            "api",
+            "automation",
+            "testing",
+            "docker",
+        ]:
+            if candidate in words and candidate not in keywords:
+                keywords.append(candidate)
+        if not keywords:
+            keywords = ["communication"]
         return [
-            JobRequirement(
-                id="req_general",
-                text=(
-                    "Review the job posting and identify relevant "
-                    "delivery responsibilities."
-                ),
-                priority=RequirementPriority.UNKNOWN,
-                category=RequirementCategory.OTHER,
-                keywords=[normalised_text.split()[0]],
-                source_excerpt=normalised_text[:160],
-            )
+            {
+                "requirement_type": "skill",
+                "text": f"Experience with {keyword}",
+                "keywords": [keyword],
+                "priority": index + 1,
+            }
+            for index, keyword in enumerate(keywords[:5])
         ]
 
-    def _build_technologies(self, lowered_text: str) -> list[str]:
-        technologies: list[str] = []
 
-        for rule in KEYWORD_RULES:
-            if rule.token in lowered_text and rule.technology not in technologies:
-                technologies.append(rule.technology)
+@dataclass
+class FakeTailoringClient:
+    captured_payloads: list[PromptPayload] = field(default_factory=list)
 
-        return technologies
-
-    def _build_warnings(
-        self,
-        lowered_text: str,
-        normalised_text: str,
-    ) -> list[ExtractionWarning]:
-        warnings: list[ExtractionWarning] = []
-
-        for phrase in SUSPICIOUS_PHRASES:
-            if phrase not in lowered_text:
-                continue
-
-            warnings.append(
-                ExtractionWarning(
-                    code=ExtractionWarningCode.PROMPT_INJECTION_RISK,
-                    message=f"Suspicious phrase detected in job text: {phrase}",
-                    source_excerpt=_source_excerpt(normalised_text, phrase),
-                )
+    def propose(self, payload: PromptPayload) -> AiChangeProposalSchema | None:
+        self.captured_payloads.append(payload)
+        target = payload.user_payload["target"]
+        requirements = payload.user_payload["job_requirements"]
+        facts = payload.user_payload["allowed_facts"]
+        if not requirements:
+            return None
+        requirement = requirements[0]
+        fact_ids = [int(fact["id"]) for fact in facts[:1] if fact.get("id")]
+        policy = payload.user_payload["editing_policy"]
+        if policy.get("fact_link_required") and not fact_ids:
+            return AiChangeProposalSchema(
+                target_type=target["target_type"],
+                target_id=int(target["id"]),
+                operation="rewrite",
+                before_text=str(target.get("text", "")),
+                after_text=str(target.get("text", "")),
+                reason="No verified fact supports a stronger claim.",
+                risk_level="high",
+                requirement_ids=[int(requirement["id"])],
+                fact_ids=[],
+                warnings=["missing_verified_fact"],
             )
-
-        return warnings
-
-    def _build_responsibilities(self, lowered_text: str) -> list[str]:
-        responsibilities: list[str] = []
-
-        if "backend" in lowered_text or "api" in lowered_text:
-            responsibilities.append("Develop and maintain backend services.")
-
-        if "testing" in lowered_text:
-            responsibilities.append("Maintain automated test coverage.")
-
-        return responsibilities
-
-    def _infer_job_title(self, lowered_text: str) -> str | None:
-        if "backend" in lowered_text and "senior" in lowered_text:
-            return "Senior Backend Developer"
-
-        if "backend" in lowered_text:
-            return "Backend Developer"
-
-        if "developer" in lowered_text and "senior" in lowered_text:
-            return "Senior Developer"
-
-        if "developer" in lowered_text:
-            return "Developer"
-
-        return None
-
-    def _infer_seniority_level(self, lowered_text: str) -> SeniorityLevel:
-        if "principal" in lowered_text:
-            return SeniorityLevel.PRINCIPAL
-
-        if "lead" in lowered_text:
-            return SeniorityLevel.LEAD
-
-        if "senior" in lowered_text:
-            return SeniorityLevel.SENIOR
-
-        if "junior" in lowered_text:
-            return SeniorityLevel.JUNIOR
-
-        if "intern" in lowered_text:
-            return SeniorityLevel.INTERNSHIP
-
-        return SeniorityLevel.UNKNOWN
-
-    def _infer_work_arrangement(self, lowered_text: str) -> WorkArrangement:
-        if "remote" in lowered_text:
-            return WorkArrangement.REMOTE
-
-        if "hybrid" in lowered_text:
-            return WorkArrangement.HYBRID
-
-        if "onsite" in lowered_text or "on-site" in lowered_text:
-            return WorkArrangement.ONSITE
-
-        return WorkArrangement.UNKNOWN
+        before = str(target.get("text", ""))
+        suffix = str(requirement["text"])
+        after = before if suffix.lower() in before.lower() else f"{before} Aligns with {suffix.lower()}."
+        operation = "update_title" if target["target_type"] == "resume_block_title" else "rewrite"
+        return AiChangeProposalSchema(
+            target_type=target["target_type"],
+            target_id=int(target["id"]),
+            operation=operation,
+            before_text=before,
+            after_text=after,
+            reason="Deterministic fake proposal matched an extracted requirement.",
+            risk_level="low" if fact_ids else "medium",
+            requirement_ids=[int(requirement["id"])],
+            fact_ids=fact_ids,
+            warnings=[] if fact_ids else ["unsupported_optional_fact_link"],
+        )
 
 
-def _source_excerpt(text: str, token: str) -> str:
-    start_index = text.lower().find(token.lower())
+@dataclass
+class FakeCoverLetterClient:
+    captured_payloads: list[PromptPayload] = field(default_factory=list)
 
-    if start_index == -1:
-        return text[:160]
-
-    excerpt_start = max(0, start_index - 60)
-    excerpt_end = min(len(text), start_index + len(token) + 60)
-
-    return text[excerpt_start:excerpt_end]
+    def generate(
+        self,
+        *,
+        profile_name: str,
+        resume_markdown: str,
+        job_requirements: list[dict[str, object]],
+    ) -> str:
+        payload = build_cover_letter_prompt(
+            profile_name=profile_name,
+            resume_markdown=resume_markdown,
+            job_requirements=job_requirements,
+        )
+        self.captured_payloads.append(payload)
+        requirement = job_requirements[0]["text"] if job_requirements else "the role requirements"
+        return f"Dear hiring team,\n\nI am interested in this role because my verified resume background matches {requirement}.\n\nSincerely,\n{profile_name}\n"

@@ -1,44 +1,9 @@
-{% extends "base.html" %}
-
-{% block content %}
-  <h1>Dashboard</h1>
-
-  {% if applications %}
-    <table>
-      <thead>
-        <tr>
-          <th>Application</th>
-          <th>Created</th>
-          <th>Company</th>
-          <th>Job title</th>
-          <th>Status</th>
-          <th>CV variant</th>
-          <th>Warnings</th>
-          <th>Artifacts</th>
-          <th>Links</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for application in applications %}
-          <tr>
-            <td>{{ application.display_number }}</td>
-            <td>{{ application.created_at }}</td>
-            <td>{{ application.company_name or "Not available" }}</td>
-            <td>{{ application.job_title or "Not available" }}</td>
-            <td>{{ application.status }}</td>
-            <td>{{ application.selected_cv_variant or "Not selected" }}</td>
-            <td>{{ application.warnings | length }}</td>
-            <td>{{ application.artifacts | length }}</td>
-            <td>
-              <a href="/applications/{{ application.application_number }}">Detail</a>
-              <a href="/applications/{{ application.application_number }}/review">Review</a>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No applications have been created yet.</p>
-    <p><a href="/applications/new">Create the first application</a></p>
-  {% endif %}
+{% extends "base.html" %}{% block content %}
+<h1>Dashboard</h1><p class="muted">Create profiles and structured resumes, paste a job description, review AI proposals, then export approved documents.</p>
+<div class="grid">
+  <section class="card"><h2>Profiles</h2><p>{{ profile_count }} person profiles</p><a class="button" href="/profiles">Manage profiles</a></section>
+  <section class="card"><h2>Resumes</h2><p>{{ resume_count }} structured resumes</p><a class="button" href="/profiles">Open builder</a></section>
+  <section class="card"><h2>Applications</h2><p>{{ application_count }} saved applications</p><a class="button" href="/applications/new">New application</a></section>
+  <section class="card"><h2>Safety</h2><p>Private contact details are added only during final rendering/export.</p><a class="button secondary" href="/setup">View setup</a></section>
+</div>
 {% endblock %}

@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<h1>Cover letter</h1><form method="post"><button>Generate cover letter</button></form>{% if letter %}<section class="card"><pre>{{ letter.content }}</pre></section>{% else %}<section class="card"><p>No cover letter generated yet.</p></section>{% endif %}{% endblock %}

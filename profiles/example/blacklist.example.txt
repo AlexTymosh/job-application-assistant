@@ -1,6 +1,0 @@
-# Example blacklist file.
-# Use fake sample entries only.
-
-example-bad-company.test
-spam recruiter
-unpaid trial

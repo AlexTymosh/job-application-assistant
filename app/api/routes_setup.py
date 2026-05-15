@@ -1,23 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy.orm import Session
 
-from app.setup.checks import SetupStatus
+from app.api.dependencies import get_app_data_root, get_session
+from app.setup.service import SetupStatusService
 from app.web.templating import templates
 
-router = APIRouter(tags=["setup"])
+router = APIRouter(prefix="/setup", tags=["setup"])
 
 
-@router.get("/setup", response_class=HTMLResponse)
-async def setup(request: Request) -> HTMLResponse:
-    setup_status: SetupStatus = request.app.state.setup_status
-
-    return templates.TemplateResponse(
-        request=request,
-        name="setup.html",
-        context={
-            "project_name": "Local Job Application Assistant",
-            "setup_status": setup_status,
-        },
-    )
+@router.get("")
+def setup(request: Request, session: Session = Depends(get_session)):
+    status = SetupStatusService(session, get_app_data_root(request), key_available=True).evaluate()
+    return templates.TemplateResponse("setup.html", {"request": request, "setup_status": status})

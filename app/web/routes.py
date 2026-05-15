@@ -1,23 +1,24 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.core.config import ProjectConfig
+from app.api.dependencies import get_session
+from app.db.models import Application, PersonProfile, Resume
 from app.web.templating import templates
 
-router = APIRouter(tags=["web"])
+router = APIRouter()
 
 
-@router.get("/", response_class=HTMLResponse)
-async def index(request: Request) -> HTMLResponse:
-    config: ProjectConfig = request.app.state.config
-
+@router.get("/")
+def dashboard(request: Request, session: Session = Depends(get_session)):
     return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "profile_name": config.app.profile_name,
-            "project_name": "Local Job Application Assistant",
+        "dashboard.html",
+        {
+            "request": request,
+            "profile_count": session.scalar(select(PersonProfile).count()) if False else len(list(session.scalars(select(PersonProfile.id)))),
+            "resume_count": len(list(session.scalars(select(Resume.id)))),
+            "application_count": len(list(session.scalars(select(Application.id)))),
         },
     )

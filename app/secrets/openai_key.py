@@ -40,9 +40,7 @@ class OpenAISecretService:
                 self.account_name,
             )
         except _keyring_error_types() as exc:
-            raise SecretStorageError(
-                "OpenAI API key could not be read from the OS keyring."
-            ) from exc
+            raise SecretStorageError("OpenAI API key could not be read from the OS keyring.") from exc
 
         if value is None or not value.strip():
             return None
@@ -60,9 +58,7 @@ class OpenAISecretService:
                 normalised,
             )
         except _keyring_error_types() as exc:
-            raise SecretStorageError(
-                "OpenAI API key could not be saved to the OS keyring."
-            ) from exc
+            raise SecretStorageError("OpenAI API key could not be saved to the OS keyring.") from exc
 
     def delete_api_key(self) -> None:
         try:
@@ -73,9 +69,7 @@ class OpenAISecretService:
         except _password_delete_error_types():
             return
         except _keyring_error_types() as exc:
-            raise SecretStorageError(
-                "OpenAI API key could not be removed from the OS keyring."
-            ) from exc
+            raise SecretStorageError("OpenAI API key could not be removed from the OS keyring.") from exc
 
     def is_configured(self) -> bool:
         return self.get_api_key() is not None
