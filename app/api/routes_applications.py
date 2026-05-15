@@ -116,6 +116,7 @@ async def run_local_pipeline(
         config=config,
         profile_paths=profile_paths,
         openai_secret_service=request.app.state.openai_secret_service,
+        app_data_paths=request.app.state.app_data_paths,
     )
 
     try:

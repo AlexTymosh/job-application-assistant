@@ -8,11 +8,6 @@ from app.artifacts.resolution import resolve_artifact_path_under_applications_di
 from app.artifacts.writer import ArtifactWriter
 from app.core.config import ProjectConfig
 from app.core.paths import ProfilePaths
-from app.cv.fact_bank import load_fact_bank
-from app.cv.markdown_loader import load_markdown_file
-from app.cv.models import LoadedCv
-from app.cv.section_parser import parse_cv_sections
-from app.cv.selector import select_cv_variant
 from app.db.models import Application, ApplicationStatus, WarningLevel
 from app.db.repositories import (
     ApplicationEventRepository,
@@ -22,6 +17,7 @@ from app.db.repositories import (
 )
 from app.llm.factory import build_job_extraction_client
 from app.llm.fake_tailor import FakeCvTailoringClient
+from app.pipeline.cv_source import PipelineCvSourceLoader
 from app.pipeline.cv_tailoring import CvTailoringStep
 from app.pipeline.export_markdown_html import export_markdown_html_artifacts
 from app.pipeline.export_pdf_docx import export_pdf_docx_artifacts
@@ -31,6 +27,7 @@ from app.pipeline.state import ApplicationRunState
 from app.reports.evidence_matrix import build_evidence_matrix
 from app.reports.match_report import build_cv_match_report
 from app.secrets.openai_key import OpenAISecretService
+from app.storage.app_dirs import AppDataPaths
 
 EVIDENCE_MATRIX_ARTIFACT_TYPE = "evidence_matrix"
 MATCH_REPORT_ARTIFACT_TYPE = "match_report"
@@ -59,11 +56,13 @@ class LocalApplicationPipelineService:
         config: ProjectConfig,
         profile_paths: ProfilePaths,
         openai_secret_service: OpenAISecretService | None = None,
+        app_data_paths: AppDataPaths | None = None,
     ) -> None:
         self._session = session
         self._config = config
         self._profile_paths = profile_paths
         self._openai_secret_service = openai_secret_service
+        self._app_data_paths = app_data_paths
         self._artifact_writer = ArtifactWriter(
             applications_dir=profile_paths.applications_dir
         )
@@ -134,21 +133,20 @@ class LocalApplicationPipelineService:
             message="Job requirements were extracted by the configured local pipeline.",
         )
 
-        selected_cv = select_cv_variant(
-            cv_dir=self._profile_paths.cv_dir,
-            variant_name=selected_variant,
-            is_example_profile=self._config.app.profile_name == "example",
+        cv_source = PipelineCvSourceLoader(
+            config=self._config,
+            profile_paths=self._profile_paths,
+            app_data_paths=self._app_data_paths,
+        ).load(selected_variant=selected_variant)
+        events.create(
+            application_id=application.id,
+            event_type="pipeline_cv_source_loaded",
+            message=cv_source.metadata.message,
         )
-        loaded_cv = LoadedCv(
-            path=selected_cv.path,
-            markdown=load_markdown_file(selected_cv.path),
-            sections=parse_cv_sections(selected_cv.markdown),
-        )
-        fact_bank = load_fact_bank(self._profile_paths.fact_bank)
         state = CvTailoringStep(FakeCvTailoringClient()).run(
             state,
-            loaded_cv=loaded_cv,
-            fact_bank=fact_bank,
+            loaded_cv=cv_source.loaded_cv,
+            fact_bank=cv_source.fact_bank,
         )
         tailoring_status = (
             ApplicationStatus.TAILORED
@@ -165,11 +163,13 @@ class LocalApplicationPipelineService:
             message="Safe fake CV tailoring completed using verified fact-bank data.",
         )
 
-        evidence_matrix = build_evidence_matrix(state.extracted_job, fact_bank)
+        evidence_matrix = build_evidence_matrix(
+            state.extracted_job, cv_source.fact_bank
+        )
         match_report = build_cv_match_report(
             str(application.id),
             state.extracted_job,
-            fact_bank,
+            cv_source.fact_bank,
             evidence_matrix,
         )
         match_report_missing_skills_exists = bool(match_report.missing_skills)
