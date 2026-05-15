@@ -146,7 +146,17 @@ Open these local URLs:
 
 - Confirm automated tests cover app settings schema version 3 and managed CV tables in `app_data_root/app.sqlite3`.
 - Confirm managed CV tables are not present in profile-specific `applications.sqlite3`.
-- Confirm the current pipeline still reads Markdown CV variants and YAML fact banks until import tools and pipeline migration are implemented.
+## Managed profile, import, editor, and pipeline verification
+
+- Confirm automated tests cover app settings schema version 3 and managed CV tables in `app_data_root/app.sqlite3`.
+- Confirm managed CV tables are not present in profile-specific `applications.sqlite3`.
+- Confirm the active managed profile can connect an existing file-based profile folder without creating private profile files automatically.
+- Confirm `/profiles/import` can preview and apply imports from Markdown CV variants and YAML fact-bank records.
+- Confirm import preview performs no writes and import apply is idempotent.
+- Confirm `/profiles/cv` and `/profiles/facts` show imported managed CV/fact records.
+- Confirm editing a managed CV block writes only to `app_data_root/app.sqlite3` and does not mutate source Markdown CV files.
+- Confirm the local pipeline uses managed CV/fact storage when a valid active managed source exists.
+- Confirm fallback to Markdown/YAML remains available only when no valid managed source exists yet.
 
 ## Dashboard verification
 
@@ -233,4 +243,9 @@ The generated SQLite files, `.env`, and private profile files must be ignored. I
 - [ ] `git status --short` shows no accidental generated files.
 - [ ] `.env`, SQLite databases, private profile files, and generated artefacts are ignored.
 - [ ] App settings schema version 3 and managed CV storage tests pass.
+- [ ] Managed profile connect/activate smoke path passed.
+- [ ] Managed CV/fact import preview/apply smoke path passed.
+- [ ] Managed CV/fact editor smoke path passed.
+- [ ] Managed-first pipeline smoke path passed and emitted `pipeline_cv_source_loaded`.
+- [ ] Generated tailored CV artefacts reflect managed CV edits when managed storage is active.
 - [ ] OpenAI key handling remains OS-keyring safe and tests do not call the real OpenAI API.

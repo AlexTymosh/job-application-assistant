@@ -172,6 +172,11 @@ Release polish progress:
 - QA warning applications are blocked from final export until reviewed.
 - Repeated approval/export attempts do not duplicate final artefact records.
 
+Smoke-test polish completed:
+- added release-smoke coverage for the managed user path: connect active managed profile, preview/apply import, inspect managed CV/fact editor pages, edit an imported managed block, run the local pipeline, and verify managed-source artefact output;
+- updated manual smoke and release checklist docs so release validation covers the managed-first pipeline path, not only the legacy file-based flow;
+- preserved file-based fallback compatibility and did not change production pipeline behaviour.
+
 ## Key Decisions
 
 - Default app data folder should be visible and user-owned: `Documents/JobApplicationAssistant/`.

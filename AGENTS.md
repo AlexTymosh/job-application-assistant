@@ -118,6 +118,7 @@ uv run pytest
 uv run pre-commit run --all-files
 ```
 
+Release-smoke changes must keep automated and manual smoke coverage aligned. When managed profile, import, editor, or pipeline-source behaviour changes, update `tests/test_release_smoke.py`, `docs/manual-smoke-test.md`, and `docs/release-checklist.md` together.
 When dependencies change:
 
 ```powershell
