@@ -292,6 +292,12 @@ class SetupStatusService:
                 raise ValueError(
                     "Database is missing expected tables: " + ", ".join(missing_tables)
                 )
+            missing_columns = _read_missing_sqlite_columns(database_file)
+            if missing_columns:
+                raise ValueError(
+                    "Database tables are missing expected columns: "
+                    + ", ".join(missing_columns)
+                )
         except _EXPECTED_SETUP_EXCEPTIONS as exc:
             return SetupCheck(
                 code="sqlite_database",
@@ -504,3 +510,15 @@ def _read_sqlite_table_names(database_file: Path) -> set[str]:
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         ).fetchall()
     return {str(row[0]) for row in rows}
+
+
+def _read_missing_sqlite_columns(database_file: Path) -> list[str]:
+    missing_columns: list[str] = []
+    with sqlite3.connect(f"file:{database_file}?mode=ro", uri=True) as connection:
+        for table_name, table in sorted(Base.metadata.tables.items()):
+            rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+            actual_columns = {str(row[1]) for row in rows}
+            expected_columns = {column.name for column in table.columns}
+            for column_name in sorted(expected_columns - actual_columns):
+                missing_columns.append(f"{table_name}.{column_name}")
+    return missing_columns

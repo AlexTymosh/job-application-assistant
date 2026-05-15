@@ -29,7 +29,7 @@ This release checklist does not add product scope. The release remains a local-f
    PROFILE_DATA_DIR=profiles/example
    ```
 
-3. Keep `OPENAI_API_KEY` empty or set it only in your private `.env` or process environment. Never commit `.env` or API keys.
+3. Keep `OPENAI_API_KEY` empty for public smoke tests. Preferred real-key storage is `/settings` plus the OS keyring; `OPENAI_API_KEY` in private `.env` or the process environment is a developer fallback only. Never commit `.env` or API keys.
 
 4. Model values are placeholders and should be provided through environment variables or private config when real LLM usage is enabled:
 
@@ -114,7 +114,7 @@ Apply Alembic migrations to the active profile database:
 uv run --env-file .env -- alembic upgrade head
 ```
 
-With the example profile active, this may create `profiles/example/applications.sqlite3`. That file is generated local data and must remain ignored by Git.
+With the example profile active, this may create `profiles/example/applications.sqlite3`. That file is generated local data and must remain ignored by Git. The app-level database `app_data_root/app.sqlite3` is initialised separately by the storage bootstrap and deterministic app settings migrations; it currently uses app settings schema version 3 for non-secret settings, managed profiles, and managed CV storage tables.
 
 ## Start the local web app
 
@@ -124,10 +124,29 @@ uv run --env-file .env -- uvicorn app.main:app --reload
 
 Open these local URLs:
 
+- Setup diagnostics: <http://127.0.0.1:8000/setup>
+- Settings: <http://127.0.0.1:8000/settings>
+- Data Folder: <http://127.0.0.1:8000/data-folder>
+- Profiles: <http://127.0.0.1:8000/profiles>
 - Home: <http://127.0.0.1:8000/>
 - Dashboard: <http://127.0.0.1:8000/dashboard>
 - New application: <http://127.0.0.1:8000/applications/new>
 - OpenAPI docs for local inspection: <http://127.0.0.1:8000/docs>
+
+## Setup, settings, data folder, and profile verification
+
+- Open `/setup` and confirm app data folders, app settings database, active file-based profile, profile SQLite database, LLM mode, default CV variant, and fact-bank checks are displayed.
+- Confirm app settings storage reports the current app-level schema and does not require managed CV records to use the existing file-based pipeline.
+- Open `/settings` and confirm non-secret settings can be viewed without displaying raw OpenAI API keys.
+- Confirm OpenAI key handling is keyring-safe: SQLite may store only configured/unconfigured metadata, and `OPENAI_API_KEY` remains a developer fallback.
+- Open `/data-folder` and confirm the effective app data root, `profiles/`, `logs/`, `backups/`, `app.sqlite3`, and `README.txt` paths are visible.
+- Open `/profiles` and confirm managed profile records can be inspected without creating private profile folders automatically.
+
+## Managed CV storage verification
+
+- Confirm automated tests cover app settings schema version 3 and managed CV tables in `app_data_root/app.sqlite3`.
+- Confirm managed CV tables are not present in profile-specific `applications.sqlite3`.
+- Confirm the current pipeline still reads Markdown CV variants and YAML fact banks until import tools and pipeline migration are implemented.
 
 ## Dashboard verification
 
@@ -205,7 +224,7 @@ The generated SQLite files, `.env`, and private profile files must be ignored. I
 - [ ] `uv run pre-commit run --all-files` passed.
 - [ ] `uv run --env-file .env -- alembic upgrade head` passed for the active profile.
 - [ ] The local app starts with `uv run --env-file .env -- uvicorn app.main:app --reload`.
-- [ ] Home, dashboard, new application, detail, and review pages render.
+- [ ] Setup, settings, data folder, profiles, home, dashboard, new application, detail, and review pages render.
 - [ ] Unknown detail and review pages return simple HTML 404 pages.
 - [ ] Manual job text intake works.
 - [ ] Warning rendering works.
@@ -213,4 +232,5 @@ The generated SQLite files, `.env`, and private profile files must be ignored. I
 - [ ] Markdown, HTML, PDF, and DOCX exporter tests pass.
 - [ ] `git status --short` shows no accidental generated files.
 - [ ] `.env`, SQLite databases, private profile files, and generated artefacts are ignored.
-- [ ] Tests do not call the real OpenAI API.
+- [ ] App settings schema version 3 and managed CV storage tests pass.
+- [ ] OpenAI key handling remains OS-keyring safe and tests do not call the real OpenAI API.
