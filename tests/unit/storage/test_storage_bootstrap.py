@@ -1,8 +1,9 @@
 from pathlib import Path
 
 from app.storage.bootstrap import bootstrap_app_data_dirs
+from tests.support.paths import PROJECT_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = PROJECT_ROOT
 
 
 def test_bootstrap_creates_required_directories(monkeypatch, tmp_path: Path) -> None:

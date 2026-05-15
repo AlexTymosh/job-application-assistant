@@ -118,7 +118,7 @@ uv run pytest
 uv run pre-commit run --all-files
 ```
 
-Release-smoke changes must keep automated and manual smoke coverage aligned. When managed profile, import, editor, or pipeline-source behaviour changes, update `tests/test_release_smoke.py`, `docs/manual-smoke-test.md`, and `docs/release-checklist.md` together.
+Release-smoke changes must keep automated and manual smoke coverage aligned. When managed profile, import, editor, or pipeline-source behaviour changes, update `tests/smoke/test_release_smoke.py`, `docs/manual-smoke-test.md`, and `docs/release-checklist.md` together.
 When dependencies change:
 
 ```powershell
@@ -133,6 +133,18 @@ uv run --env-file .env -- alembic upgrade head
 ```
 
 Tests must not call the real OpenAI API and must not require `OPENAI_API_KEY`.
+
+
+Tests are organised by scope:
+
+- `tests/unit/` for narrow service, model, repository, exporter, and pure function tests;
+- `tests/integration/` for route, database, and pipeline boundary tests;
+- `tests/smoke/` for release-level user journeys;
+- `tests/contract/` for repository structure and privacy checks;
+- `tests/support/` for shared test builders, fakes, and assertions.
+
+Do not import helper functions from another `test_*.py` file. Shared helpers must live under `tests/support/`.
+
 
 ---
 

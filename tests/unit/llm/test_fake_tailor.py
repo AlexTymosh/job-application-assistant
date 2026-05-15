@@ -1,4 +1,4 @@
-from pathlib import Path
+from __future__ import annotations
 
 from app.cv.fact_bank import load_fact_bank
 from app.cv.markdown_loader import load_markdown_file
@@ -18,8 +18,9 @@ from app.llm.schemas import (
     RequirementCategory,
     RequirementPriority,
 )
+from tests.support.paths import PROJECT_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = PROJECT_ROOT
 EXAMPLE_VARIANT_CV = (
     ROOT / "profiles" / "example" / "cv" / "variants" / "backend_developer.example.md"
 )

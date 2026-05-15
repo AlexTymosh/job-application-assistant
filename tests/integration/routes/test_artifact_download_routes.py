@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.db.repositories import ApplicationRepository, ArtifactRepository
-from tests.test_application_routes import build_test_client, long_job_text
+from tests.support.apps import build_example_client, long_job_text
 
 
 def create_application(client) -> str:  # type: ignore[no-untyped-def]
@@ -22,7 +22,7 @@ def create_application(client) -> str:  # type: ignore[no-untyped-def]
 
 
 def test_download_existing_artifact_for_application(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
     create_application(client)
 
     with client.app.state.session_factory() as session:
@@ -41,7 +41,7 @@ def test_download_existing_artifact_for_application(tmp_path: Path) -> None:
 
 
 def test_download_missing_artifact_returns_404(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
     create_application(client)
 
     response = client.get(f"/applications/1/artifacts/{uuid4()}/download")
@@ -51,7 +51,7 @@ def test_download_missing_artifact_returns_404(tmp_path: Path) -> None:
 
 
 def test_download_artifact_from_wrong_application_returns_404(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
     create_application(client)
     create_application(client)
 
@@ -70,7 +70,7 @@ def test_download_artifact_from_wrong_application_returns_404(tmp_path: Path) ->
 
 
 def test_download_rejects_path_traversal(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
     create_application(client)
 
     with client.app.state.session_factory() as session:

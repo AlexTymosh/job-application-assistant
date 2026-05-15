@@ -142,15 +142,11 @@ Open these local URLs:
 - Open `/data-folder` and confirm the effective app data root, `profiles/`, `logs/`, `backups/`, `app.sqlite3`, and `README.txt` paths are visible.
 - Open `/profiles` and confirm managed profile records can be inspected without creating private profile folders automatically.
 
-## Managed CV storage verification
-
-- Confirm automated tests cover app settings schema version 3 and managed CV tables in `app_data_root/app.sqlite3`.
-- Confirm managed CV tables are not present in profile-specific `applications.sqlite3`.
 ## Managed profile, import, editor, and pipeline verification
 
 - Confirm automated tests cover app settings schema version 3 and managed CV tables in `app_data_root/app.sqlite3`.
 - Confirm managed CV tables are not present in profile-specific `applications.sqlite3`.
-- Confirm the active managed profile can connect an existing file-based profile folder without creating private profile files automatically.
+- Confirm the active managed profile can connect an existing file-based profile folder outside the repository without creating private profile files automatically.
 - Confirm `/profiles/import` can preview and apply imports from Markdown CV variants and YAML fact-bank records.
 - Confirm import preview performs no writes and import apply is idempotent.
 - Confirm `/profiles/cv` and `/profiles/facts` show imported managed CV/fact records.
@@ -201,7 +197,7 @@ Submit the form and open the application detail page.
 Verify Markdown, HTML, PDF, and DOCX exporters through automated tests:
 
 ```powershell
-uv run pytest tests/test_markdown_exporter.py tests/test_html_exporter.py tests/test_pdf_exporter.py tests/test_docx_exporter.py tests/test_export_markdown_html.py tests/test_export_pdf_docx.py
+uv run pytest tests/unit/exporters
 ```
 
 Existing export flows must write files through `ArtifactWriter`, store only relative database paths, and must not mutate selected source CV variants.

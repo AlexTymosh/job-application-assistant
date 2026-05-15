@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from app.cv.fact_bank import load_fact_bank
 from app.cv.markdown_loader import load_markdown_file
 from app.cv.models import CvSectionName, FactBank, LoadedCv
@@ -13,8 +11,9 @@ from app.llm.schemas import (
 )
 from app.pipeline.cv_tailoring import CvTailoringStep
 from app.pipeline.state import ApplicationRunState
+from tests.support.paths import PROJECT_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = PROJECT_ROOT
 EXAMPLE_VARIANT_CV = (
     ROOT / "profiles" / "example" / "cv" / "variants" / "backend_developer.example.md"
 )

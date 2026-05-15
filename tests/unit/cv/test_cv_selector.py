@@ -3,8 +3,9 @@ from pathlib import Path
 import pytest
 
 from app.cv.selector import select_cv_variant, select_default_cv_variant
+from tests.support.paths import PROJECT_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = PROJECT_ROOT
 EXAMPLE_CV_DIR = ROOT / "profiles" / "example" / "cv"
 
 VALID_VARIANT = """

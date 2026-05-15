@@ -7,11 +7,11 @@ from app.db.repositories import (
     ApplicationWarningRepository,
     ArtifactRepository,
 )
-from tests.test_application_routes import build_test_client, long_job_text
+from tests.support.apps import build_example_client, long_job_text
 
 
 def test_dashboard_empty_state_renders(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
 
     response = client.get("/dashboard")
 
@@ -21,7 +21,7 @@ def test_dashboard_empty_state_renders(tmp_path: Path) -> None:
 
 
 def test_dashboard_lists_applications_counts_and_links(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
     create_response = client.post(
         "/applications",
         data={

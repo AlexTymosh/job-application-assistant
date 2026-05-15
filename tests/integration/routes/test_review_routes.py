@@ -3,11 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.db.repositories import ApplicationRepository, ArtifactRepository
-from tests.test_application_routes import build_test_client, long_job_text
+from tests.support.apps import build_example_client, long_job_text
 
 
 def test_review_page_displays_read_only_review_information(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
     create_response = client.post(
         "/applications",
         data={
@@ -37,7 +37,7 @@ def test_review_page_displays_read_only_review_information(tmp_path: Path) -> No
 
 
 def test_review_page_links_existing_extracted_job_artifact(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
     create_response = client.post(
         "/applications",
         data={
@@ -71,7 +71,7 @@ def test_review_page_links_existing_extracted_job_artifact(tmp_path: Path) -> No
 
 
 def test_get_unknown_review_returns_404_html(tmp_path: Path) -> None:
-    client = build_test_client(tmp_path)
+    client = build_example_client(tmp_path)
 
     response = client.get("/applications/999999/review")
 
