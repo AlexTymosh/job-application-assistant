@@ -6,7 +6,14 @@
     Facts must represent verified experience only. The editor never suggests or
     generates facts, and adding a fact here does not make an unverified claim true.
   </p>
-  <p><a href="/profiles/cv">Back to Managed CV</a> | <a href="/profiles/facts/new">Create fact</a></p>
+
+  <p>
+    <a href="/profiles/cv">Back to Managed CV</a>
+    {% if state.active_profile %}
+      | <a href="/profiles/facts/new">Create fact</a>
+    {% endif %}
+  </p>
+
 
   {% if not state.active_profile %}
     <section role="status">

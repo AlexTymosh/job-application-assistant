@@ -163,6 +163,56 @@ def test_editor_index_shows_no_active_profile_message(
     assert "/profiles" in response.text
 
 
+def test_create_fact_requires_active_profile(monkeypatch, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    _patch_user_locations(monkeypatch, tmp_path)
+    client = _client()
+
+    response = client.post(
+        "/profiles/facts",
+        data={
+            "fact_key": "new-fact",
+            "category": "skill",
+            "name": "New fact",
+            "allowed_claim_level": "practical",
+            "evidence": "Verified evidence.",
+            "is_active": "on",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "No active managed profile" in response.text
+    assert "/profiles" in response.text
+    assert "Fact key" not in response.text
+    assert "Save fact" not in response.text
+
+
+def test_new_fact_form_reports_missing_app_settings_storage(
+    monkeypatch, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    _patch_user_locations(monkeypatch, tmp_path)
+    client = _client()
+    client.app.state.app_settings_service = None
+
+    response = client.get("/profiles/facts/new")
+
+    assert response.status_code == 400
+    assert "App settings storage is not available" in response.text
+    assert "Traceback" not in response.text
+
+
+def test_new_fact_form_requires_active_profile(monkeypatch, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    _patch_user_locations(monkeypatch, tmp_path)
+    client = _client()
+
+    response = client.get("/profiles/facts/new")
+
+    assert response.status_code == 400
+    assert "No active managed profile" in response.text
+    assert "/profiles" in response.text
+    assert "Fact key" not in response.text
+    assert "Save fact" not in response.text
+
+
 def test_editor_index_shows_no_imported_cv_message_without_private_path(
     monkeypatch, tmp_path: Path
 ) -> None:  # type: ignore[no-untyped-def]
