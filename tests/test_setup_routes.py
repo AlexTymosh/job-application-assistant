@@ -15,6 +15,9 @@ def build_complete_client(tmp_path: Path, monkeypatch) -> TestClient:  # type: i
     monkeypatch.setenv("APP_DATA_DIR", str(tmp_path / "app-data"))
     profile_dir = tmp_path / "example"
     shutil.copytree(Path("profiles/example"), profile_dir)
+
+    (profile_dir / "applications.sqlite3").unlink(missing_ok=True)
+
     base_config = load_profile_config(Path("profiles/example/config.example.yaml"))
     config_data = base_config.model_dump()
     config_data["app"] = {"profile_name": "example", "data_dir": profile_dir}

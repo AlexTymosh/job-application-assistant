@@ -13,6 +13,7 @@ from app.api.routes_applications import router as applications_router
 from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_data_folder import router as data_folder_router
 from app.api.routes_health import router as health_router
+from app.api.routes_profiles import router as profiles_router
 from app.api.routes_review import router as review_router
 from app.api.routes_settings import router as settings_router
 from app.api.routes_setup import router as setup_router
@@ -132,6 +133,7 @@ def create_app(
     app.include_router(setup_router)
     app.include_router(settings_router)
     app.include_router(data_folder_router)
+    app.include_router(profiles_router)
     app.include_router(applications_router)
     app.include_router(review_router)
     app.include_router(dashboard_router)
@@ -141,10 +143,17 @@ def create_app(
 
 
 def _requires_completed_setup(path: str) -> bool:
-    if path in _SETUP_GATE_EXEMPT_PATHS:
-        return False
+    return not _is_setup_gate_exempt_path(path)
 
-    return not path.startswith("/docs/")
+
+def _is_setup_gate_exempt_path(path: str) -> bool:
+    if path in _SETUP_GATE_EXEMPT_PATHS:
+        return True
+
+    if path == "/profiles" or path.startswith("/profiles/"):
+        return True
+
+    return path.startswith("/docs/")
 
 
 app = create_app()

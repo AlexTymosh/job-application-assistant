@@ -79,7 +79,7 @@ This version can be used by a technical user who can:
 - run Alembic migrations;
 - inspect logs/errors if something fails.
 
-This version is not yet suitable for a non-technical user. The current product direction is to continue from app data bootstrap, setup diagnostics, managed settings storage, the Settings UI, and the Data Folder UI towards managed profiles, managed CV data, guided repair actions, and a persistent application data folder under Documents.
+This version is not yet suitable for a non-technical user. The current product direction is to continue from app data bootstrap, setup diagnostics, managed settings storage, the Settings UI, and the Data Folder UI through managed profile selection towards managed CV data and guided repair actions.
 
 ---
 
@@ -191,9 +191,9 @@ app.sqlite3
 README.txt
 ```
 
-The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. Raw API keys are not stored in SQLite; OpenAI mode prefers the OS keyring value and falls back to the runtime `OPENAI_API_KEY` environment variable for developer workflows. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, and Markdown CV behaviour remains compatible.
+The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. The app-managed `profiles` table stores connected file-based profile records and the active managed profile selection. Profile records contain metadata such as name, display name, type, data directory, and active status; they do not store raw secrets, CV content, fact-bank content, or application history. Raw API keys are not stored in SQLite; OpenAI mode prefers the OS keyring value and falls back to the runtime `OPENAI_API_KEY` environment variable for developer workflows. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, and Markdown CV behaviour remains compatible.
 
-The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, and Data Folder UI are now implemented. This still does not implement managed profiles, managed CV storage, profile import, or pipeline migration to managed CV storage.
+The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, Data Folder UI, and managed profile selection are now implemented. This still does not implement managed CV storage, profile import, CV/fact editing, automatic profile application database migration, or pipeline migration to managed CV storage.
 
 If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
 
@@ -211,8 +211,16 @@ The Data Folder page is available at:
 /data-folder
 ```
 
-It shows the effective app data root, whether that root came from `APP_DATA_DIR`, a persisted user selection, or the default Documents location, the expected `profiles/`, `logs/`, `backups/`, `app.sqlite3`, and `README.txt` paths, and a link back to setup diagnostics. It can create or connect a safe external app data folder by text path. The action bootstraps only the approved app data root files/folders and initialises or migrates only `app.sqlite3`. It does not create private profile folders, profile config files, CV files, fact-bank files, profile `applications.sqlite3` databases, import tools, or profile migrations. Existing file-based `.env`, YAML, Markdown, and profile support remains compatible, and profile data is not migrated automatically.
+It shows the effective app data root, whether that root came from `APP_DATA_DIR`, a persisted user selection, or the default Documents location, the expected `profiles/`, `logs/`, `backups/`, `app.sqlite3`, and `README.txt` paths, and a link back to setup diagnostics. It can create or connect a safe external app data folder by text path. The action rejects broad or high-risk choices such as filesystem roots, home/Documents roots, repository paths, repository parents, repository-internal paths, and unrelated non-empty folders that are not recognisable app data folders. Existing non-empty folders need strong app-data evidence: the data-folder README marker, a current readable `app.sqlite3`, or the complete `profiles/`, `logs/`, and `backups/` folder structure. A single common folder such as `logs/` is not enough. The action bootstraps only the approved app data root files/folders and initialises or migrates only `app.sqlite3`; existing `README.txt` files are preserved. It does not create private profile folders, profile config files, CV files, fact-bank files, profile `applications.sqlite3` databases, import tools, or profile migrations. Existing file-based `.env`, YAML, Markdown, and profile support remains compatible, and profile data is not migrated automatically.
 
+The Profiles page is available at:
+
+```text
+/profiles
+```
+
+It lists app-managed profile records, validates connected file-based profile folders, connects an existing file-based profile directory, and lets the user make one managed profile active. A connected file-based profile must already contain its supported config file, `cv/`, `cv/variants/`, and fact-bank YAML file, and the loaded config must match the managed profile name and selected profile folder. The Profiles page and profile activation actions remain available while setup is incomplete so the user can repair profile selection. When an active managed profile exists, runtime config loading and setup diagnostics prefer that profile. When no managed profile is active, existing managed settings and `.env` profile fallbacks remain unchanged.
+The app revalidates the active managed profile identity when loading runtime config, so edited config files that no longer match the managed profile record make setup incomplete instead of silently switching profiles.
 ---
 
 ## Current Configuration Model
@@ -220,13 +228,15 @@ It shows the effective app data root, whether that root came from `APP_DATA_DIR`
 The current implementation uses:
 
 - managed app settings storage for supported non-secret settings;
+- managed profile records in `app_data_root/app.sqlite3` for connected file-based profiles and active profile selection;
 - `/settings` for editing supported non-secret settings and managing the OpenAI API key safely;
+- `/profiles` for connecting and activating existing file-based profile folders;
 - OS keyring for the raw OpenAI API key, with `app_settings` storing only configured/unconfigured metadata;
-- `.env` for developer fallback profile selection and `OPENAI_API_KEY` fallback;
-- `config.yaml` for private profile settings that are not managed yet;
+- `.env` for developer fallback profile selection and `OPENAI_API_KEY` fallback when no active managed profile overrides profile selection;
+- `config.yaml` for private file-based profile settings that are not migrated yet;
 - `fact_bank.yaml` for verified user facts;
 - Markdown files under `cv/variants/` as source CV variants;
-- SQLite for applications, events, warnings, artefacts, and history.
+- profile-specific SQLite for applications, events, warnings, artefacts, and history.
 
 This is acceptable for the current developer release, but it is not the final product model.
 
@@ -234,8 +244,9 @@ Target direction:
 
 - continue using the default application data folder under Documents;
 - let the user connect an existing application data folder;
+- let the user connect existing file-based profile folders as managed profile records;
 - expand application settings stored in SQLite;
-- store CV variants, sections, blocks, aliases, and facts in SQLite;
+- store CV variants, sections, blocks, aliases, and facts in SQLite in a later stage;
 - keep generated artefacts as files on disk;
 - keep OpenAI API keys in the OS keyring, not directly in SQLite;
 - keep YAML/Markdown as import/export and compatibility formats.
@@ -260,7 +271,7 @@ Documents/
     └── README.txt
 ```
 
-The user can now connect this folder from the application UI, but managed profiles and profile migration are still future work.
+The user can now connect this folder and connect existing file-based profiles from the application UI. Managed CV storage, import tools, CV/fact editing, pipeline migration, and automatic profile application database migration are still future work.
 
 Rationale:
 

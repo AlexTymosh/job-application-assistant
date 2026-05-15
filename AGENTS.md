@@ -49,7 +49,7 @@ Target direction:
 - user data is stored outside the repository;
 - default app data folder is under the user's Documents folder;
 - app data folders are resolved and created through `app/storage/`;
-- existing profile folders can be connected by path;
+- existing file-based profile folders can be connected by path through managed profile records;
 - settings are managed through the app UI and persisted in SQLite;
 - secrets such as OpenAI API keys are stored in OS keyring, not committed and not stored as plaintext;
 - YAML/Markdown profile files remain as compatibility, import/export, and fake example data formats;
@@ -72,7 +72,7 @@ routes -> services/pipeline -> repositories/exporters/LLM clients/artifact write
 Rules:
 
 - routes may parse input, call services, and render/redirect;
-- settings routes must stay thin and must persist settings through `AppSettingsService`/`AppSettingsRepository`;
+- settings and profiles routes must stay thin and must persist through service/repository boundaries;
 - `/settings` must remain available when setup is incomplete if it is needed to repair LLM mode or default profile selection;
 - routes must not call OpenAI directly;
 - routes must not write PDF/DOCX/HTML/Markdown files directly;
@@ -154,9 +154,12 @@ Real private profile data must live outside the repository.
 
 Private app data must be created through the storage/bootstrap boundary in `app/storage/`, not ad hoc in routes, tests, or pipeline code. Setup, settings, and Data Folder UI code must use this boundary when resolving or creating app-owned folders.
 
+Managed profiles live in `app_data_root/app.sqlite3`. Profile application history remains in the profile-specific `applications.sqlite3` database for now; do not migrate application records automatically. Profile records must not store raw secrets or real CV/fact content. Connected file-based profile records must match the loaded profile config identity: `app.profile_name` and `app.data_dir` must resolve to the managed profile name and selected folder.
+Effective config loading must revalidate active managed profile identity before using it, not only during connect or activate actions.
+
 The active app data folder location must be resolved by `app/storage/`. `APP_DATA_DIR` remains the highest-priority developer override. When `APP_DATA_DIR` is not set, any user-selected app data folder pointer must be stored outside the app data folder itself through the `app/storage/` location boundary. Do not store the active app data folder path in `app_settings` or in `app_data_root/app.sqlite3`, because that database lives inside the folder being selected.
 
-Future managed storage should default to a user-visible application folder, for example:
+Managed storage defaults to a user-visible application folder, for example:
 
 ```text
 Documents/JobApplicationAssistant/

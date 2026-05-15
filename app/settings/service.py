@@ -7,6 +7,8 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import ProjectConfig, load_profile_config
+from app.profiles.repository import ManagedProfileRepository
+from app.profiles.validation import validate_profile_config_identity
 from app.settings.repository import AppSettingsRepository
 from app.settings.schema import (
     ManagedAppSettings,
@@ -30,6 +32,10 @@ class AppSettingsService:
     def delete_setting(self, key: str) -> None:
         self._repository.delete_setting(key)
 
+    @property
+    def session_factory(self) -> sessionmaker[Session]:
+        return self._repository.session_factory
+
     def list_settings(self) -> list[StoredAppSetting]:
         return self._repository.list_settings()
 
@@ -45,7 +51,23 @@ class AppSettingsService:
 
     def load_effective_config(self) -> ProjectConfig:
         managed_settings = self.get_managed_settings()
-        base_config = _load_base_config(managed_settings)
+        active_profile = ManagedProfileRepository(
+            self.session_factory
+        ).get_active_profile()
+        if active_profile is not None:
+            base_config = load_profile_config(
+                _config_path_for_profile(
+                    profile_name=active_profile.name,
+                    profile_data_dir=active_profile.data_dir,
+                )
+            )
+            validate_profile_config_identity(
+                base_config,
+                expected_profile_name=active_profile.name,
+                expected_data_dir=active_profile.data_dir,
+            )
+        else:
+            base_config = _load_base_config(managed_settings)
         return overlay_project_config(base_config, managed_settings)
 
 
