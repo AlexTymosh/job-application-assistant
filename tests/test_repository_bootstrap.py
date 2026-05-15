@@ -209,6 +209,7 @@ REQUIRED_PROJECT_FILES = [
     "app/exporters/docx_exporter.py",
     "app/pipeline/export_markdown_html.py",
     "app/pipeline/export_pdf_docx.py",
+    "app/pipeline/final_export.py",
     "app/pipeline/local_web_pipeline.py",
     "tests/test_artifact_download_routes.py",
     "tests/test_local_pipeline_routes.py",
