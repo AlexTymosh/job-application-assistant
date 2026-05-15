@@ -191,9 +191,9 @@ app.sqlite3
 README.txt
 ```
 
-The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. The app-managed `profiles` table stores connected file-based profile records and the active managed profile selection. Profile records contain metadata such as name, display name, type, data directory, and active status; they do not store raw secrets, CV content, fact-bank content, or application history. Raw API keys are not stored in SQLite; OpenAI mode prefers the OS keyring value and falls back to the runtime `OPENAI_API_KEY` environment variable for developer workflows. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, and Markdown CV behaviour remains compatible.
+The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. The app-managed `profiles` table stores connected file-based profile records and the active managed profile selection. Managed CV tables in the same app-level database provide the first storage model for variants, aliases, sections, blocks, facts, and block-fact links. Profile records contain metadata such as name, display name, type, data directory, and active status; they do not store raw secrets or application history. Raw API keys are not stored in SQLite; OpenAI mode prefers the OS keyring value and falls back to the runtime `OPENAI_API_KEY` environment variable for developer workflows. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, YAML fact bank, and Markdown CV behaviour remains compatible.
 
-The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, Data Folder UI, and managed profile selection are now implemented. This still does not implement managed CV storage, profile import, CV/fact editing, automatic profile application database migration, or pipeline migration to managed CV storage.
+The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, Data Folder UI, managed profile selection, and managed CV storage foundation are now implemented. This still does not implement profile import tools, CV/fact editing, automatic profile application database migration, or pipeline migration to managed CV storage.
 
 If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
 
@@ -232,10 +232,11 @@ The current implementation uses:
 - `/settings` for editing supported non-secret settings and managing the OpenAI API key safely;
 - `/profiles` for connecting and activating existing file-based profile folders;
 - OS keyring for the raw OpenAI API key, with `app_settings` storing only configured/unconfigured metadata;
+- app-level managed CV storage for variants, aliases, sections, blocks, facts, and block-fact links as a foundation for future import/editor work;
 - `.env` for developer fallback profile selection and `OPENAI_API_KEY` fallback when no active managed profile overrides profile selection;
 - `config.yaml` for private file-based profile settings that are not migrated yet;
-- `fact_bank.yaml` for verified user facts;
-- Markdown files under `cv/variants/` as source CV variants;
+- `fact_bank.yaml` for verified user facts used by the current pipeline;
+- Markdown files under `cv/variants/` as current source CV variants;
 - profile-specific SQLite for applications, events, warnings, artefacts, and history.
 
 This is acceptable for the current developer release, but it is not the final product model.
@@ -245,8 +246,8 @@ Target direction:
 - continue using the default application data folder under Documents;
 - let the user connect an existing application data folder;
 - let the user connect existing file-based profile folders as managed profile records;
-- expand application settings stored in SQLite;
-- store CV variants, sections, blocks, aliases, and facts in SQLite in a later stage;
+- expand application settings stored in SQLite where useful;
+- add import tools, editor workflows, and pipeline migration for the managed CV/fact storage foundation;
 - keep generated artefacts as files on disk;
 - keep OpenAI API keys in the OS keyring, not directly in SQLite;
 - keep YAML/Markdown as import/export and compatibility formats.
@@ -556,12 +557,16 @@ Remaining work in this area is guided repair actions, not automatic profile migr
 
 ### 4. Managed CV storage
 
+Implemented app-level storage foundation in `app_data_root/app.sqlite3`:
+
 - CV variants;
 - aliases;
 - sections;
 - blocks;
 - facts;
 - fact links.
+
+The current pipeline still reads Markdown CV variants and YAML fact banks until a future explicit migration.
 
 ### 5. Import tools
 
@@ -635,7 +640,7 @@ git status --short
 - Real private profiles must live outside the repository.
 - Do not hardcode `alex` in business logic.
 - Do not add arbitrary application statuses without documenting them.
-- Do not add schema changes without Alembic migrations.
+- Do not add profile application database schema changes without Alembic migrations; app-level settings database changes use deterministic migrations in `app/settings/migrations.py`.
 - Do not call real OpenAI from tests.
 - Do not introduce auto-apply behaviour.
 - Do not mutate selected source CV variants automatically.

@@ -157,6 +157,8 @@ Private app data must be created through the storage/bootstrap boundary in `app/
 Managed profiles live in `app_data_root/app.sqlite3`. Profile application history remains in the profile-specific `applications.sqlite3` database for now; do not migrate application records automatically. Profile records must not store raw secrets or real CV/fact content. Connected file-based profile records must match the loaded profile config identity: `app.profile_name` and `app.data_dir` must resolve to the managed profile name and selected folder.
 Effective config loading must revalidate active managed profile identity before using it, not only during connect or activate actions.
 
+Managed CV storage lives in the app-level settings database, `app_data_root/app.sqlite3`, through `app/managed_cv/` models that inherit from `app.settings.base.SettingsBase`. Managed CV tables must not be added to `app.db.base.Base` and must not be created in profile-specific `applications.sqlite3` databases. Until an explicit pipeline migration is implemented, existing Markdown CV variants and YAML fact-bank loading remain the active pipeline source.
+
 The active app data folder location must be resolved by `app/storage/`. `APP_DATA_DIR` remains the highest-priority developer override. When `APP_DATA_DIR` is not set, any user-selected app data folder pointer must be stored outside the app data folder itself through the `app/storage/` location boundary. Do not store the active app data folder path in `app_settings` or in `app_data_root/app.sqlite3`, because that database lives inside the folder being selected.
 
 Managed storage defaults to a user-visible application folder, for example:

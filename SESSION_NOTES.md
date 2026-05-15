@@ -13,7 +13,7 @@ Read first:
 
 Move the project from file-based profile configuration to a managed local application setup.
 
-The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, a Data Folder UI for connecting the app data root safely, and managed profile records for selecting existing file-based profile folders.
+The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, a Data Folder UI for connecting the app data root safely, managed profile records for selecting existing file-based profile folders, and the first app-managed CV storage model.
 
 ---
 
@@ -53,8 +53,18 @@ Implemented the managed profiles foundation:
 - profile application history remains in each profile-specific `applications.sqlite3`.
 - Effective config loading revalidates active managed profile identity before using it.
 
+### PR 8 — Managed CV model
+
+Implemented the app-managed CV storage foundation:
+- app settings schema version 3 adds app-level tables for CV variants, variant aliases, sections, blocks, facts, and block-fact links in `app_data_root/app.sqlite3`;
+- managed CV SQLAlchemy models use `SettingsBase` and stay out of the profile application database metadata;
+- repository operations create/list managed CV records and return Pydantic records rather than raw SQLAlchemy rows;
+- duplicate variant names, aliases, fact keys, and block-fact links have explicit domain errors;
+- profile deletion cascades managed CV records through app-level foreign keys;
+- profile database setup readiness now verifies expected columns, not only table names, without creating or migrating tables during diagnostics;
+- existing Markdown CV variants, YAML fact banks, selectors, and local pipeline behaviour remain unchanged.
+
 Non-goals preserved:
-- no managed CV model yet;
 - no import tools;
 - no CV/fact editor;
 - no pipeline migration to DB-backed CV/fact storage;
@@ -64,27 +74,28 @@ Non-goals preserved:
 Remaining risks:
 - setup status is still diagnostic; it does not repair missing profile files or run profile migrations;
 - if the host OS keyring backend is missing or unavailable, Settings reports a safe keyring error and `OPENAI_API_KEY` remains the developer fallback;
-- database readiness checks verify tables/schema but do not yet provide a guided repair or migration button;
+- database readiness checks verify expected tables and columns but do not yet provide a guided repair or migration button;
 - profile and data folder UIs use text path inputs for this local developer release and do not provide OS-native folder pickers.
 
 ## Next Implementation Plan
 
-### PR 8 — Managed CV model
+### PR 9 — Import tools
 
 Goal:
-Add the first managed CV data model while preserving the current file-based pipeline until an explicit migration step.
+Add safe import tools that can copy existing file-based CV variant and YAML fact-bank data into the managed CV storage model without changing the active pipeline yet.
 
 Recommended scope:
-- design managed CV variants, sections, blocks, facts, and aliases in app-managed storage;
-- keep imports/export compatibility explicit and safe;
-- do not auto-migrate private profile application history;
-- keep generated artefacts and existing pipeline behaviour stable unless the PR explicitly changes them.
+- import existing Markdown CV variants into managed variants, sections, and blocks;
+- import YAML fact-bank entries into managed facts;
+- keep imports explicit, reviewable, and idempotent;
+- do not add CV/fact editor UI yet;
+- do not make the local pipeline read managed CV/fact records yet.
 
 ## Key Decisions
 
 - Default app data folder should be visible and user-owned: `Documents/JobApplicationAssistant/`.
 - Users can connect an existing app data folder through `/data-folder`; `APP_DATA_DIR` remains the highest-priority developer override.
-- SQLite should become the primary source of app/profile settings later.
+- Supported app settings and managed profile records already live in SQLite; future work should focus on managed CV/fact imports, editor workflows, pipeline migration, and guided repair.
 - YAML should remain as example/import/export/fallback only, not the main UI-facing settings store.
 - OpenAI API key uses OS keyring as the preferred storage backend, with `OPENAI_API_KEY` retained as a developer fallback.
 - SQLite may store secret metadata only, not the raw API key.

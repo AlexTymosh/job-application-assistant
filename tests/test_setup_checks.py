@@ -299,3 +299,70 @@ def test_setup_checks_do_not_create_private_profile_files_or_database_tables(
     assert status.is_complete is False
     assert not (profile_dir / "applications.sqlite3").exists()
     assert not (profile_dir / "cv" / "fact_bank.example.yaml").exists()
+
+
+def test_profile_database_with_current_tables_but_missing_column_fails_readiness(
+    tmp_path: Path,
+) -> None:
+    profile_dir, config = copy_example_profile(tmp_path)
+    database_file = profile_dir / "applications.sqlite3"
+    with sqlite3.connect(database_file) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE applications (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                profile_name TEXT NOT NULL,
+                application_number INTEGER,
+                status TEXT NOT NULL,
+                job_title TEXT,
+                company_name TEXT,
+                company_domain TEXT,
+                source_url TEXT,
+                normalized_url TEXT,
+                job_text_hash TEXT,
+                selected_cv_variant TEXT,
+                notes TEXT
+            );
+            CREATE TABLE artifacts (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                application_id TEXT NOT NULL,
+                artifact_type TEXT NOT NULL,
+                path TEXT NOT NULL
+            );
+            CREATE TABLE application_events (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                application_id TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                message TEXT,
+                occurred_at TEXT NOT NULL
+            );
+            CREATE TABLE application_warnings (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                application_id TEXT NOT NULL,
+                level TEXT NOT NULL,
+                code TEXT NOT NULL,
+                message TEXT NOT NULL
+            );
+            """
+        )
+    service = build_service(tmp_path)
+
+    status = service.build_status(config=config)
+    sqlite_check = check_by_code(status, "sqlite_database")
+
+    assert status.is_complete is False
+    assert sqlite_check.ok is False
+    assert "applications.artifact_dir_name" in sqlite_check.message
+    with sqlite3.connect(database_file) as connection:
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(applications)")
+        }
+    assert "artifact_dir_name" not in columns

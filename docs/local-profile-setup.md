@@ -90,7 +90,7 @@ future_integrations:
   auto_apply_enabled: false
 ```
 
-Do not store secrets in `config.yaml`. Keep `OPENAI_API_KEY` in `.env` or the process environment.
+Do not store secrets in `config.yaml`. Preferred OpenAI API key storage is the `/settings` page, which writes the raw key through the OS keyring boundary and stores only configured/unconfigured metadata in SQLite. `OPENAI_API_KEY` in `.env` or the process environment is a developer fallback only.
 
 ## Required `blacklist.txt` shape
 
@@ -207,4 +207,4 @@ After copying, rename the example CV files to private filenames outside the repo
 - replace the fake fact-bank content with private verified facts;
 - replace the fake CV variant content with private verified CV content.
 
-The selected CV variants are the only source CV documents used for tailoring, `fact_bank.yaml` is the claim authority, source variants remain read-only, and generated tailored CV files are written separately as application artefacts. Never copy real private data back into `profiles/example`.
+The selected CV variants are the only source CV documents used by the current tailoring pipeline, `fact_bank.yaml` is the current claim authority, source variants remain read-only, and generated tailored CV files are written separately as application artefacts. The app-managed CV storage model now exists in `app_data_root/app.sqlite3` for future import/editor work, but this setup guide does not migrate Markdown or YAML data into it. Never copy real private data back into `profiles/example`.

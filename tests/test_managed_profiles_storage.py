@@ -160,7 +160,7 @@ def test_profile_table_schema_migrates_from_v1_to_v2(tmp_path: Path) -> None:
         ).fetchone()[0]
 
     assert "profiles" in tables
-    assert version == CURRENT_APP_SETTINGS_SCHEMA_VERSION == 2
+    assert version == CURRENT_APP_SETTINGS_SCHEMA_VERSION == 3
 
 
 def test_create_list_duplicate_and_active_profiles(tmp_path: Path) -> None:
