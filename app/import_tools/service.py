@@ -4,6 +4,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from uuid import uuid4
 
+import yaml
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -42,6 +44,15 @@ class ImportApplyBlockedError(ImportToolsError):
     pass
 
 
+_EXPECTED_IMPORT_EXCEPTIONS = (
+    FileNotFoundError,
+    OSError,
+    ValueError,
+    ValidationError,
+    yaml.YAMLError,
+)
+
+
 class ManagedCvImportService:
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
@@ -55,7 +66,7 @@ class ManagedCvImportService:
         try:
             loaded_variants = load_markdown_variants(profile.data_dir, config)
             loaded_facts = load_planned_facts(profile.name, profile.data_dir)
-        except (FileNotFoundError, OSError, ValueError) as exc:
+        except _EXPECTED_IMPORT_EXCEPTIONS as exc:
             raise ImportToolsError(f"Import source could not be loaded: {exc}") from exc
 
         planned_variants = [
@@ -206,7 +217,7 @@ class ManagedCvImportService:
         config_file = profile.data_dir / _config_filename(profile.name)
         try:
             return load_profile_config(config_file)
-        except (FileNotFoundError, OSError, ValueError) as exc:
+        except _EXPECTED_IMPORT_EXCEPTIONS as exc:
             raise ImportToolsError(
                 f"Profile config could not be loaded: {exc}"
             ) from exc

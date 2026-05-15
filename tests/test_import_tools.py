@@ -250,6 +250,25 @@ def test_invalid_fact_bank_raises_clear_error_without_partial_writes(
     assert _table_count(database_file, "facts") == 0
 
 
+def test_malformed_fact_bank_yaml_raises_clear_error_without_partial_writes(
+    tmp_path: Path,
+) -> None:
+    session_factory, database_file = _session_factory(tmp_path)
+    profile_dir = _write_profile(
+        tmp_path / "private" / "alex",
+        fact_bank_content="facts:\n  - id: [unterminated\n",
+    )
+    _create_active_profile(ManagedProfileRepository(session_factory), profile_dir)
+
+    with pytest.raises(ImportToolsError, match="Import source could not be loaded"):
+        ManagedCvImportService(session_factory).apply_import()
+
+    assert _table_count(database_file, "cv_variants") == 0
+    assert _table_count(database_file, "cv_sections") == 0
+    assert _table_count(database_file, "cv_blocks") == 0
+    assert _table_count(database_file, "facts") == 0
+
+
 def test_apply_does_not_mutate_source_files_or_profile_application_database(
     tmp_path: Path,
 ) -> None:

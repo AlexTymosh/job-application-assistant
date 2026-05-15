@@ -46,7 +46,9 @@ def _client() -> TestClient:
     )
 
 
-def _write_profile(path: Path, *, name: str = "alex") -> None:
+def _write_profile(
+    path: Path, *, name: str = "alex", fact_bank_content: str | None = None
+) -> None:
     (path / "cv" / "variants").mkdir(parents=True)
     (path / "config.yaml").write_text(
         f"""
@@ -69,7 +71,8 @@ future_integrations: {{}}
         encoding="utf-8",
     )
     (path / "cv" / "fact_bank.yaml").write_text(
-        """
+        fact_bank_content
+        or """
 facts:
   - id: fact-1
     category: skill
@@ -168,6 +171,23 @@ def test_apply_route_writes_records_after_explicit_post(
     assert "Created 1 variants, 4 sections, 4 blocks, and 1 facts" in response.text
     assert "Variants to skip: 1" in preview.text
     assert "Facts to skip: 1" in preview.text
+
+
+def test_preview_route_renders_malformed_fact_bank_yaml_error(
+    monkeypatch, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    _patch_user_locations(monkeypatch, tmp_path)
+    profile_dir = tmp_path / "private" / "alex"
+    _write_profile(profile_dir, fact_bank_content="facts:\n  - id: [unterminated\n")
+    client = _client()
+    _connect_active_profile(client, profile_dir)
+
+    response = client.post("/profiles/import/preview")
+
+    assert response.status_code == 200
+    assert "Import cannot continue" in response.text
+    assert "Import source could not be loaded" in response.text
+    assert "Traceback" not in response.text
 
 
 def test_import_route_reports_missing_active_profile_clearly(
