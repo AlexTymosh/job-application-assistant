@@ -142,15 +142,11 @@ Open these local URLs:
 - Open `/data-folder` and confirm the effective app data root, `profiles/`, `logs/`, `backups/`, `app.sqlite3`, and `README.txt` paths are visible.
 - Open `/profiles` and confirm managed profile records can be inspected without creating private profile folders automatically.
 
-## Managed CV storage verification
-
-- Confirm automated tests cover app settings schema version 3 and managed CV tables in `app_data_root/app.sqlite3`.
-- Confirm managed CV tables are not present in profile-specific `applications.sqlite3`.
 ## Managed profile, import, editor, and pipeline verification
 
 - Confirm automated tests cover app settings schema version 3 and managed CV tables in `app_data_root/app.sqlite3`.
 - Confirm managed CV tables are not present in profile-specific `applications.sqlite3`.
-- Confirm the active managed profile can connect an existing file-based profile folder without creating private profile files automatically.
+- Confirm the active managed profile can connect an existing file-based profile folder outside the repository without creating private profile files automatically.
 - Confirm `/profiles/import` can preview and apply imports from Markdown CV variants and YAML fact-bank records.
 - Confirm import preview performs no writes and import apply is idempotent.
 - Confirm `/profiles/cv` and `/profiles/facts` show imported managed CV/fact records.
