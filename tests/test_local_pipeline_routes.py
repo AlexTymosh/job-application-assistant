@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from app.artifacts.resolution import resolve_artifact_path_under_applications_dir
 from app.db.models import ApplicationStatus
 from app.db.repositories import ApplicationRepository
 from app.pipeline.local_web_pipeline import LocalApplicationPipelineService
@@ -291,3 +292,91 @@ def test_application_detail_page_shows_changed_cv_download_links(
     assert "tailored_cv.html" in response.text
     assert "/applications/1/artifacts/" in response.text
     assert str(tmp_path) not in response.text
+
+
+def test_local_pipeline_uses_managed_cv_source_when_available(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("APP_DATA_DIR", str(tmp_path / "app_data"))
+    client = build_test_client(tmp_path)
+
+    from app.cv.models import AllowedClaimLevel, CvSectionName, FactCategory
+    from app.managed_cv.repository import ManagedCvRepository
+    from app.profiles.repository import ManagedProfileRepository
+    from app.profiles.schema import ManagedProfileType
+
+    session_factory = client.app.state.app_settings_service.session_factory
+    profile_repository = ManagedProfileRepository(session_factory)
+    cv_repository = ManagedCvRepository(session_factory)
+    profile_repository.create_profile(
+        profile_id="profile-1",
+        name="example",
+        display_name="Example",
+        profile_type=ManagedProfileType.FILE_BASED,
+        data_dir=client.app.state.profile_paths.profile_dir,
+        is_active=True,
+    )
+    variant = cv_repository.create_cv_variant(
+        profile_id="profile-1",
+        name="backend_developer",
+        display_name="Backend Developer",
+    )
+    managed_summary = "Managed source summary with FastAPI evidence."
+    for order, section_name, content in [
+        (0, CvSectionName.SUMMARY, managed_summary),
+        (1, CvSectionName.SKILLS, "- FastAPI"),
+        (2, CvSectionName.EXPERIENCE, "## Managed Experience\n\n- Built services."),
+        (3, CvSectionName.PROJECTS, "## Managed Project\n\n- Built tooling."),
+    ]:
+        section = cv_repository.create_cv_section(
+            variant_id=variant.id,
+            section_key=section_name.value,
+            title=section_name.value.title(),
+            display_order=order,
+            is_required=True,
+        )
+        cv_repository.create_cv_block(
+            section_id=section.id,
+            block_key="content",
+            content_markdown=content,
+            display_order=0,
+            is_enabled=True,
+        )
+    cv_repository.create_fact(
+        profile_id="profile-1",
+        fact_key="managed-fastapi",
+        category=FactCategory.SKILL,
+        name="FastAPI",
+        allowed_claim_level=AllowedClaimLevel.PRACTICAL,
+        evidence="Built FastAPI services.",
+    )
+
+    create_application(client, extra_text=long_job_text(" FastAPI."))
+    response = client.post("/applications/1/run-local-pipeline", follow_redirects=False)
+
+    assert response.status_code == 303
+    with client.app.state.session_factory() as session:
+        application = ApplicationRepository(session).get_by_number_with_related(
+            profile_name="example",
+            application_number=1,
+        )
+        assert application is not None
+        event = next(
+            event
+            for event in application.events
+            if event.event_type == "pipeline_cv_source_loaded"
+        )
+        assert "Managed CV/fact storage" in event.message
+        markdown_artifact = next(
+            artifact
+            for artifact in application.artifacts
+            if artifact.artifact_type == "tailored_cv_markdown"
+        )
+
+    tailored_path = resolve_artifact_path_under_applications_dir(
+        applications_dir=client.app.state.profile_paths.applications_dir,
+        stored_relative_path=markdown_artifact.path,
+    )
+    tailored_markdown = tailored_path.read_text(encoding="utf-8")
+    assert "Managed Project" in tailored_markdown
+    assert "managed-fastapi" not in tailored_markdown

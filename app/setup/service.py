@@ -15,12 +15,11 @@ from app.core.config import (
     validate_llm_runtime_config,
 )
 from app.core.paths import ProfilePaths, build_profile_paths
-from app.cv.fact_bank import load_fact_bank
-from app.cv.selector import select_default_cv_variant
 
 # Import models so SQLAlchemy metadata is populated for readiness checks.
 from app.db import models  # noqa: F401
 from app.db.base import Base
+from app.pipeline.cv_source import CvSourceError, PipelineCvSourceLoader
 from app.secrets.openai_key import (
     OpenAISecretService,
     SecretStorageError,
@@ -75,7 +74,7 @@ class SetupStatusService:
             checks.append(self._check_sqlite_database(profile_paths))
             checks.append(self._check_llm_mode(loaded_config))
             checks.append(self._check_cv_source(loaded_config, profile_paths))
-            checks.append(self._check_fact_bank(profile_paths))
+            checks.append(self._check_fact_bank(loaded_config, profile_paths))
         else:
             checks.extend(
                 [
@@ -403,32 +402,40 @@ class SetupStatusService:
             )
 
         try:
-            select_default_cv_variant(
-                cv_dir=profile_paths.cv_dir,
-                default_variant=config.cv.default_variant,
-                available_variants=config.cv.variants,
-                is_example_profile=config.app.profile_name == "example",
-            )
-        except _EXPECTED_SETUP_EXCEPTIONS as exc:
+            metadata = PipelineCvSourceLoader(
+                config=config,
+                profile_paths=profile_paths,
+                app_data_paths=self._app_data_paths,
+            ).check_readiness(selected_variant=config.cv.default_variant)
+        except _EXPECTED_SETUP_EXCEPTIONS + (CvSourceError,) as exc:
             return SetupCheck(
                 code="cv_source",
                 label="CV source",
                 ok=False,
                 message=str(exc),
                 action_hint=(
-                    "Configure a default CV variant and ensure the Markdown variant "
-                    "file exists."
+                    "Import or repair the active managed CV/fact source, or use a "
+                    "valid file-based fallback when no managed CV variants exist."
                 ),
             )
 
+        if metadata.source_type == "managed":
+            message = "Managed CV/fact source is ready for the local pipeline."
+        else:
+            message = (
+                "Default CV variant is configured and readable; "
+                "file-based CV/fact fallback is ready for the local pipeline."
+            )
         return SetupCheck(
             code="cv_source",
             label="CV source",
             ok=True,
-            message="Default CV variant is configured and readable.",
+            message=message,
         )
 
-    def _check_fact_bank(self, profile_paths: ProfilePaths | None) -> SetupCheck:
+    def _check_fact_bank(
+        self, config: ProjectConfig, profile_paths: ProfilePaths | None
+    ) -> SetupCheck:
         if profile_paths is None:
             return _failed_dependency_check(
                 code="fact_bank",
@@ -437,21 +444,32 @@ class SetupStatusService:
             )
 
         try:
-            load_fact_bank(profile_paths.fact_bank)
-        except _EXPECTED_SETUP_EXCEPTIONS as exc:
+            metadata = PipelineCvSourceLoader(
+                config=config,
+                profile_paths=profile_paths,
+                app_data_paths=self._app_data_paths,
+            ).check_readiness(selected_variant=config.cv.default_variant)
+        except _EXPECTED_SETUP_EXCEPTIONS + (CvSourceError,) as exc:
             return SetupCheck(
                 code="fact_bank",
                 label="Fact bank",
                 ok=False,
                 message=str(exc),
-                action_hint="Create a valid fact_bank.yaml with at least one fact.",
+                action_hint=(
+                    "Ensure the selected pipeline source has at least one active "
+                    "verified fact."
+                ),
             )
 
+        if metadata.source_type == "managed":
+            message = "Active managed facts are available for the local pipeline."
+        else:
+            message = "File-based fact bank exists and validates."
         return SetupCheck(
             code="fact_bank",
             label="Fact bank",
             ok=True,
-            message="Fact bank exists and validates.",
+            message=message,
         )
 
 

@@ -37,8 +37,8 @@ Implemented today:
 - application events, warnings, and artefacts;
 - fake/demo LLM extraction mode by default;
 - optional OpenAI structured job extraction mode;
-- Markdown CV variant loading;
-- `fact_bank.yaml` validation;
+- managed CV/fact source loading for active managed profiles;
+- Markdown CV variant and `fact_bank.yaml` fallback/import compatibility;
 - safe fake CV tailoring based on verified facts;
 - Evidence Matrix and CV Match Report generation;
 - Markdown, HTML, PDF, and DOCX exporters;
@@ -54,8 +54,8 @@ The current release is still raw:
 
 - raw OpenAI API keys are stored through the OS keyring boundary and are never displayed;
 - settings not listed on `/settings` still use `.env` and `config.yaml`;
-- private CV data is still file-based;
-- CV variants and facts are not yet edited through the web UI;
+- private CV data should live outside the repository, either in connected file-based profile folders or app-managed storage;
+- imported managed CV variants and facts can be edited through the web UI;
 - the setup flow is not yet friendly for ordinary users;
 - OpenAI tailoring is not implemented yet;
 - URL scraping is not implemented yet;
@@ -193,9 +193,9 @@ README.txt
 
 The `app_settings` table stores non-secret settings metadata only, such as managed LLM mode, export toggles, human-approval preference, default file-based profile selection, and whether an OpenAI API key is configured. The app-managed `profiles` table stores connected file-based profile records and the active managed profile selection. Managed CV tables in the same app-level database provide the first storage model for variants, aliases, sections, blocks, facts, and block-fact links. Profile records contain metadata such as name, display name, type, data directory, and active status; they do not store raw secrets or application history. Raw API keys are not stored in SQLite; OpenAI mode prefers the OS keyring value and falls back to the runtime `OPENAI_API_KEY` environment variable for developer workflows. Existing `.env`, `PROFILE_NAME`, `PROFILE_DATA_DIR`, YAML config, YAML fact bank, and Markdown CV behaviour remains compatible.
 
-The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, Data Folder UI, managed profile selection, managed CV storage foundation, previewable import tools, and Managed CV editor are now implemented. This still does not implement automatic profile application database migration or pipeline migration to managed CV storage.
+The setup diagnostics, setup redirect, managed app settings storage, OS keyring-backed OpenAI secret storage, Settings UI, Data Folder UI, managed profile selection, managed CV storage foundation, previewable import tools, Managed CV editor, and managed CV/fact pipeline source loading are now implemented. This still does not implement automatic profile application database migration or release-polish flows.
 
-If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, the default CV variant, and the fact bank. Health checks and API documentation remain available while setup is incomplete.
+If the current local installation is incomplete, browser requests for the working app pages redirect to `/setup` instead of failing inside startup, database dependencies, CV loading, or LLM runtime validation. The setup page reports pass/fail checks for app data folders, app settings storage, profile config, the active file-based profile, profile SQLite database tables, LLM mode requirements, and the effective pipeline CV/fact source readiness. Health checks and API documentation remain available while setup is incomplete.
 
 The Settings page is available at:
 
@@ -228,7 +228,7 @@ The Import CV/Facts page is available at:
 /profiles/import
 ```
 
-It previews and then explicitly applies imports from the active managed file-based profile. Markdown CV variant files are copied into managed variants, sections, and single imported-content blocks; YAML fact-bank entries are copied into managed facts. Re-running the same import skips matching records, reports conflicts instead of overwriting them, rejects empty or ambiguous CV sources, writes only to `app_data_root/app.sqlite3`, does not mutate source Markdown/YAML files, and does not change the current pipeline source. Normal import UI errors use safe labels instead of absolute private profile paths. The local pipeline still reads file-based Markdown CV variants and YAML fact banks until a future explicit pipeline migration.
+It previews and then explicitly applies imports from the active managed file-based profile. Markdown CV variant files are copied into managed variants, sections, and single imported-content blocks; YAML fact-bank entries are copied into managed facts. Re-running the same import skips matching records, reports conflicts instead of overwriting them, rejects empty or ambiguous CV sources, writes only to `app_data_root/app.sqlite3`, and does not mutate source Markdown/YAML files. Normal import UI errors use safe labels instead of absolute private profile paths. After import, the local pipeline prefers valid managed CV/fact storage for the active managed profile and keeps Markdown/YAML as fallback/import/example compatibility.
 
 The Managed CV editor pages are available at:
 
@@ -237,7 +237,7 @@ The Managed CV editor pages are available at:
 /profiles/facts
 ```
 
-They let the active managed profile view imported managed CV variants, sections, and blocks; edit block Markdown, display order, enabled state, and selected fact links; list managed facts; create verified facts; and edit fact category, name, allowed claim level, evidence, and active state. The editor updates only app-managed imported CV/fact records in `app_data_root/app.sqlite3`; it does not mutate source Markdown CV files, source YAML fact-bank files, or profile-specific `applications.sqlite3`. Fact keys are required and unique on create, immutable on edit, and the UI states that facts must represent verified experience only. The current pipeline still uses file-based Markdown/YAML until the pipeline migration stage.
+They let the active managed profile view imported managed CV variants, sections, and blocks; edit block Markdown, display order, enabled state, and selected fact links; list managed facts; create verified facts; and edit fact category, name, allowed claim level, evidence, and active state. The editor updates only app-managed imported CV/fact records in `app_data_root/app.sqlite3`; it does not mutate source Markdown CV files, source YAML fact-bank files, or profile-specific `applications.sqlite3`. Fact keys are required and unique on create, immutable on edit, and the UI states that facts must represent verified experience only. Pipeline execution reads managed CV/fact records when a valid active managed source exists, but it does not mutate those records.
 
 ---
 
@@ -255,8 +255,8 @@ The current implementation uses:
 - Managed CV editor pages for editing imported app-managed CV blocks, facts, and block-fact links;
 - `.env` for developer fallback profile selection and `OPENAI_API_KEY` fallback when no active managed profile overrides profile selection;
 - `config.yaml` for private file-based profile settings that are not migrated yet;
-- `fact_bank.yaml` for verified user facts used by the current pipeline;
-- Markdown files under `cv/variants/` as current source CV variants;
+- `fact_bank.yaml` for verified user facts used by fallback/import/example flows;
+- Markdown files under `cv/variants/` as fallback/import/example CV variants;
 - profile-specific SQLite for applications, events, warnings, artefacts, and history.
 
 This is acceptable for the current developer release, but it is not the final product model.
@@ -267,7 +267,7 @@ Target direction:
 - let the user connect an existing application data folder;
 - let the user connect existing file-based profile folders as managed profile records;
 - expand application settings stored in SQLite where useful;
-- migrate the local pipeline to managed CV/fact storage when explicitly implemented;
+- keep the local pipeline managed-first while preserving file-based fallback compatibility;
 - keep generated artefacts as files on disk;
 - keep OpenAI API keys in the OS keyring, not directly in SQLite;
 - keep YAML/Markdown as import/export and compatibility formats.
@@ -292,7 +292,7 @@ Documents/
     └── README.txt
 ```
 
-The user can now connect this folder, connect existing file-based profiles, import Markdown/YAML CV data into managed storage, and edit imported managed CV blocks and facts from the application UI. Pipeline migration and automatic profile application database migration are still future work.
+The user can now connect this folder, connect existing file-based profiles, import Markdown/YAML CV data into managed storage, edit imported managed CV blocks and facts from the application UI, and run the local pipeline from managed CV/fact storage when the active managed source is valid. Automatic profile application database migration is still future work.
 
 Rationale:
 
@@ -335,14 +335,12 @@ Choose or create data folder
 
 ## CV Data Direction
 
-The current source CV model is file-based:
+The local pipeline source precedence is now:
 
-```text
-cv/variants/backend_developer.md
-cv/fact_bank.yaml
-```
+1. valid app-managed CV variants and managed facts for the active managed profile;
+2. file-based Markdown CV variants and YAML fact banks when no managed source exists yet.
 
-The target model is managed and block-based:
+The managed model is block-based:
 
 ```text
 Profile
@@ -586,7 +584,7 @@ Implemented app-level storage foundation in `app_data_root/app.sqlite3`:
 - facts;
 - fact links.
 
-The current pipeline still reads Markdown CV variants and YAML fact banks until a future explicit migration.
+The current pipeline prefers managed CV variants and managed facts for the active managed profile when the selected active variant (or alias), required sections, enabled blocks, and at least one active fact are valid. Markdown CV variants and YAML fact banks remain fallback/import/example compatibility and are still used when no active managed profile exists or when the active managed profile has no managed CV variants yet.
 
 ### 5. Import tools
 
@@ -596,7 +594,7 @@ Implemented safe import tools for the active managed file-based profile:
 - import existing YAML fact-bank data into managed facts;
 - preview and approve imports before writing managed records;
 - skip matching records on repeated imports and block conflicting records;
-- preserve source Markdown/YAML files and keep the pipeline file-based for now.
+- preserve source Markdown/YAML files and let the pipeline prefer valid managed CV/fact data after import.
 
 ### 6. CV and fact editor UI
 
@@ -608,8 +606,10 @@ Implemented safe import tools for the active managed file-based profile:
 
 ### 7. Pipeline migration to managed CV/facts
 
-- read verified facts from managed storage;
-- generate tailored CV artefacts from managed CV data;
+Implemented:
+
+- read active verified facts from managed storage when a valid active managed source exists;
+- generate tailored CV artefacts from composed managed CV Markdown;
 - preserve the rule that no verified fact means no strengthened CV claim.
 
 ### 8. Release polish

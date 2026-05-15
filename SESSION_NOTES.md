@@ -13,7 +13,7 @@ Read first:
 
 Move the project from file-based profile configuration to a managed local application setup.
 
-The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, Markdown CV variants, YAML fact-bank validation, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, a Data Folder UI for connecting the app data root safely, managed profile records for selecting existing file-based profile folders, the app-managed CV storage model, previewable Markdown/YAML import tools, and simple managed CV/fact editor pages.
+The current app remains a local FastAPI/Jinja2 web application with manual intake, SQLite/Alembic persistence, fake/demo extraction, optional OpenAI extraction, managed CV/fact pipeline loading with Markdown/YAML fallback, safe fake tailoring, reports, exporters, review pages, safe artefact downloads, app data bootstrap, setup diagnostics, managed settings storage, a Settings UI for supported non-secret app settings plus OS keyring-backed OpenAI API key management, a Data Folder UI for connecting the app data root safely, managed profile records for selecting existing file-based profile folders, the app-managed CV storage model, previewable Markdown/YAML import tools, and simple managed CV/fact editor pages.
 
 ---
 
@@ -126,24 +126,50 @@ Remaining risks:
 - managed block-fact links are captured for future claim integrity, but the active pipeline does not consume them yet;
 - safe repair guidance for missing app settings storage remains minimal.
 
-## Next Implementation Plan
-
 ### PR 11 — Pipeline migration
 
-Goal:
-Move the local CV tailoring pipeline from file-based Markdown CV variants and YAML fact banks to managed CV/fact storage after the editor has populated reviewed data.
+Completed managed CV/fact pipeline source migration:
+
+- added a testable pipeline CV source loader that resolves the selected CV variant and facts from app-managed storage when a valid active managed profile source exists;
+- composed managed Markdown from active variants, deterministic sections, and enabled blocks while preserving the required section marker contract used by `parse_cv_sections()`;
+- converted active managed facts into the existing `FactBank` model using `fact_key` as the stable pipeline/report fact id;
+- validated selected managed sources clearly: missing selected variants, missing required sections, required sections without enabled content, no active facts, and inactive or stale block-fact links fail without silent file fallback;
+- preserved deterministic file-based Markdown/YAML fallback when no active managed profile exists or the active managed profile has no managed CV variants yet;
+- updated `LocalApplicationPipelineService` to consume the new source loader and emit `pipeline_cv_source_loaded` events;
+- aligned setup diagnostics with effective pipeline source readiness;
+- preserved source records: pipeline execution does not mutate managed CV/fact storage, source Markdown/YAML files, or profile `applications.sqlite3`.
+
+Non-goals preserved:
+
+- no PR 12 release polish;
+- no backup/export profile flow;
+- no automatic profile application database migration;
+- no destructive deletion of managed CV/fact records;
+- no real OpenAI tailoring;
+- no URL scraping, auto-apply, LinkedIn automation, email sending, cloud deployment, auth, payments, or LangGraph.
+
+Remaining risks:
+
+- managed block-fact links are validated for profile/active-fact integrity, but full block-level claim filtering is intentionally deferred;
+- imported CV sections may still be coarse `imported_content` blocks until a later refinement;
+- setup repair guidance remains text-based and does not yet provide one-click repair flows.
+
+## Next Implementation Plan
+
+### PR 12 — Release polish
 
 Recommended scope:
-- load selected managed CV variants, sections, enabled blocks, managed facts, and block-fact links for the active managed profile;
-- preserve claim integrity: no verified fact means no strengthened CV claim;
-- keep Markdown/YAML compatibility for import/export and fallback until explicitly retired;
-- avoid automatic profile application database migration.
+
+- improve user-facing setup and repair guidance for managed CV/fact readiness failures;
+- harden release smoke tests and final review/export user flows;
+- polish documentation and release checklist without changing the pipeline source architecture;
+- preserve managed-first pipeline source precedence and file-based fallback compatibility.
 
 ## Key Decisions
 
 - Default app data folder should be visible and user-owned: `Documents/JobApplicationAssistant/`.
 - Users can connect an existing app data folder through `/data-folder`; `APP_DATA_DIR` remains the highest-priority developer override.
-- Supported app settings, managed profile records, managed CV records, import tools, and editor workflows already live in SQLite; future work should focus on pipeline migration and guided repair.
+- Supported app settings, managed profile records, managed CV records, import tools, editor workflows, and managed-first pipeline loading already live in SQLite; future work should focus on release polish and guided repair.
 - YAML should remain as example/import/export/fallback only, not the main UI-facing settings store.
 - OpenAI API key uses OS keyring as the preferred storage backend, with `OPENAI_API_KEY` retained as a developer fallback.
 - SQLite may store secret metadata only, not the raw API key.
