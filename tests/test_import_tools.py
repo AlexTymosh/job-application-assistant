@@ -34,7 +34,14 @@ def _write_profile(
     fact_bank_content: str | None = None,
 ) -> Path:
     (path / "cv" / "variants").mkdir(parents=True)
-    (path / "config.yaml").write_text(
+    config_filename = "config.example.yaml" if name == "example" else "config.yaml"
+    fact_bank_filename = (
+        "fact_bank.example.yaml" if name == "example" else "fact_bank.yaml"
+    )
+    cv_filename = (
+        "backend_developer.example.md" if name == "example" else "backend_developer.md"
+    )
+    (path / config_filename).write_text(
         f"""
 app:
   profile_name: {name}
@@ -54,7 +61,7 @@ future_integrations: {{}}
         + "\n",
         encoding="utf-8",
     )
-    (path / "cv" / "fact_bank.yaml").write_text(
+    (path / "cv" / fact_bank_filename).write_text(
         fact_bank_content
         or """
 facts:
@@ -66,7 +73,7 @@ facts:
 """.lstrip(),
         encoding="utf-8",
     )
-    (path / "cv" / "variants" / "backend_developer.md").write_text(
+    (path / "cv" / "variants" / cv_filename).write_text(
         cv_content or _valid_cv_content("Imported"),
         encoding="utf-8",
     )
@@ -81,10 +88,11 @@ def _create_active_profile(
     profile_dir: Path,
     *,
     profile_id: str = "profile-1",
+    name: str = "alex",
 ) -> None:
     repository.create_profile(
         profile_id=profile_id,
-        name="alex",
+        name=name,
         display_name="Alex",
         profile_type=ManagedProfileType.FILE_BASED,
         data_dir=profile_dir,
@@ -260,12 +268,89 @@ def test_malformed_fact_bank_yaml_raises_clear_error_without_partial_writes(
     )
     _create_active_profile(ManagedProfileRepository(session_factory), profile_dir)
 
-    with pytest.raises(ImportToolsError, match="Import source could not be loaded"):
+    with pytest.raises(
+        ImportToolsError, match="Import source could not be loaded"
+    ) as exc_info:
+        ManagedCvImportService(session_factory).apply_import()
+
+    assert str(profile_dir) not in str(exc_info.value)
+    assert _table_count(database_file, "cv_variants") == 0
+    assert _table_count(database_file, "cv_sections") == 0
+    assert _table_count(database_file, "cv_blocks") == 0
+    assert _table_count(database_file, "facts") == 0
+
+
+def test_empty_marked_cv_section_raises_clear_error_without_partial_writes(
+    tmp_path: Path,
+) -> None:
+    session_factory, database_file = _session_factory(tmp_path)
+    profile_dir = _write_profile(
+        tmp_path / "private" / "alex",
+        cv_content=_valid_cv_content("Imported").replace(
+            "Backend-focused software developer.", "   "
+        ),
+    )
+    _create_active_profile(ManagedProfileRepository(session_factory), profile_dir)
+
+    with pytest.raises(ImportToolsError, match="empty required section"):
         ManagedCvImportService(session_factory).apply_import()
 
     assert _table_count(database_file, "cv_variants") == 0
     assert _table_count(database_file, "cv_sections") == 0
     assert _table_count(database_file, "cv_blocks") == 0
+    assert _table_count(database_file, "facts") == 0
+
+
+def test_non_example_profile_rejects_colliding_example_variant_without_writes(
+    tmp_path: Path,
+) -> None:
+    session_factory, database_file = _session_factory(tmp_path)
+    profile_dir = _write_profile(tmp_path / "private" / "alex")
+    (profile_dir / "cv" / "variants" / "backend_developer.example.md").write_text(
+        _valid_cv_content("Stale Example"), encoding="utf-8"
+    )
+    _create_active_profile(ManagedProfileRepository(session_factory), profile_dir)
+
+    with pytest.raises(ImportToolsError, match="Ambiguous CV variant source files"):
+        ManagedCvImportService(session_factory).apply_import()
+
+    assert _table_count(database_file, "cv_variants") == 0
+    assert _table_count(database_file, "facts") == 0
+
+
+def test_example_profile_imports_example_markdown_variant(tmp_path: Path) -> None:
+    session_factory, _database_file = _session_factory(tmp_path)
+    profile_dir = _write_profile(tmp_path / "private" / "example", name="example")
+    (profile_dir / "cv" / "variants" / "backend_developer.md").write_text(
+        "This non-example file must be ignored for the example profile.",
+        encoding="utf-8",
+    )
+    _create_active_profile(
+        ManagedProfileRepository(session_factory), profile_dir, name="example"
+    )
+
+    result = ManagedCvImportService(session_factory).apply_import()
+
+    variants = ManagedCvRepository(session_factory).list_cv_variants("profile-1")
+    assert result.created_variants == 1
+    assert variants[0].name == "backend_developer"
+
+
+def test_configured_example_only_variant_for_non_example_profile_is_rejected(
+    tmp_path: Path,
+) -> None:
+    session_factory, database_file = _session_factory(tmp_path)
+    profile_dir = _write_profile(tmp_path / "private" / "alex")
+    (profile_dir / "cv" / "variants" / "backend_developer.md").unlink()
+    (profile_dir / "cv" / "variants" / "backend_developer.example.md").write_text(
+        _valid_cv_content("Stale Example"), encoding="utf-8"
+    )
+    _create_active_profile(ManagedProfileRepository(session_factory), profile_dir)
+
+    with pytest.raises(ImportToolsError, match="example-only source files"):
+        ManagedCvImportService(session_factory).apply_import()
+
+    assert _table_count(database_file, "cv_variants") == 0
     assert _table_count(database_file, "facts") == 0
 
 

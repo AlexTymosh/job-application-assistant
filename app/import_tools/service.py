@@ -67,7 +67,10 @@ class ManagedCvImportService:
             loaded_variants = load_markdown_variants(profile.data_dir, config)
             loaded_facts = load_planned_facts(profile.name, profile.data_dir)
         except _EXPECTED_IMPORT_EXCEPTIONS as exc:
-            raise ImportToolsError(f"Import source could not be loaded: {exc}") from exc
+            message = _safe_exception_message(exc, profile.data_dir)
+            raise ImportToolsError(
+                f"Import source could not be loaded: {message}"
+            ) from exc
 
         planned_variants = [
             planned_variant_from_loaded(variant) for variant in loaded_variants
@@ -211,15 +214,20 @@ class ManagedCvImportService:
         try:
             validation = self._profile_service.validate_profile(profile)
         except ManagedProfileError as exc:
-            raise ImportToolsError(str(exc)) from exc
+            raise ImportToolsError(
+                _safe_exception_message(exc, profile.data_dir)
+            ) from exc
         if not validation.ok:
-            raise ImportToolsError(validation.message)
+            raise ImportToolsError(
+                _safe_error_text(validation.message, profile.data_dir)
+            )
         config_file = profile.data_dir / _config_filename(profile.name)
         try:
             return load_profile_config(config_file)
         except _EXPECTED_IMPORT_EXCEPTIONS as exc:
+            message = _safe_exception_message(exc, profile.data_dir)
             raise ImportToolsError(
-                f"Profile config could not be loaded: {exc}"
+                f"Profile config could not be loaded: {message}"
             ) from exc
 
     def _classify_variant(
@@ -438,6 +446,27 @@ def _count_action(totals: dict[str, int], prefix: str, action: ImportAction) -> 
 
 def _safe_profile_path_label(path: Path) -> str:
     return path.name or "connected profile folder"
+
+
+def _safe_exception_message(exc: BaseException, private_root: Path) -> str:
+    message = str(exc).strip() or exc.__class__.__name__
+    return _safe_error_text(message, private_root)
+
+
+def _safe_error_text(message: str, private_root: Path) -> str:
+    safe_message = message
+    private_path_labels = {str(private_root), private_root.as_posix()}
+    try:
+        resolved_root = private_root.resolve()
+    except OSError:
+        resolved_root = private_root
+    private_path_labels.update({str(resolved_root), resolved_root.as_posix()})
+    for private_path_label in sorted(private_path_labels, key=len, reverse=True):
+        if private_path_label:
+            safe_message = safe_message.replace(
+                private_path_label, "connected profile folder"
+            )
+    return safe_message
 
 
 def _config_filename(profile_name: str) -> str:

@@ -84,7 +84,7 @@ Completed safe import tools for existing active managed file-based profiles:
 - `/profiles/import` renders a simple preview/apply UI;
 - Markdown CV variants are loaded with existing Markdown and section parsers, then imported into managed variants, sections, and one deterministic `imported_content` block per section;
 - YAML fact banks are loaded with the existing fact-bank validator, then imported into managed facts;
-- previews perform no writes, report planned creates/skips/conflicts, avoid showing unnecessary absolute paths in the normal UI, and block apply when conflicts exist;
+- previews perform no writes, report planned creates/skips/conflicts, avoid showing unnecessary absolute paths in the normal UI, reject empty or ambiguous CV sources, and block apply when conflicts exist;
 - apply uses one SQLAlchemy transaction, is idempotent for matching records, does not overwrite conflicts, and writes only to `app_data_root/app.sqlite3`;
 - source Markdown/YAML files, profile `applications.sqlite3`, current file-based pipeline loading, and block-fact links remain unchanged.
 

@@ -228,7 +228,7 @@ The Import CV/Facts page is available at:
 /profiles/import
 ```
 
-It previews and then explicitly applies imports from the active managed file-based profile. Markdown CV variant files are copied into managed variants, sections, and single imported-content blocks; YAML fact-bank entries are copied into managed facts. Re-running the same import skips matching records, reports conflicts instead of overwriting them, writes only to `app_data_root/app.sqlite3`, does not mutate source Markdown/YAML files, and does not change the current pipeline source. The local pipeline still reads file-based Markdown CV variants and YAML fact banks until a future explicit pipeline migration.
+It previews and then explicitly applies imports from the active managed file-based profile. Markdown CV variant files are copied into managed variants, sections, and single imported-content blocks; YAML fact-bank entries are copied into managed facts. Re-running the same import skips matching records, reports conflicts instead of overwriting them, rejects empty or ambiguous CV sources, writes only to `app_data_root/app.sqlite3`, does not mutate source Markdown/YAML files, and does not change the current pipeline source. Normal import UI errors use safe labels instead of absolute private profile paths. The local pipeline still reads file-based Markdown CV variants and YAML fact banks until a future explicit pipeline migration.
 
 ---
 

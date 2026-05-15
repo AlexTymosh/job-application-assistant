@@ -187,6 +187,25 @@ def test_preview_route_renders_malformed_fact_bank_yaml_error(
     assert response.status_code == 200
     assert "Import cannot continue" in response.text
     assert "Import source could not be loaded" in response.text
+    assert str(profile_dir) not in response.text
+    assert "Traceback" not in response.text
+
+
+def test_preview_route_sanitises_private_path_from_profile_config_error(
+    monkeypatch, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    _patch_user_locations(monkeypatch, tmp_path)
+    profile_dir = tmp_path / "private" / "alex"
+    _write_profile(profile_dir)
+    client = _client()
+    _connect_active_profile(client, profile_dir)
+    (profile_dir / "config.yaml").write_text("app: [unterminated\n", encoding="utf-8")
+
+    response = client.post("/profiles/import/preview")
+
+    assert response.status_code == 200
+    assert "Import cannot continue" in response.text
+    assert str(profile_dir) not in response.text
     assert "Traceback" not in response.text
 
 
