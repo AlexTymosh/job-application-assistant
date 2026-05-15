@@ -45,6 +45,10 @@ class DuplicateBlockFactLinkError(ManagedCvStorageError):
     pass
 
 
+class CrossProfileFactLinkError(ManagedCvStorageError):
+    pass
+
+
 class RelatedManagedCvRecordNotFoundError(ManagedCvStorageError):
     pass
 
@@ -252,8 +256,9 @@ class ManagedCvRepository:
     ) -> ManagedCvBlockFactLinkRecord:
         record = ManagedCvBlockFactLinkRecord(block_id=block_id, fact_id=fact_id)
         with self._session_factory() as session:
-            _require_row(session, ManagedCvBlock, block_id, "CV block")
-            _require_row(session, ManagedFact, fact_id, "Fact")
+            block = _require_row(session, ManagedCvBlock, block_id, "CV block")
+            fact = _require_row(session, ManagedFact, fact_id, "Fact")
+            _validate_block_and_fact_share_profile(session, block, fact)
             row = ManagedCvBlockFactLink(**record.model_dump())
             session.add(row)
             try:
@@ -281,11 +286,23 @@ def _new_id() -> str:
     return str(uuid4())
 
 
-def _require_row(session: Session, model: type, row_id: str, label: str) -> object:
+def _require_row[T](session: Session, model: type[T], row_id: str, label: str) -> T:
     row = session.get(model, row_id)
     if row is None:
         raise RelatedManagedCvRecordNotFoundError(f"{label} {row_id!r} was not found.")
     return row
+
+
+def _validate_block_and_fact_share_profile(
+    session: Session, block: ManagedCvBlock, fact: ManagedFact
+) -> None:
+    section = _require_row(session, ManagedCvSection, block.section_id, "CV section")
+    variant = _require_row(session, ManagedCvVariant, section.variant_id, "CV variant")
+    if variant.profile_id != fact.profile_id:
+        raise CrossProfileFactLinkError(
+            "CV block and fact belong to different managed profiles: "
+            f"block profile {variant.profile_id!r}, fact profile {fact.profile_id!r}."
+        )
 
 
 def _raise_variant_create_error(

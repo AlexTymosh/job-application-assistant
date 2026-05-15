@@ -11,6 +11,7 @@ from app.db.base import Base
 from app.db.session import create_all_tables, create_sqlite_engine
 from app.managed_cv import models as managed_cv_models
 from app.managed_cv.repository import (
+    CrossProfileFactLinkError,
     DuplicateBlockFactLinkError,
     DuplicateCvVariantAliasError,
     DuplicateCvVariantNameError,
@@ -386,6 +387,37 @@ def test_link_block_to_fact_and_reject_duplicate_link(
     assert cv_repository.list_block_fact_links(block.id)[0].fact_id == fact.id
     with pytest.raises(DuplicateBlockFactLinkError):
         cv_repository.link_block_to_fact(block_id=block.id, fact_id=fact.id)
+
+
+def test_cross_profile_block_fact_link_is_rejected(
+    repository: tuple[ManagedCvRepository, ManagedProfileRepository],
+) -> None:
+    cv_repository, profile_repository = repository
+    profile_a_id = create_profile(profile_repository, "profile-a")
+    profile_b_id = create_profile(profile_repository, "profile-b")
+    variant = cv_repository.create_cv_variant(profile_id=profile_a_id, name="backend")
+    section = cv_repository.create_cv_section(
+        variant_id=variant.id, section_key="summary", title="Summary", display_order=0
+    )
+    block = cv_repository.create_cv_block(
+        section_id=section.id,
+        block_key="intro",
+        content_markdown="Intro block",
+        display_order=0,
+    )
+    fact = cv_repository.create_fact(
+        profile_id=profile_b_id,
+        fact_key="python",
+        category=FactCategory.SKILL,
+        name="Python",
+        allowed_claim_level=AllowedClaimLevel.STRONG,
+        evidence="Used Python in fake example projects.",
+    )
+
+    with pytest.raises(CrossProfileFactLinkError):
+        cv_repository.link_block_to_fact(block_id=block.id, fact_id=fact.id)
+
+    assert cv_repository.list_block_fact_links(block.id) == []
 
 
 def test_deleting_managed_profile_cascades_managed_cv_records(
