@@ -251,6 +251,8 @@ Expected generated CV artefacts:
 
 If human approval is enabled, final PDF/DOCX generation must respect the approval flow.
 
+When human approval is enabled, final PDF/DOCX exports must be generated only through an explicit approval action after review artefacts exist. The action must not export `qa_warning` applications automatically and must not create duplicate final artefact records on repeated submissions.
+
 ---
 
 ## 11. Database and Migrations

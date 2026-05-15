@@ -166,6 +166,12 @@ Recommended scope:
 - polish documentation and release checklist without changing the pipeline source architecture;
 - preserve managed-first pipeline source precedence and file-based fallback compatibility.
 
+Release polish progress:
+- Added explicit human approval final export action for applications waiting for approval.
+- The action generates PDF/DOCX final artefacts from the persisted Markdown review artefact.
+- QA warning applications are blocked from final export until reviewed.
+- Repeated approval/export attempts do not duplicate final artefact records.
+
 ## Key Decisions
 
 - Default app data folder should be visible and user-owned: `Documents/JobApplicationAssistant/`.

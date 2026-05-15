@@ -469,10 +469,13 @@ If human approval is enabled:
 
 ```text
 Run local pipeline
-→ generate review artefacts
+→ generate Markdown/HTML review artefacts
 → show warnings and reports
-→ wait for approval
-→ generate PDF/DOCX after approval
+→ approve on the review page
+→ generate PDF/DOCX final exports
+→ download final documents
+
+When human approval is enabled, the review page exposes an explicit approval action only for applications in `awaiting_approval` state without warnings. Applications in `qa_warning` state must be reviewed first and are not exported automatically.
 ```
 
 If human approval is disabled:
