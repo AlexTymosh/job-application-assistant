@@ -75,6 +75,17 @@ class PipelineCvSourceLoader:
     def check_readiness(self, *, selected_variant: str) -> CvSourceMetadata:
         return self.load(selected_variant=selected_variant).metadata
 
+    def _active_profile_matches_runtime(
+        self,
+        active_profile: ManagedProfileRecord,
+    ) -> bool:
+        if active_profile.name != self._config.app.profile_name:
+            return False
+
+        return _normalise_path(active_profile.data_dir) == _normalise_path(
+            self._profile_paths.profile_dir
+        )
+
     def _managed_context(self) -> _ManagedContext | None:
         if self._app_data_paths is None:
             return None
@@ -85,9 +96,27 @@ class PipelineCvSourceLoader:
         if active_profile is None:
             return None
 
+        if not self._active_profile_matches_runtime(active_profile):
+            raise CvSourceError(
+                "The active managed profile does not match the current runtime "
+                "profile. Select the matching active profile or update the runtime "
+                "profile settings before running the local pipeline."
+            )
+
         return _ManagedContext(
             active_profile=active_profile,
             repository=ManagedCvRepository(session_factory),
+        )
+
+    def _active_profile_matches_runtime(
+        self,
+        active_profile: ManagedProfileRecord,
+    ) -> bool:
+        if active_profile.name != self._config.app.profile_name:
+            return False
+
+        return _normalise_path(active_profile.data_dir) == _normalise_path(
+            self._profile_paths.profile_dir
         )
 
     def _load_managed_if_available(
@@ -288,6 +317,10 @@ def _clean_selected_variant(selected_variant: str) -> str:
     if not cleaned:
         raise CvSourceError("Selected CV variant must not be empty.")
     return cleaned
+
+
+def _normalise_path(path: Path) -> Path:
+    return path.expanduser().resolve(strict=False)
 
 
 def _managed_fact_to_fact(fact: ManagedFactRecord) -> Fact:

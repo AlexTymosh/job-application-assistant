@@ -133,6 +133,7 @@ Completed managed CV/fact pipeline source migration:
 - added a testable pipeline CV source loader that resolves the selected CV variant and facts from app-managed storage when a valid active managed profile source exists;
 - composed managed Markdown from active variants, deterministic sections, and enabled blocks while preserving the required section marker contract used by `parse_cv_sections()`;
 - converted active managed facts into the existing `FactBank` model using `fact_key` as the stable pipeline/report fact id;
+- added an active managed profile identity guard so the pipeline cannot combine one profile's application database with another profile's managed CV/fact records;
 - validated selected managed sources clearly: missing selected variants, missing required sections, required sections without enabled content, no active facts, and inactive or stale block-fact links fail without silent file fallback;
 - preserved deterministic file-based Markdown/YAML fallback when no active managed profile exists or the active managed profile has no managed CV variants yet;
 - updated `LocalApplicationPipelineService` to consume the new source loader and emit `pipeline_cv_source_loaded` events;

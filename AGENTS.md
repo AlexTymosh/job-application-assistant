@@ -158,6 +158,7 @@ Managed profiles live in `app_data_root/app.sqlite3`. Profile application histor
 Effective config loading must revalidate active managed profile identity before using it, not only during connect or activate actions.
 
 Managed CV storage lives in the app-level settings database, `app_data_root/app.sqlite3`, through `app/managed_cv/` models that inherit from `app.settings.base.SettingsBase`. Managed CV tables must not be added to `app.db.base.Base` and must not be created in profile-specific `applications.sqlite3` databases. The local pipeline now prefers managed CV/fact storage when a valid active managed profile source exists for the selected variant. Markdown CV variants and YAML fact banks remain compatibility fallback, import, example, and developer-flow formats until explicitly retired.
+The pipeline source loader must validate that the active managed profile identity matches the current runtime ProjectConfig and ProfilePaths before using managed CV/fact records.
 
 Managed CV import tools must be previewable and idempotent. They may copy existing Markdown CV variants and YAML fact-bank records into `app_data_root/app.sqlite3`, but must not mutate source Markdown/YAML files, must not call OpenAI, must not write managed CV data to profile-specific `applications.sqlite3`, and must not silently overwrite conflicting managed records.
 

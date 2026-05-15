@@ -322,3 +322,57 @@ def test_managed_source_selects_active_variant_by_alias(tmp_path: Path) -> None:
 
     assert source.metadata.source_type == "managed"
     assert source.metadata.variant_name == "managed_backend"
+
+
+def test_active_managed_profile_name_mismatch_is_rejected(
+    tmp_path: Path,
+) -> None:
+    paths = _app_data_paths(tmp_path)
+    config, profile_dir = _file_config(tmp_path)
+    profile_repository, cv_repository = _settings_repositories(paths)
+
+    profile_repository.create_profile(
+        profile_id="profile-other",
+        name="other",
+        display_name="Other",
+        profile_type=ManagedProfileType.FILE_BASED,
+        data_dir=profile_dir,
+        is_active=True,
+    )
+    _managed_variant(cv_repository, "profile-other")
+    _managed_fact(cv_repository, "profile-other")
+
+    with pytest.raises(CvSourceError, match="active managed profile does not match"):
+        PipelineCvSourceLoader(
+            config=config,
+            profile_paths=build_profile_paths(config),
+            app_data_paths=paths,
+        ).load(selected_variant="backend_developer")
+
+
+def test_active_managed_profile_data_dir_mismatch_is_rejected(
+    tmp_path: Path,
+) -> None:
+    paths = _app_data_paths(tmp_path)
+    config, profile_dir = _file_config(tmp_path)
+    other_profile_dir = tmp_path / "other-profile"
+    other_profile_dir.mkdir()
+
+    profile_repository, cv_repository = _settings_repositories(paths)
+    profile_repository.create_profile(
+        profile_id="profile-other-dir",
+        name="example",
+        display_name="Example with wrong dir",
+        profile_type=ManagedProfileType.FILE_BASED,
+        data_dir=other_profile_dir,
+        is_active=True,
+    )
+    _managed_variant(cv_repository, "profile-other-dir")
+    _managed_fact(cv_repository, "profile-other-dir")
+
+    with pytest.raises(CvSourceError, match="active managed profile does not match"):
+        PipelineCvSourceLoader(
+            config=config,
+            profile_paths=build_profile_paths(config),
+            app_data_paths=paths,
+        ).load(selected_variant="backend_developer")
