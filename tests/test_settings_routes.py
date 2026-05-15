@@ -6,7 +6,8 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.core.config import ProjectConfig, load_profile_config
-from app.db.session import create_all_tables
+from app.db import models as _db_models  # noqa: F401
+from app.db.session import create_all_tables, create_sqlite_engine
 from app.main import create_app
 from app.secrets.openai_key import OpenAISecretService
 from app.settings.schema import (
@@ -43,6 +44,25 @@ def _build_secret_service() -> OpenAISecretService:
 def _copy_example_profile(tmp_path: Path) -> Path:
     profile_dir = tmp_path / "example"
     shutil.copytree(Path("profiles/example"), profile_dir)
+
+    config_file = profile_dir / "config.example.yaml"
+    config_file.write_text(
+        config_file.read_text(encoding="utf-8").replace(
+            'data_dir: "profiles/example"',
+            f'data_dir: "{profile_dir.as_posix()}"',
+        ),
+        encoding="utf-8",
+    )
+
+    database_file = profile_dir / "applications.sqlite3"
+    database_file.unlink(missing_ok=True)
+
+    engine = create_sqlite_engine(database_file)
+    try:
+        create_all_tables(engine)
+    finally:
+        engine.dispose()
+
     return profile_dir
 
 

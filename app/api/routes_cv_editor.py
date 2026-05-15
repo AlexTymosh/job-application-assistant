@@ -11,6 +11,7 @@ from app.managed_cv.editor_service import (
     FACT_CATEGORY_OPTIONS,
     ManagedCvEditorError,
     ManagedCvEditorService,
+    ManagedCvFactsState,
     build_managed_cv_editor_service,
 )
 from app.managed_cv.form_models import (
@@ -98,19 +99,27 @@ async def facts(request: Request) -> HTMLResponse:
         state = _editor_service(request).load_facts()
     except ManagedCvEditorError as exc:
         return _render_storage_error(request, str(exc), status.HTTP_400_BAD_REQUEST)
-    return templates.TemplateResponse(
-        request=request,
-        name="facts.html",
-        context={
-            "project_name": "Local Job Application Assistant",
-            "state": state,
-        },
+    return _render_facts_page(
+        request,
+        state=state,
         status_code=status.HTTP_200_OK,
     )
 
 
 @router.get("/profiles/facts/new", response_class=HTMLResponse)
 async def new_fact(request: Request) -> HTMLResponse:
+    try:
+        state = _editor_service(request).load_facts()
+    except ManagedCvEditorError as exc:
+        return _render_storage_error(request, str(exc), status.HTTP_400_BAD_REQUEST)
+
+    if state.active_profile is None:
+        return _render_facts_page(
+            request,
+            state=state,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     return _render_fact_form(
         request,
         mode="create",
@@ -121,6 +130,18 @@ async def new_fact(request: Request) -> HTMLResponse:
 
 @router.post("/profiles/facts", response_class=HTMLResponse)
 async def create_fact(request: Request) -> Response:
+    try:
+        state = _editor_service(request).load_facts()
+    except ManagedCvEditorError as exc:
+        return _render_storage_error(request, str(exc), status.HTTP_400_BAD_REQUEST)
+
+    if state.active_profile is None:
+        return _render_facts_page(
+            request,
+            state=state,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     form_values = await _read_urlencoded_form(request)
     try:
         form = parse_fact_create_form(form_values)
@@ -224,6 +245,23 @@ def _render_block_form(
             "success_message": "Block saved."
             if request.query_params.get("success")
             else None,
+        },
+        status_code=status_code,
+    )
+
+
+def _render_facts_page(
+    request: Request,
+    *,
+    state: ManagedCvFactsState,
+    status_code: int,
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="facts.html",
+        context={
+            "project_name": "Local Job Application Assistant",
+            "state": state,
         },
         status_code=status_code,
     )
