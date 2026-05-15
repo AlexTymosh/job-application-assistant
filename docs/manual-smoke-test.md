@@ -10,7 +10,7 @@ The test starts from the fake example profile, then explicitly verifies the mana
 cd C:\path\to\job-application-assistant
 ```
 
-## 2. Select the fake example profile
+## 2. Select the fake example profile for initial app startup
 
 ```powershell
 $env:PROFILE_NAME = "example"
@@ -27,7 +27,7 @@ uv sync --locked --group dev
 
 If this fails because dependency download is blocked, complete the smoke test later in an environment with package index access.
 
-## 4. Apply database migrations
+## 4. Apply database migrations for the committed fake profile
 
 ```powershell
 uv run --env-file .env -- alembic upgrade head
@@ -74,61 +74,58 @@ $smokeProfile = Join-Path $smokeRoot "example"
 Remove-Item $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $smokeProfile | Out-Null
 
-Copy-Item .\profiles\example\config.example.yaml (Join-Path $smokeProfile "config.yaml")
-Copy-Item .\profiles\example\blacklist.example.txt (Join-Path $smokeProfile "blacklist.txt")
+Copy-Item .\profiles\example\config.example.yaml (Join-Path $smokeProfile "config.example.yaml")
+Copy-Item .\profiles\example\blacklist.example.txt (Join-Path $smokeProfile "blacklist.example.txt")
 
 New-Item -ItemType Directory -Force -Path (Join-Path $smokeProfile "cv") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $smokeProfile "cv\variants") | Out-Null
 
-Copy-Item .\profiles\example\cv\fact_bank.example.yaml (Join-Path $smokeProfile "cv\fact_bank.yaml")
-Copy-Item .\profiles\example\cv\variants\backend_developer.example.md (Join-Path $smokeProfile "cv\variants\backend_developer.md")
+Copy-Item .\profiles\example\cv\fact_bank.example.yaml (Join-Path $smokeProfile "cv\fact_bank.example.yaml")
+Copy-Item .\profiles\example\cv\variants\backend_developer.example.md (Join-Path $smokeProfile "cv\variants\backend_developer.example.md")
 ```
 
 Update the copied config so it points to the external smoke profile folder:
-```
-$configPath = Join-Path $smokeProfile "config.yaml"
-$config = Get-Content $configPath -Raw
-$config = $config -replace "profile_name: example", "profile_name: example"
-$config = $config -replace "data_dir: profiles/example", "data_dir: $($smokeProfile -replace '\\', '/')"
-Set-Content -Path $configPath -Value $config -Encoding UTF8
 
+```powershell
+$configPath = Join-Path $smokeProfile "config.example.yaml"
+$smokeProfileForYaml = $smokeProfile -replace "\\", "/"
+
+$config = Get-Content $configPath
+$config = $config | ForEach-Object {
+    if ($_ -match "^\s*data_dir:") {
+        "  data_dir: `"$smokeProfileForYaml`""
+    } else {
+        $_
+    }
+}
+Set-Content -Path $configPath -Value $config -Encoding UTF8
 ```
+
 Apply profile database migrations for the copied external profile:
 
-```
+```powershell
 $env:PROFILE_NAME = "example"
 $env:PROFILE_DATA_DIR = $smokeProfile
-uv run --env-file .env -- alembic upgrade head
+uv run -- alembic upgrade head
 ```
-Open http://127.0.0.1:8000/profiles
-.
+
+Open <http://127.0.0.1:8000/profiles>.
 
 Use the connect form:
 
-Name: example
-Display name: Example Smoke Profile
-Data directory: paste the $smokeProfile value
-Make active: checked
+- Name: `example`
+- Display name: `Example Smoke Profile`
+- Data directory: paste the `$smokeProfile` value
+- Make active: checked
 
 Submit the form.
 
 Verify:
 
-the profile appears in the managed profile list;
-the profile is marked active;
-setup diagnostics still render;
-no private profile folder is created inside the repository.
-
-
-```
-
-```
-
-
-
-
-
-
+- the profile appears in the managed profile list;
+- the profile is marked active;
+- setup diagnostics still render;
+- no private profile folder is created inside the repository.
 
 ## 8. Preview and apply managed CV/fact import
 
@@ -337,6 +334,7 @@ Only remove generated fake profile data if it is ignored and not tracked:
 ```powershell
 Remove-Item profiles/example/applications.sqlite3 -ErrorAction SilentlyContinue
 Remove-Item profiles/example/applications -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $env:TEMP "JobApplicationAssistantSmoke") -Recurse -Force -ErrorAction SilentlyContinue
 ```
 
 Never delete real private profile data as part of this public smoke test.
