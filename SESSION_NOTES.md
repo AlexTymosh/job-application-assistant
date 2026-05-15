@@ -47,7 +47,7 @@ Implemented safe app data folder connection and creation through `/data-folder`.
 
 Implemented the managed profiles foundation:
 - app-managed `profiles` records live in `app_data_root/app.sqlite3`;
-- `/profiles` lists connected file-based profiles, validates their folder status and config identity, connects existing profile folders, and activates one managed profile;
+- `/profiles` lists connected file-based profiles, validates their folder status and config identity, connects existing profile folders, and permits activation repair actions while setup is incomplete;
 - active managed profiles are preferred for effective config loading and setup diagnostics;
 - existing `.env`, managed settings default profile values, YAML config, Markdown CV variants, and YAML fact bank fallback remain compatible when no managed profile is active;
 - profile application history remains in each profile-specific `applications.sqlite3`.

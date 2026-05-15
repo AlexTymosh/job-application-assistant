@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -179,6 +180,43 @@ def test_profiles_can_make_profile_active_and_refresh_runtime_state(
 
     assert response.status_code == 303
     assert client.app.state.config.app.profile_name == "sam"
+
+
+def test_profile_activation_repair_post_bypasses_setup_gate(
+    monkeypatch, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    _patch_user_locations(monkeypatch, tmp_path)
+    broken_dir = tmp_path / "private" / "broken"
+    valid_dir = tmp_path / "private" / "valid"
+    _write_profile(broken_dir, name="broken", with_database=True)
+    _write_profile(valid_dir, name="valid", with_database=True)
+    client = _client()
+    client.post(
+        "/profiles",
+        data={"name": "broken", "data_dir": str(broken_dir), "make_active": "on"},
+    )
+    client.post("/profiles", data={"name": "valid", "data_dir": str(valid_dir)})
+    shutil.rmtree(broken_dir)
+
+    dashboard_response = client.get("/dashboard", follow_redirects=False)
+    profiles_page = client.get("/profiles")
+    marker = 'data-profile-name="valid"'
+    valid_section = profiles_page.text[profiles_page.text.index(marker) :]
+    action_start = valid_section.index("/profiles/")
+    action_end = valid_section.index("/activate", action_start) + len("/activate")
+    activate_url = valid_section[action_start:action_end]
+
+    response = client.post(activate_url, follow_redirects=False)
+
+    assert dashboard_response.status_code == 303
+    assert dashboard_response.headers["location"] == "/setup"
+    assert profiles_page.status_code == 200
+    assert "Setup is incomplete" in profiles_page.text
+    assert response.status_code == 303
+    assert response.headers["location"] == "/profiles"
+    assert client.app.state.config.app.profile_name == "valid"
+    setup_response = client.get("/setup")
+    assert "Default CV variant is configured and readable" in setup_response.text
 
 
 def test_setup_status_uses_active_managed_profile(monkeypatch, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]

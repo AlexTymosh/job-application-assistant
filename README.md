@@ -219,7 +219,7 @@ The Profiles page is available at:
 /profiles
 ```
 
-It lists app-managed profile records, validates connected file-based profile folders, connects an existing file-based profile directory, and lets the user make one managed profile active. A connected file-based profile must already contain its supported config file, `cv/`, `cv/variants/`, and fact-bank YAML file, and the loaded config must match the managed profile name and selected profile folder. The Profiles page remains available while setup is incomplete so the user can repair profile selection. When an active managed profile exists, runtime config loading and setup diagnostics prefer that profile. When no managed profile is active, existing managed settings and `.env` profile fallbacks remain unchanged.
+It lists app-managed profile records, validates connected file-based profile folders, connects an existing file-based profile directory, and lets the user make one managed profile active. A connected file-based profile must already contain its supported config file, `cv/`, `cv/variants/`, and fact-bank YAML file, and the loaded config must match the managed profile name and selected profile folder. The Profiles page and profile activation actions remain available while setup is incomplete so the user can repair profile selection. When an active managed profile exists, runtime config loading and setup diagnostics prefer that profile. When no managed profile is active, existing managed settings and `.env` profile fallbacks remain unchanged.
 
 ---
 

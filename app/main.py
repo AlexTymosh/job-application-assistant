@@ -35,8 +35,6 @@ _SETUP_GATE_EXEMPT_PATHS = {
     "/settings/",
     "/data-folder",
     "/data-folder/",
-    "/profiles",
-    "/profiles/",
     "/health/live",
     "/health/ready",
     "/docs",
@@ -145,10 +143,17 @@ def create_app(
 
 
 def _requires_completed_setup(path: str) -> bool:
-    if path in _SETUP_GATE_EXEMPT_PATHS:
-        return False
+    return not _is_setup_gate_exempt_path(path)
 
-    return not path.startswith("/docs/")
+
+def _is_setup_gate_exempt_path(path: str) -> bool:
+    if path in _SETUP_GATE_EXEMPT_PATHS:
+        return True
+
+    if path == "/profiles" or path.startswith("/profiles/"):
+        return True
+
+    return path.startswith("/docs/")
 
 
 app = create_app()
