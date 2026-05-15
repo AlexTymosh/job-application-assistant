@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-CURRENT_APP_SETTINGS_SCHEMA_VERSION = 1
+CURRENT_APP_SETTINGS_SCHEMA_VERSION = 2
 _SCHEMA_TABLE = "app_settings_schema"
 
 
@@ -17,6 +17,10 @@ def migrate_app_settings_database(database_file: Path) -> None:
         if current_version < 1:
             _apply_version_1(connection)
             _write_schema_version(connection, 1)
+            current_version = 1
+        if current_version < 2:
+            _apply_version_2(connection)
+            _write_schema_version(connection, 2)
         connection.commit()
 
 
@@ -27,7 +31,7 @@ def is_app_settings_schema_current(database_file: Path) -> tuple[bool, str]:
     try:
         with sqlite3.connect(f"file:{database_file}?mode=ro", uri=True) as connection:
             table_names = _read_table_names(connection)
-            required_tables = {"app_settings", _SCHEMA_TABLE}
+            required_tables = {"app_settings", "profiles", _SCHEMA_TABLE}
             missing_tables = sorted(required_tables - table_names)
             if missing_tables:
                 return (
@@ -71,6 +75,38 @@ def _apply_version_1(connection: sqlite3.Connection) -> None:
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
+        """
+    )
+
+
+def _apply_version_2(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS profiles (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            display_name TEXT,
+            profile_type TEXT NOT NULL,
+            data_dir TEXT NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CHECK (profile_type IN ('file_based')),
+            CHECK (is_active IN (0, 1))
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_profiles_single_active
+        ON profiles (is_active)
+        WHERE is_active = 1
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS ix_profiles_name
+        ON profiles (name)
         """
     )
 

@@ -6,8 +6,13 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.secrets.openai_key import OpenAISecretService
+from app.settings.init import initialise_app_settings_storage
 from app.storage import app_dirs, location
-from app.storage.app_dirs import APP_DATA_FOLDER_NAME, resolve_effective_app_data_root
+from app.storage.app_dirs import (
+    APP_DATA_FOLDER_NAME,
+    build_app_data_paths,
+    resolve_effective_app_data_root,
+)
 from app.storage.location import (
     get_app_data_location_status,
     get_app_data_pointer_file,
@@ -88,6 +93,8 @@ def test_data_folder_page_accessible_while_setup_is_incomplete(
     tmp_path: Path,
 ) -> None:
     _patch_user_locations(monkeypatch, tmp_path)
+    monkeypatch.setenv("PROFILE_NAME", "missing")
+    monkeypatch.setenv("PROFILE_DATA_DIR", str(tmp_path / "missing-profile"))
     client = _client()
 
     response = client.get("/data-folder")
@@ -283,3 +290,170 @@ def test_raw_openai_api_keys_are_not_written_to_app_data_files(
         if path.is_file() and secret_value.encode("utf-8") in path.read_bytes()
     ]
     assert leaked_files == []
+
+
+def test_post_rejects_filesystem_root(monkeypatch, tmp_path: Path) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    client = _client()
+
+    response = client.post("/data-folder", data={"app_data_root": Path.cwd().anchor})
+
+    assert response.status_code == 400
+    assert "filesystem root" in response.text
+
+
+def test_post_rejects_user_home_directory(monkeypatch, tmp_path: Path) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    client = _client()
+
+    response = client.post("/data-folder", data={"app_data_root": str(tmp_path)})
+
+    assert response.status_code == 400
+    assert "home folder" in response.text
+
+
+def test_post_rejects_documents_root(monkeypatch, tmp_path: Path) -> None:
+    documents_dir, _ = _patch_user_locations(monkeypatch, tmp_path)
+    documents_dir.mkdir(parents=True)
+    client = _client()
+
+    response = client.post("/data-folder", data={"app_data_root": str(documents_dir)})
+
+    assert response.status_code == 400
+    assert "Documents folder" in response.text
+
+
+def test_post_rejects_repository_root_and_parent(monkeypatch, tmp_path: Path) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    client = _client()
+
+    repo_response = client.post("/data-folder", data={"app_data_root": str(Path.cwd())})
+    parent_response = client.post(
+        "/data-folder", data={"app_data_root": str(Path.cwd().parent)}
+    )
+
+    assert repo_response.status_code == 400
+    assert parent_response.status_code == 400
+    assert "outside this repository" in repo_response.text
+    assert "outside this repository" in parent_response.text
+
+
+def test_post_rejects_broad_non_app_specific_non_empty_directory(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    broad_dir = tmp_path / "Downloads"
+    broad_dir.mkdir()
+    (broad_dir / "unrelated.txt").write_text("keep\n", encoding="utf-8")
+    client = _client()
+
+    response = client.post("/data-folder", data={"app_data_root": str(broad_dir)})
+
+    assert response.status_code == 400
+    assert "Existing non-empty folders" in response.text
+    assert (broad_dir / "unrelated.txt").is_file()
+
+
+def test_post_preserves_existing_readme_content(monkeypatch, tmp_path: Path) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    selected_root = tmp_path / "external" / "JobApplicationAssistant"
+    selected_root.mkdir(parents=True)
+    readme = selected_root / "README.txt"
+    custom_content = README_TEXT.splitlines()[0] + "\n\nCustom operator notes.\n"
+    readme.write_text(custom_content, encoding="utf-8")
+    client = _client()
+
+    response = client.post(
+        "/data-folder",
+        data={"app_data_root": str(selected_root)},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert readme.read_text(encoding="utf-8") == custom_content
+
+
+def test_post_rejects_existing_folder_with_only_common_logs_marker(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    selected_root = tmp_path / "existing" / "JobApplicationAssistant"
+    (selected_root / "logs").mkdir(parents=True)
+    client = _client()
+
+    response = client.post(
+        "/data-folder",
+        data={"app_data_root": str(selected_root)},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 400
+    assert "Existing non-empty folders" in response.text
+    assert not (selected_root / "app.sqlite3").exists()
+
+
+def test_post_allows_existing_folder_with_readme_marker(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    selected_root = tmp_path / "existing" / "JobApplicationAssistant"
+    selected_root.mkdir(parents=True)
+    (selected_root / "README.txt").write_text(
+        README_TEXT.splitlines()[0] + "\nCustom notes.\n",
+        encoding="utf-8",
+    )
+    client = _client()
+
+    response = client.post(
+        "/data-folder",
+        data={"app_data_root": str(selected_root)},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert (selected_root / "app.sqlite3").is_file()
+
+
+def test_post_allows_existing_folder_with_complete_app_structure(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    selected_root = tmp_path / "existing" / "JobApplicationAssistant"
+    for child in ("profiles", "logs", "backups"):
+        (selected_root / child).mkdir(parents=True, exist_ok=True)
+    client = _client()
+
+    response = client.post(
+        "/data-folder",
+        data={"app_data_root": str(selected_root)},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert (selected_root / "profiles").is_dir()
+    assert (selected_root / "app.sqlite3").is_file()
+    assert list((selected_root / "profiles").iterdir()) == []
+
+
+def test_post_allows_existing_folder_with_current_app_sqlite(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    _patch_user_locations(monkeypatch, tmp_path)
+    selected_root = tmp_path / "existing" / "JobApplicationAssistant"
+    initialise_app_settings_storage(build_app_data_paths(selected_root))
+    client = _client()
+
+    response = client.post(
+        "/data-folder",
+        data={"app_data_root": str(selected_root)},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert (selected_root / "app.sqlite3").is_file()

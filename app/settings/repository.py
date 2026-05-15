@@ -17,11 +17,11 @@ from app.settings.schema import (
 
 class AppSettingsRepository:
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
-        self._session_factory = session_factory
+        self.session_factory = session_factory
 
     def get_setting(self, key: str) -> Any | None:
         key = validate_managed_setting_key(key)
-        with self._session_factory() as session:
+        with self.session_factory() as session:
             row = session.get(AppSetting, key)
             if row is None:
                 return None
@@ -32,7 +32,7 @@ class AppSettingsRepository:
         key = validate_managed_setting_key(key)
         serialised_value = validate_stored_setting_value(key, value)
         value_json = json.dumps(_jsonable_value(serialised_value), sort_keys=True)
-        with self._session_factory() as session:
+        with self.session_factory() as session:
             row = session.get(AppSetting, key)
             if row is None:
                 row = AppSetting(key=key, value_json=value_json)
@@ -43,14 +43,14 @@ class AppSettingsRepository:
 
     def delete_setting(self, key: str) -> None:
         key = validate_managed_setting_key(key)
-        with self._session_factory() as session:
+        with self.session_factory() as session:
             row = session.get(AppSetting, key)
             if row is not None:
                 session.delete(row)
             session.commit()
 
     def list_settings(self) -> list[StoredAppSetting]:
-        with self._session_factory() as session:
+        with self.session_factory() as session:
             rows: Iterable[AppSetting] = session.scalars(
                 select(AppSetting).order_by(AppSetting.key)
             )
