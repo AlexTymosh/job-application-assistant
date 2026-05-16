@@ -1,33 +1,22 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
-from sqlite3 import Connection as SQLiteConnection
 
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.db import models  # noqa: F401
 from app.db.base import Base
 
 
-def build_sqlite_url(database_file: Path) -> str:
-    return f"sqlite:///{database_file.as_posix()}"
-
-
-def create_sqlite_engine(database_file: Path) -> Engine:
-    database_file.parent.mkdir(parents=True, exist_ok=True)
-
-    engine = create_engine(
-        build_sqlite_url(database_file),
-        connect_args={"check_same_thread": False},
-    )
+def create_sqlite_engine(database_file: Path | str) -> Engine:
+    database_path = Path(database_file)
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    engine = create_engine(f"sqlite:///{database_path}", future=True)
 
     @event.listens_for(engine, "connect")
-    def enable_sqlite_foreign_keys(
-        dbapi_connection: SQLiteConnection,
-        _connection_record: object,
-    ) -> None:
+    def _enable_foreign_keys(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -37,22 +26,14 @@ def create_sqlite_engine(database_file: Path) -> Engine:
 
 def create_session_factory(engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(
-        bind=engine,
-        autoflush=False,
-        expire_on_commit=False,
+        bind=engine, expire_on_commit=False, autoflush=False, future=True
     )
 
 
-def create_all_tables(engine: Engine) -> None:
-    Base.metadata.create_all(bind=engine)
+def initialise_database(engine: Engine) -> None:
+    Base.metadata.create_all(engine)
 
 
-@contextmanager
-def session_scope(session_factory: sessionmaker[Session]) -> Iterator[Session]:
-    with session_factory() as session:
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
+def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:
+    with factory() as session:
+        yield session

@@ -33,7 +33,6 @@ dependencies = [
     "pydantic>=2.10,<3.0",
     "pydantic-settings>=2.7,<3.0",
     "python-docx>=1.2,<2.0",
-    "pyyaml>=6.0,<7.0",
     "reportlab>=4.4,<5.0",
     "sqlalchemy>=2.0,<3.0",
     "uvicorn[standard]>=0.34,<1.0",
@@ -47,7 +46,6 @@ dev = [
     "pytest>=8.3,<9.0",
     "pytest-cov>=6.0,<8.0",
     "ruff>=0.15.12,<1.0",
-    "types-pyyaml>=6.0,<7.0",
 ]
 
 [tool.uv]
@@ -66,7 +64,6 @@ select = [
     "SIM",
     "I",
 ]
-ignore = []
 
 [tool.ruff.format]
 quote-style = "double"

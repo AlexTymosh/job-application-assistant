@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
 
-from app.setup.checks import SetupStatus
+from app.api.dependencies import SessionDep, get_app_data_root
+from app.setup.service import SetupStatusService
 from app.web.templating import templates
 
-router = APIRouter(tags=["setup"])
+router = APIRouter(prefix="/setup", tags=["setup"])
 
 
-@router.get("/setup", response_class=HTMLResponse)
-async def setup(request: Request) -> HTMLResponse:
-    setup_status: SetupStatus = request.app.state.setup_status
-
+@router.get("")
+def setup(request: Request, session: SessionDep):
+    status = SetupStatusService(
+        session, get_app_data_root(request), key_available=True
+    ).evaluate()
     return templates.TemplateResponse(
-        request=request,
-        name="setup.html",
-        context={
-            "project_name": "Local Job Application Assistant",
-            "setup_status": setup_status,
-        },
+        "setup.html", {"request": request, "setup_status": status}
     )

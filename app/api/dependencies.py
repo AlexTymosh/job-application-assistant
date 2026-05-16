@@ -1,18 +1,33 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
+from typing import Annotated
+from urllib.parse import parse_qs
 
-from fastapi import Request
-from sqlalchemy.orm import Session, sessionmaker
+from fastapi import Depends, Request
+from sqlalchemy.orm import Session
 
 
 def get_session(request: Request) -> Iterator[Session]:
-    session_factory: sessionmaker[Session] = request.app.state.session_factory
+    factory = request.app.state.session_factory
+    with factory() as session:
+        yield session
 
-    with session_factory() as session:
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
+
+def get_app_data_root(request: Request) -> Path:
+    return request.app.state.app_data_paths.root
+
+
+SessionDep = Annotated[Session, Depends(get_session)]
+AppDataRootDep = Annotated[Path, Depends(get_app_data_root)]
+
+
+async def read_form_data(request: Request) -> dict[str, str]:
+    body = (await request.body()).decode("utf-8")
+    parsed = parse_qs(body, keep_blank_values=True)
+    return {key: values[-1] if values else "" for key, values in parsed.items()}
+
+
+def form_bool(data: dict[str, str], key: str) -> bool:
+    return data.get(key, "").lower() in {"true", "on", "1", "yes"}
