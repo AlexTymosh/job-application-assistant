@@ -1,22 +1,61 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero">
-  <p class="badge">⚙ Settings</p>
+  <p class="badge">Settings</p>
   <h1>Workspace hub</h1>
-  <p class="muted">Manage global configuration, active profile, CV Builder links, facts, and protected prompt-template instructions.</p>
+  <p class="muted">Manage profiles, CV Builder, prompts, configuration, privacy, and export defaults.</p>
 </section>
 <div class="grid">
+  <section class="card">
+    <h2>Profiles</h2>
+    <p>Active profile: <strong>{{ active_profile.display_name if active_profile else "No active profile" }}</strong></p>
+    <form action="/settings/active-profile" method="post">
+      <input type="hidden" name="next" value="/settings">
+      <select name="active_profile_id">
+        <option value="">No active profile</option>
+        {% for profile in profiles %}<option value="{{ profile.id }}" {% if active_profile and profile.id == active_profile.id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}
+      </select>
+      <button class="compact">Select active profile</button>
+    </form>
+    <p class="toolbar"><a class="button compact secondary" href="/profiles">Manage profiles</a><a class="button compact" href="/profiles/new">Create profile</a></p>
+  </section>
+  <section class="card">
+    <h2>Create/Edit Resume or CV Builder</h2>
+    {% if active_profile %}
+      <p class="muted">Active profile: {{ active_profile.display_name }}</p>
+      <p class="toolbar"><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes">Existing resumes</a><a class="button compact secondary" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a><a class="button compact secondary" href="/settings/active-profile/facts">Manage active profile facts</a></p>
+    {% else %}<div class="empty-state"><p>Select or create a profile to open profile-scoped resumes and facts.</p><a class="button compact" href="/profiles/new">Create profile</a></div>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Prompt templates</h2>
+    <p class="muted">Configure global, profile, resume, and section-specific user instructions.</p>
+    <a class="button compact" href="/settings/prompts">Manage prompt templates</a>
+  </section>
   <section class="card">
     <h2>App configuration</h2>
     <form method="post" action="/settings">
       <label>Locale <input name="locale" value="{{ settings.locale }}"></label>
+      <button class="compact">Save configuration</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>OpenAI / keyring</h2>
+    <form method="post" action="/settings">
+      <input type="hidden" name="locale" value="{{ settings.locale }}">
+      <label>OpenAI API key <input name="openai_api_key" type="password" placeholder="Stored in OS keyring only"></label>
+      <p class="muted">Key status: {{ key_status }}. Raw API keys are never stored in SQLite.</p>
+      <button class="compact">Save key</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Export formats</h2>
+    <form method="post" action="/settings">
+      <input type="hidden" name="locale" value="{{ settings.locale }}">
       <label><input type="checkbox" name="export_pdf" {% if settings.exports.pdf %}checked{% endif %}> Export PDF</label>
       <label><input type="checkbox" name="export_docx" {% if settings.exports.docx %}checked{% endif %}> Export DOCX</label>
       <label><input type="checkbox" name="export_markdown" {% if settings.exports.markdown %}checked{% endif %}> Optional Markdown export</label>
       <label><input type="checkbox" name="export_html" {% if settings.exports.html %}checked{% endif %}> Optional HTML export</label>
-      <label>OpenAI API key <input name="openai_api_key" type="password" placeholder="Stored in OS keyring only"></label>
-      <p class="muted">Key status: {{ key_status }}. Raw API keys are never stored in SQLite.</p>
-      <button>Save configuration</button>
+      <button class="compact">Save export formats</button>
     </form>
   </section>
   <section class="card">
@@ -27,37 +66,10 @@
       <label><input type="checkbox" name="allow_new_bullets" {% if settings.ai_policy_defaults.allow_new_bullets %}checked{% endif %}> Allow new bullets</label>
       <label><input type="checkbox" name="allow_hide_bullets" {% if settings.ai_policy_defaults.allow_hide_bullets %}checked{% endif %}> Allow hiding bullets</label>
       <label><input type="checkbox" name="allow_title_edits" {% if settings.ai_policy_defaults.allow_title_edits %}checked{% endif %}> Allow title edits</label>
-      <button>Save AI policy</button>
+      <button class="compact">Save AI policy</button>
     </form>
   </section>
-  <section class="card">
-    <h2>Profiles</h2>
-    <p>Active profile: <strong>{{ active_profile.display_name if active_profile else "No active profile" }}</strong></p>
-    <form action="/settings/active-profile" method="post">
-      <input type="hidden" name="next" value="/settings">
-      <select name="active_profile_id">
-        <option value="">No active profile</option>
-        {% for profile in profiles %}<option value="{{ profile.id }}" {% if active_profile and profile.id == active_profile.id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}
-      </select>
-      <button>Select active profile</button>
-    </form>
-    <p class="actions"><a class="button secondary" href="/profiles">Manage profiles</a><a class="button" href="/profiles/new">Create profile</a></p>
-  </section>
-  <section class="card">
-    <h2>CV Builder</h2>
-    {% if active_profile %}
-      <p class="actions"><a class="button" href="/profiles/{{ active_profile.id }}/resumes">Active profile resumes</a><a class="button secondary" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a></p>
-      <p><a href="/profiles/{{ active_profile.id }}/facts">Manage active profile facts</a></p>
-    {% else %}<p class="muted">Select a profile to open profile-scoped resumes and facts.</p>{% endif %}
-  </section>
-  <section class="card">
-    <h2>Prompt templates</h2>
-    <p>User instructions are stored in SQLite and combined with protected safety rules.</p>
-    <a class="button" href="/settings/prompts">Manage prompt templates</a>
-  </section>
-  <section class="card">
-    <h2>Safety and privacy</h2>
-    <p>Private contact data is excluded from AI prompts and added only during final render/export. Prompt templates cannot disable no-fabrication, untrusted-job-text, contact-exclusion, or structured-output rules.</p>
-  </section>
+  <section class="card"><h2>Safety and privacy</h2><p>Private contact data is excluded from AI prompts and added only during final render/export. Prompt user instructions cannot disable internal no-fabrication, untrusted-job-text, contact-exclusion, or structured-output guardrails.</p></section>
+  <section class="card"><h2>Data folder</h2><p class="muted">Application data, SQLite storage, uploads, and exported artifacts stay in the selected local app data folder.</p><a class="button compact secondary" href="/data-folder">Open data folder settings</a></section>
 </div>
 {% endblock %}

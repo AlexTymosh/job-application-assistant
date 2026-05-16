@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero"><p class="badge">CV Builder</p><h1>Create resume</h1><p class="muted">Create a profile-scoped resume version such as Software Engineer, Automation Engineer, Data Analyst, or Backend Developer.</p></section>
-<form method="post">
-  <label>Resume name <input name="name" required></label>
-  <label>Target role <input name="target_role"></label>
-  <label>Language <input name="language" value="en"></label>
-  <label><input type="checkbox" name="create_standard_sections" checked> Create standard CV sections</label>
-  <button>Create resume</button>
+<section class="hero"><p class="badge">CV Builder</p><h1>{{ "Edit resume" if resume else "Create resume" }}</h1><p class="muted">Create or update a profile-scoped resume version. Uploads are stored locally and are not sent to AI automatically.</p></section>
+<form method="post" {% if not resume %}enctype="multipart/form-data"{% endif %}>
+  <label>Resume name <input name="name" value="{{ resume.name if resume else '' }}" required></label>
+  <label>Target role <input name="target_role" value="{{ resume.target_role if resume else '' }}"></label>
+  <label>Language <input name="language" value="{{ resume.language if resume else 'en' }}"></label>
+  {% if not resume %}
+    <label><input type="checkbox" name="create_standard_sections" checked> Create standard CV sections</label>
+    <label>Upload existing resume (PDF, DOC, DOCX)<input type="file" name="resume_file" accept=".pdf,.doc,.docx"></label>
+    <p class="muted">Best-effort extraction is not implemented yet; the file is stored safely for manual import.</p>
+  {% endif %}
+  <button class="compact">{{ "Save resume" if resume else "Create resume" }}</button>
 </form>
 {% endblock %}

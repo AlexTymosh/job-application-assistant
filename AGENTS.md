@@ -62,3 +62,9 @@ Use emoji plus conventional commit style:
 
 - optional detail
 ```
+
+## First-release notes
+
+- User prompt instructions are scoped as global, profile, resume, and section records. The UI must not expose internal protected safety rules as editable prompt content, but prompt builders must continue to enforce no fabrication, untrusted job text handling, private contact exclusion, and structured output.
+- Uploaded resumes are local artifacts only for the first release. Do not treat uploaded PDF/DOC/DOCX files as runtime sources of truth and do not send them to AI automatically.
+- Domain errors should be preferred for expected workflow failures so routes render friendly error pages instead of raw 500 responses.

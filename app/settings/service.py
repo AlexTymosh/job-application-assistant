@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.errors import ActiveProfileRequiredError, NotFoundError
 from app.db.models import AppSetting, PersonProfile, PromptTemplate
 
 DEFAULT_SETTINGS: dict[str, Any] = {
@@ -118,7 +119,7 @@ class SettingsService:
     def require_active_profile(self) -> PersonProfile:
         profile = self.get_active_profile()
         if profile is None:
-            raise ValueError("Select an active profile before using this workspace.")
+            raise ActiveProfileRequiredError()
         return profile
 
     def set_active_profile(self, profile_id: int | None) -> None:
@@ -126,7 +127,7 @@ class SettingsService:
             profile_id is not None
             and self.session.get(PersonProfile, profile_id) is None
         ):
-            raise ValueError("Profile not found.")
+            raise NotFoundError("Profile not found.")
         self.set("active_profile_id", profile_id)
 
     def list_profiles(self) -> list[PersonProfile]:
@@ -172,19 +173,73 @@ class SettingsService:
     ) -> None:
         template = self.session.get(PromptTemplate, template_id)
         if template is None:
-            raise ValueError("Prompt template not found.")
+            raise NotFoundError("Prompt template not found.")
         template.system_prompt = PROTECTED_SAFETY_PROMPT
         template.user_prompt_template = user_prompt_template.strip()
         self.session.commit()
 
-    def get_prompt_instruction(self, block_type: str) -> str:
+    def upsert_prompt_instruction(
+        self,
+        *,
+        block_type: str,
+        user_prompt_template: str,
+        scope: str = "global",
+        section_type: str = "",
+        name: str | None = None,
+    ) -> PromptTemplate:
         self.ensure_prompt_templates()
         template = self.session.scalar(
             select(PromptTemplate).where(
+                PromptTemplate.scope == scope,
                 PromptTemplate.block_type == block_type,
-                PromptTemplate.is_active.is_(True),
+                PromptTemplate.section_type == section_type,
             )
         )
         if template is None:
-            return DEFAULT_USER_PROMPTS.get(block_type, "")
-        return template.user_prompt_template
+            template = PromptTemplate(
+                scope=scope,
+                block_type=block_type,
+                section_type=section_type,
+                name=name or block_type.replace("_", " ").title(),
+                system_prompt=PROTECTED_SAFETY_PROMPT,
+                user_prompt_template=user_prompt_template.strip(),
+                is_active=True,
+            )
+            self.session.add(template)
+        else:
+            template.system_prompt = PROTECTED_SAFETY_PROMPT
+            template.user_prompt_template = user_prompt_template.strip()
+            template.is_active = True
+        self.session.commit()
+        return template
+
+    def get_prompt_instruction(
+        self,
+        block_type: str,
+        *,
+        profile_id: int | None = None,
+        resume_id: int | None = None,
+        section_id: int | None = None,
+        section_type: str = "",
+    ) -> str:
+        self.ensure_prompt_templates()
+        scopes = []
+        if section_id is not None:
+            scopes.append((f"section:{section_id}", section_type))
+        if resume_id is not None:
+            scopes.append((f"resume:{resume_id}", ""))
+        if profile_id is not None:
+            scopes.append((f"profile:{profile_id}", ""))
+        scopes.append(("global", ""))
+        for scope, wanted_section_type in scopes:
+            template = self.session.scalar(
+                select(PromptTemplate).where(
+                    PromptTemplate.scope == scope,
+                    PromptTemplate.block_type == block_type,
+                    PromptTemplate.section_type == wanted_section_type,
+                    PromptTemplate.is_active.is_(True),
+                )
+            )
+            if template is not None:
+                return template.user_prompt_template
+        return DEFAULT_USER_PROMPTS.get(block_type, "")

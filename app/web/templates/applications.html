@@ -1,31 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero">
-  <p class="badge">📄 Application</p>
+  <p class="badge">Application</p>
   <h1>Adapt a resume for a job</h1>
-  <p class="muted">One workspace for job input, AI proposals, side-by-side review, cover letter editing, copy/download tracking, and manual applied status.</p>
+  <p class="muted">Paste a job description, review structured AI proposals, edit the cover letter, copy/download materials, and manually track application status.</p>
 </section>
 {% if not active_profile %}
-  <div class="empty"><h2>Select an active profile first</h2><p>The Application workspace is profile-scoped.</p><a class="button" href="/settings">Open Settings</a></div>
+  <div class="empty-state"><h2>Select an active profile first</h2><p>The Application workspace is profile-scoped.</p><div class="toolbar"><a class="button compact" href="/settings">Open Settings</a><a class="button compact secondary" href="/profiles/new">Create profile</a></div></div>
 {% else %}
-  <div class="tabs"><span class="tab active">1. New application / job input</span><span class="tab">2. Adapted result / review</span></div>
+  <div class="tabs"><span class="tab active">1. Job input</span><span class="tab">2. Adapted result / review</span></div>
   <section class="card">
     <h2>New application for {{ active_profile.display_name }}</h2>
-    <form method="post" action="/applications/adapt">
-      <label>Resume
-        <select name="resume_id" required>
-          {% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}{% if resume.target_role %} — {{ resume.target_role }}{% endif %}</option>{% endfor %}
-        </select>
-      </label>
-      <div class="two-column"><label>Job title <input name="job_title"></label><label>Company <input name="company_name"></label></div>
-      <label>Source URL <input name="source_url"></label>
-      <label>Job description <textarea name="raw_job_text" required placeholder="Paste the job description here"></textarea></label>
-      <button>Adapt</button>
-    </form>
+    {% if not resumes %}
+      <div class="empty-state"><p>Create a resume first before adapting a job.</p><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume first</a></div>
+    {% else %}
+      <form method="post" action="/applications/adapt">
+        <p class="muted">Active profile: {{ active_profile.display_name }}</p>
+        <label>Resume
+          <select name="resume_id" required>
+            {% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}{% if resume.target_role %} — {{ resume.target_role }}{% endif %}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Source URL <input name="source_url" placeholder="Optional job posting link"></label>
+        <label>Job description <textarea name="raw_job_text" required placeholder="Paste the job description here"></textarea></label>
+        <button class="compact">Adapt</button>
+      </form>
+    {% endif %}
   </section>
   <section class="card" style="margin-top:1rem">
     <h2>Application history for active profile</h2>
-    {% if applications %}<table><thead><tr><th>Job</th><th>Company</th><th>Status</th><th></th></tr></thead><tbody>{% for application in applications %}<tr><td>{{ application.job_title or "Untitled role" }}</td><td>{{ application.company_name }}</td><td><span class="badge">{{ application.status }}</span></td><td><a href="/applications/{{ application.id }}">Open review</a></td></tr>{% endfor %}</tbody></table>{% else %}<p class="muted">No applications for this profile yet.</p>{% endif %}
+    {% if applications %}<table><thead><tr><th>Job</th><th>Company</th><th>Status</th><th></th></tr></thead><tbody>{% for application in applications %}<tr><td>{{ application.job_title or "Extract later" }}</td><td>{{ application.company_name or "Extract later" }}</td><td><span class="badge">{{ application.status }}</span></td><td><a href="/applications/{{ application.id }}">Open review</a></td></tr>{% endfor %}</tbody></table>{% else %}<p class="muted">No applications for this profile yet.</p>{% endif %}
   </section>
 {% endif %}
 {% endblock %}

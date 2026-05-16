@@ -15,7 +15,7 @@
 
 - Summary blocks can be AI-editable.
 - Skills are edited as a whole skills set/block for now.
-- Work experience bullets are AI-editable only when the bullet allows it.
+- Work experience bullets are AI-editable when the bullet allows it.
 - Job titles can be edited only when policy explicitly allows title edits.
 - Company names, organisations, dates, and locations are not AI-editable by default.
 - References are not AI-editable by default because they may contain private contact-like data.
@@ -24,14 +24,16 @@
 
 When fact links are required, AI must not strengthen a claim without active verified facts. If support is missing, deterministic fake mode produces a high-risk warning instead of inventing evidence.
 
-## Prompt templates
+## Prompt template scoping
 
-Users can edit prompt-template user instructions for summary, skills, work-experience bullets, job titles, custom description blocks, and cover letters. User instructions cannot disable protected rules:
+User prompt instructions are stored in SQLite and resolve in this order:
 
-- no fabrication;
-- untrusted job posting;
-- private contact exclusion;
-- structured output.
+1. section-specific prompt;
+2. resume-specific prompt;
+3. profile-specific prompt;
+4. global default prompt.
+
+Prompt UI exposes user guidance only. Internal non-user-editable guardrails still enforce no fabrication, untrusted job posting handling, private contact exclusion, and structured output.
 
 ## Match summary
 

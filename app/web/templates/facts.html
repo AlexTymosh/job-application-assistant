@@ -1,1 +1,17 @@
-{% extends "base.html" %}{% block content %}<div class="actions"><h1>Facts</h1><a class="button" href="/profiles/{{ profile_id }}/facts/new">Add fact</a></div><table><thead><tr><th>Key</th><th>Claim</th><th>Level</th><th>Evidence</th></tr></thead><tbody>{% for fact in facts %}<tr><td>{{ fact.fact_key }}</td><td>{{ fact.claim }}</td><td><span class="badge">{{ fact.allowed_claim_level }}</span></td><td>{{ fact.evidence }}</td></tr>{% endfor %}</tbody></table>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+{% if not profile %}
+  <section class="empty-state card">
+    <h1>No active profile selected</h1>
+    <p class="muted">Facts are stored per profile. Create or select a profile before managing facts.</p>
+    <div class="toolbar"><a class="button compact" href="/profiles/new">Create profile</a><a class="button compact secondary" href="/settings">Open Settings</a></div>
+  </section>
+{% else %}
+  <div class="section-header-row"><h1>Facts for {{ profile.display_name }}</h1><a class="button compact" href="/profiles/{{ profile_id }}/facts/new">Add fact</a></div>
+  {% if facts %}
+    <table><thead><tr><th>Key</th><th>Claim</th><th>Level</th><th>Evidence</th></tr></thead><tbody>{% for fact in facts %}<tr><td>{{ fact.fact_key }}</td><td>{{ fact.claim }}</td><td><span class="badge">{{ fact.allowed_claim_level }}</span></td><td>{{ fact.evidence }}</td></tr>{% endfor %}</tbody></table>
+  {% else %}
+    <div class="empty-state"><p>No facts yet. Add verified facts before asking AI to strengthen claims.</p></div>
+  {% endif %}
+{% endif %}
+{% endblock %}

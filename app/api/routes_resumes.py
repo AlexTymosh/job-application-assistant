@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
+from uuid import uuid4
+
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
-from app.api.dependencies import SessionDep, form_bool, read_form_data
+from app.api.dependencies import (
+    SessionDep,
+    form_bool,
+    get_app_data_root,
+    read_form_data,
+)
+from app.core.errors import ResumeBuilderError, ValidationAppError
 from app.db.models import (
     BlockType,
     ResumeBlock,
@@ -12,9 +21,68 @@ from app.db.models import (
     SectionType,
 )
 from app.resumes.service import ResumeService
+from app.settings.service import SettingsService
 from app.web.templating import templates
 
 router = APIRouter(tags=["resumes"])
+
+_ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".doc", ".docx"}
+
+
+def _safe_upload_name(filename: str) -> str:
+    original = Path(filename or "uploaded-resume").name
+    suffix = Path(original).suffix.lower()
+    if suffix not in _ALLOWED_UPLOAD_EXTENSIONS:
+        raise ValidationAppError("Upload a PDF, DOC, or DOCX resume file.")
+    stem = "".join(
+        char if char.isalnum() or char in {"-", "_"} else "-"
+        for char in Path(original).stem
+    ).strip("-")
+    return f"{stem or 'resume'}-{uuid4().hex}{suffix}"
+
+
+def _parse_multipart_form(
+    body: bytes, content_type: str
+) -> tuple[dict[str, str], tuple[str, bytes] | None]:
+    marker = "boundary="
+    if marker not in content_type:
+        raise ValidationAppError("Invalid upload request.")
+    boundary = content_type.split(marker, 1)[1].strip().strip('"')
+    delimiter = ("--" + boundary).encode()
+    data: dict[str, str] = {}
+    upload: tuple[str, bytes] | None = None
+    for raw_part in body.split(delimiter):
+        part = raw_part.strip(b"\r\n")
+        if not part or part == b"--" or b"\r\n\r\n" not in part:
+            continue
+        raw_headers, content = part.split(b"\r\n\r\n", 1)
+        content = content.removesuffix(b"\r\n").removesuffix(b"--")
+        headers = raw_headers.decode("utf-8", errors="ignore")
+        if 'name="' not in headers:
+            continue
+        name = headers.split('name="', 1)[1].split('"', 1)[0]
+        filename = ""
+        if 'filename="' in headers:
+            filename = headers.split('filename="', 1)[1].split('"', 1)[0]
+        if filename:
+            upload = (filename, content)
+        else:
+            data[name] = content.decode("utf-8", errors="ignore")
+    return data, upload
+
+
+def _store_resume_upload(request: Request, upload: tuple[str, bytes] | None) -> str:
+    if upload is None or not upload[0]:
+        return ""
+    filename = _safe_upload_name(upload[0])
+    root = get_app_data_root(request).resolve()
+    upload_dir = root / "artifacts" / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    destination = (upload_dir / filename).resolve()
+    if root not in destination.parents:
+        raise ValidationAppError("Unsafe upload path.")
+    destination.write_bytes(upload[1])
+    return destination.relative_to(root).as_posix()
 
 
 @router.get("/profiles/{profile_id}/resumes")
@@ -38,7 +106,13 @@ def new_resume(profile_id: int, request: Request):
 
 @router.post("/profiles/{profile_id}/resumes/new")
 async def create_resume(profile_id: int, request: Request, session: SessionDep):
-    data = await read_form_data(request)
+    content_type = request.headers.get("content-type", "")
+    upload_path = ""
+    if content_type.startswith("multipart/form-data"):
+        data, upload = _parse_multipart_form(await request.body(), content_type)
+        upload_path = _store_resume_upload(request, upload)
+    else:
+        data = await read_form_data(request)
     resume = ResumeService(session).create_resume(
         profile_id,
         data["name"],
@@ -46,7 +120,33 @@ async def create_resume(profile_id: int, request: Request, session: SessionDep):
         data.get("language", "en"),
         create_standard_sections=form_bool(data, "create_standard_sections"),
     )
+    if upload_path:
+        request.app.state.last_resume_upload_path = upload_path
     return RedirectResponse(f"/resumes/{resume.id}", status_code=303)
+
+
+@router.get("/resumes/{resume_id}/edit")
+def edit_resume_metadata(resume_id: int, request: Request, session: SessionDep):
+    return templates.TemplateResponse(
+        "resume_form.html",
+        {
+            "request": request,
+            "profile_id": ResumeService(session).get_resume(resume_id).profile_id,
+            "resume": ResumeService(session).get_resume(resume_id),
+        },
+    )
+
+
+@router.post("/resumes/{resume_id}/edit")
+async def update_resume_metadata(resume_id: int, request: Request, session: SessionDep):
+    data = await read_form_data(request)
+    ResumeService(session).update_resume(
+        resume_id,
+        name=data["name"],
+        target_role=data.get("target_role", ""),
+        language=data.get("language", "en"),
+    )
+    return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
 
 
 @router.get("/resumes/{resume_id}")
@@ -258,6 +358,24 @@ async def update_bullet(
         ai_edit_enabled=form_bool(data, "ai_edit_enabled"),
         fact_link_required=form_bool(data, "fact_link_required"),
         fact_ids=fact_ids,
+    )
+    return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
+
+
+@router.post("/resumes/{resume_id}/sections/{section_id}/prompt")
+async def update_section_prompt(
+    resume_id: int, section_id: int, request: Request, session: SessionDep
+):
+    data = await read_form_data(request)
+    section = session.get(ResumeSection, section_id)
+    if section is None or section.resume_id != resume_id:
+        raise ResumeBuilderError("Section not found for this resume.")
+    SettingsService(session).upsert_prompt_instruction(
+        block_type=data.get("block_type", "description_custom_block"),
+        user_prompt_template=data.get("user_prompt_template", ""),
+        scope=f"section:{section_id}",
+        section_type=section.section_type,
+        name=f"{section.title} section prompt",
     )
     return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
 

@@ -1,13 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero"><p class="badge">Prompt templates</p><h1>Protected AI instructions</h1><p class="muted">Edit user guidance only. Safety rules remain enforced.</p></section>
+<section class="hero"><p class="badge">Prompt templates</p><h1>Prompt instructions</h1><p class="muted">Edit user guidance for global, profile, resume, or section scopes. Internal safety guardrails remain enforced but are not user-editable.</p></section>
 {% for template in prompt_templates %}
   <form method="post" action="/settings/prompts/{{ template.id }}" class="card" style="margin-bottom:1rem">
     <h2>{{ template.name }}</h2>
-    <p><span class="badge">{{ template.block_type }}</span></p>
-    <label>Protected safety rules<textarea readonly>{{ template.system_prompt }}</textarea></label>
+    <p><span class="badge">{{ template.scope }}</span> <span class="badge">{{ template.block_type }}</span>{% if template.section_type %} <span class="badge">{{ template.section_type }}</span>{% endif %}</p>
     <label>User-editable instruction<textarea name="user_prompt_template">{{ template.user_prompt_template }}</textarea></label>
-    <button>Save prompt template</button>
+    <button class="compact">Save prompt template</button>
   </form>
 {% endfor %}
 {% endblock %}

@@ -42,3 +42,20 @@ The first usable local release stage is completed for the SQL-first AI JOB APPLI
 3. Add visual diff highlighting for before/after proposal review.
 4. Add export buttons that create snapshots and artifacts in one guided action.
 5. Harden real OpenAI client integration behind deterministic contract tests.
+
+## First-release hardening update
+
+- Added domain-level error classes and friendly error rendering for expected workflow problems, HTTP errors, and unexpected exceptions.
+- Hardened active-profile facts, application adaptation, application detail/mutation access, snapshot creation, exports, copy/download tracking, and wrong-profile resume/application access.
+- Settings now presents Profiles, CV Builder, and Prompt templates first, with facts as an active-profile card action and clean empty states when no active profile exists.
+- Prompt instructions are scoped by global default, profile, resume, and section, with section > resume > profile > global resolution. Internal safety guardrails remain enforced in prompt builders but are not exposed as editable prompt text.
+- The Application form now requires only active profile, active-profile resume, job description, and optional source URL. Job title/company can be handled after adaptation.
+- CV Builder now has compact move arrows, section prompt overrides, metadata editing, local upload support for PDF/DOC/DOCX source resumes, and builder empty-state prompts.
+- Rendered resume preview/export hides empty sections and uppercases rendered section headings.
+- Profile forms no longer expose the legacy Location field; the database column remains for compatibility.
+
+## First-release limitations
+
+- Uploaded resume files are stored safely under the local app data upload area; automatic parsing/import is intentionally not implemented yet.
+- Copy/download events mean likely applied only; only the explicit Mark as applied action is user-confirmed.
+- The application does not submit jobs, automate LinkedIn, send email, scrape broadly, or claim ATS scores.

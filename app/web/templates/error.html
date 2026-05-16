@@ -1,6 +1,15 @@
 {% extends "base.html" %}
-
 {% block content %}
-  <h1>Error</h1>
-  <p>{{ message }}</p>
+<section class="empty-state card">
+  <p class="badge bad">Error {{ status_code }}</p>
+  <h1>{{ title or "Something went wrong" }}</h1>
+  <p>{{ message or "The action could not be completed safely." }}</p>
+  <p class="muted">Status code: {{ status_code }}</p>
+  <div class="toolbar">
+    <a class="button compact secondary" href="/">Dashboard</a>
+    <a class="button compact secondary" href="/applications">Application</a>
+    <a class="button compact secondary" href="/settings">Settings</a>
+    <a class="button compact" href="javascript:history.back()">Back</a>
+  </div>
+</section>
 {% endblock %}

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.errors import NotFoundError, TailoringWorkflowError
 from app.db.models import (
     AiChangeProposal,
     Application,
@@ -45,7 +46,7 @@ class TailoringService:
     def run_tailoring(self, application_id: int) -> TailoringRun:
         app = self.session.get(Application, application_id)
         if app is None:
-            raise ValueError("Application not found.")
+            raise NotFoundError("Application not found.")
 
         requirements = list(
             self.session.scalars(
@@ -55,7 +56,7 @@ class TailoringService:
             )
         )
         if not requirements:
-            raise ValueError("Extract job requirements before tailoring.")
+            raise TailoringWorkflowError("Extract job requirements before tailoring.")
 
         resume = self.session.scalar(
             select(Resume)
@@ -67,7 +68,7 @@ class TailoringService:
             )
         )
         if resume is None:
-            raise ValueError("Resume not found.")
+            raise NotFoundError("Resume not found.")
 
         facts = list(
             self.session.scalars(
@@ -109,13 +110,20 @@ class TailoringService:
 
         for section in resume.sections:
             for block in section.blocks:
-                self._propose_for_block(run, block, requirement_payload, fact_payload)
+                self._propose_for_block(
+                    run,
+                    block,
+                    requirement_payload,
+                    fact_payload,
+                    profile_id=app.profile_id,
+                )
                 for bullet in block.bullets:
                     self._propose_for_bullet(
                         run,
                         bullet,
                         requirement_payload,
                         fact_payload,
+                        profile_id=app.profile_id,
                     )
 
         app.status = ApplicationStatus.TAILORING_PROPOSED.value
@@ -128,6 +136,8 @@ class TailoringService:
         block: ResumeBlock,
         requirements: list[dict[str, object]],
         facts: list[dict[str, object]],
+        *,
+        profile_id: int,
     ) -> None:
         if not block.ai_edit_enabled:
             return
@@ -147,7 +157,9 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
-                user_instruction=settings.get_prompt_instruction("summary"),
+                user_instruction=settings.get_prompt_instruction(
+                    "summary", profile_id=profile_id, resume_id=run.resume_id
+                ),
             )
         elif block.block_type == "skills":
             target["target_type"] = "skills_set"
@@ -156,7 +168,9 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
-                user_instruction=settings.get_prompt_instruction("skills"),
+                user_instruction=settings.get_prompt_instruction(
+                    "skills", profile_id=profile_id, resume_id=run.resume_id
+                ),
             )
         elif block.block_type == "title":
             if not policy.get("ai_can_edit_title"):
@@ -168,7 +182,9 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
-                user_instruction=settings.get_prompt_instruction("job_title"),
+                user_instruction=settings.get_prompt_instruction(
+                    "job_title", profile_id=profile_id, resume_id=run.resume_id
+                ),
             )
         else:
             payload = build_description_prompt(
@@ -177,7 +193,9 @@ class TailoringService:
                 facts=facts,
                 policy=policy,
                 user_instruction=settings.get_prompt_instruction(
-                    "description_custom_block"
+                    "description_custom_block",
+                    profile_id=profile_id,
+                    resume_id=run.resume_id,
                 ),
             )
 
@@ -191,6 +209,8 @@ class TailoringService:
         bullet: ResumeBullet,
         requirements: list[dict[str, object]],
         facts: list[dict[str, object]],
+        *,
+        profile_id: int,
     ) -> None:
         if not bullet.ai_edit_enabled:
             return
@@ -224,7 +244,7 @@ class TailoringService:
             facts=allowed_facts,
             policy=policy,
             user_instruction=SettingsService(self.session).get_prompt_instruction(
-                "work_experience_bullet"
+                "work_experience_bullet", profile_id=profile_id, resume_id=run.resume_id
             ),
         )
 

@@ -1,6 +1,45 @@
 from __future__ import annotations
 
-from app.db.models import ProfileContact, Resume
+from app.db.models import ProfileContact, Resume, ResumeBlock, ResumeSection
+
+
+def _block_has_meaningful_content(
+    block: ResumeBlock, accepted_changes: dict[tuple[str, int], str]
+) -> bool:
+    if not block.is_visible:
+        return False
+    content = accepted_changes.get(("resume_block", block.id), block.content)
+    skills = accepted_changes.get(("skills_set", block.id), "")
+    title = accepted_changes.get(("resume_block_title", block.id), block.title)
+    if any(
+        str(part).strip()
+        for part in [
+            title,
+            block.subtitle,
+            block.role_title,
+            block.organisation,
+            block.location,
+            block.start_date,
+            block.end_date,
+            content,
+            skills,
+        ]
+    ):
+        return True
+    return any(
+        bullet.is_visible
+        and accepted_changes.get(("resume_bullet", bullet.id), bullet.text).strip()
+        for bullet in block.bullets
+    )
+
+
+def _section_has_meaningful_content(
+    section: ResumeSection, accepted_changes: dict[tuple[str, int], str]
+) -> bool:
+    return section.is_visible and any(
+        _block_has_meaningful_content(block, accepted_changes)
+        for block in section.blocks
+    )
 
 
 def render_resume_markdown(
@@ -30,13 +69,13 @@ def render_resume_markdown(
         lines.extend(["", f"**Target role:** {resume.target_role}"])
 
     for section in resume.sections:
-        if not section.is_visible:
+        if not _section_has_meaningful_content(section, accepted_changes):
             continue
 
-        lines.extend(["", f"## {section.title}"])
+        lines.extend(["", f"## {section.title.upper()}"])
 
         for block in section.blocks:
-            if not block.is_visible:
+            if not _block_has_meaningful_content(block, accepted_changes):
                 continue
 
             title = accepted_changes.get(("resume_block_title", block.id), block.title)

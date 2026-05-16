@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
 
 from app.api.routes_applications import router as applications_router
@@ -12,6 +13,7 @@ from app.api.routes_people import router as people_router
 from app.api.routes_resumes import router as resumes_router
 from app.api.routes_settings import router as settings_router
 from app.api.routes_setup import router as setup_router
+from app.core.errors import AppError
 from app.db.session import (
     create_session_factory,
     create_sqlite_engine,
@@ -21,6 +23,9 @@ from app.secrets.openai_key import OpenAISecretService, build_openai_secret_serv
 from app.settings.service import SettingsService
 from app.storage.bootstrap import bootstrap_app_data_dirs
 from app.web.routes import router as web_router
+from app.web.templating import templates
+
+logger = logging.getLogger(__name__)
 
 _SETUP_GATE_EXEMPT_PREFIXES = (
     "/setup",
@@ -51,6 +56,53 @@ def create_app(*, openai_secret_service: OpenAISecretService | None = None) -> F
     app.state.openai_secret_service = (
         openai_secret_service or build_openai_secret_service()
     )
+
+    @app.exception_handler(AppError)
+    async def app_error_handler(request: Request, exc: AppError) -> Response:
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "title": exc.title,
+                "message": exc.message,
+                "status_code": exc.status_code,
+            },
+            status_code=exc.status_code,
+        )
+
+    @app.exception_handler(HTTPException)
+    async def http_error_handler(request: Request, exc: HTTPException) -> Response:
+        message = (
+            str(exc.detail)
+            if exc.detail
+            else "The requested action could not be completed."
+        )
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "title": "Request issue" if exc.status_code < 500 else "Server issue",
+                "message": message,
+                "status_code": exc.status_code,
+            },
+            status_code=exc.status_code,
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_error_handler(request: Request, exc: Exception) -> Response:
+        logger.exception("Unhandled request error", exc_info=exc)
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "title": "Something went wrong",
+                "message": (
+                    "The action could not be completed. Please go back and try again."
+                ),
+                "status_code": 500,
+            },
+            status_code=500,
+        )
 
     @app.middleware("http")
     async def setup_gate(

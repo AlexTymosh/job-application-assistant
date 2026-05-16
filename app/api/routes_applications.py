@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import select
 
 from app.api.dependencies import SessionDep, get_app_data_root, read_form_data
 from app.applications.service import ApplicationService
+from app.core.errors import (
+    ActiveProfileRequiredError,
+    ApplicationWorkflowError,
+    NotFoundError,
+    ProfileScopeError,
+    ValidationAppError,
+)
 from app.cover_letters.service import CoverLetterService
 from app.db.models import Artifact, ProposalStatus, TailoredResumeSnapshot
 from app.settings.service import SettingsService
@@ -48,18 +55,22 @@ async def adapt_application(request: Request, session: SessionDep):
     data = await read_form_data(request)
     active_profile = SettingsService(session).get_active_profile()
     if active_profile is None:
-        raise HTTPException(status_code=400, detail="Select an active profile first.")
+        raise ActiveProfileRequiredError()
+    if not data.get("resume_id"):
+        raise ApplicationWorkflowError(
+            "Create a resume for the active profile before adapting a job."
+        )
     try:
         app = ApplicationService(session).adapt_application(
             profile_id=active_profile.id,
             resume_id=int(data["resume_id"]),
-            job_title=data.get("job_title", ""),
-            company_name=data.get("company_name", ""),
+            job_title="",
+            company_name="",
             source_url=data.get("source_url", ""),
             raw_job_text=data["raw_job_text"],
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise ApplicationWorkflowError(str(exc)) from exc
     return RedirectResponse(f"/applications/{app.id}", status_code=303)
 
 
@@ -72,9 +83,9 @@ def _require_active_profile_application(application_id: int, session: SessionDep
     app = ApplicationService(session).get_application(application_id)
     active_profile = SettingsService(session).get_active_profile()
     if active_profile is None:
-        raise HTTPException(status_code=400, detail="Select an active profile first.")
+        raise ActiveProfileRequiredError()
     if app.profile_id != active_profile.id:
-        raise HTTPException(status_code=404, detail="Application not found.")
+        raise ProfileScopeError("Application not found.")
     return app
 
 
@@ -173,7 +184,7 @@ def exports(
     if snapshot_id is not None:
         snapshot = session.get(TailoredResumeSnapshot, snapshot_id)
         if snapshot is None or snapshot.application_id != application_id:
-            raise HTTPException(status_code=404, detail="Snapshot not found.")
+            raise NotFoundError("Snapshot not found.")
     else:
         snapshot = service.latest_snapshot(application_id)
 
@@ -243,13 +254,13 @@ def download(
     _require_active_profile_application(application_id, session)
     artifact = session.get(Artifact, artifact_id)
     if artifact is None or artifact.application_id != application_id:
-        raise HTTPException(status_code=404, detail="Artifact not found.")
+        raise NotFoundError("Artifact not found.")
     root = get_app_data_root(request).resolve()
     path = (root / artifact.relative_path).resolve()
     if root not in path.parents and path != root:
-        raise HTTPException(status_code=400, detail="Unsafe artifact path.")
+        raise ValidationAppError("Unsafe artifact path.")
     if not path.exists():
-        raise HTTPException(status_code=404, detail="Artifact file not found.")
+        raise NotFoundError("Artifact file not found.")
     ApplicationService(session).record_download_event(
         application_id, artifact.id, artifact.artifact_type
     )

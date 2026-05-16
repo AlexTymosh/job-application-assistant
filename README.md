@@ -119,3 +119,27 @@ uv run ruff check .
 uv run pytest
 uv run pre-commit run --all-files
 ```
+
+## First-release hardening notes
+
+This release keeps SQLite as the runtime source of truth and focuses on the local profile-first workflow. Settings remains available without an active profile, while Dashboard, Application, facts, and resume selection are scoped to the validated active profile.
+
+### Error handling
+
+Expected domain problems now render a safe error page with Dashboard, Application, Settings, and Back navigation. Missing active profiles, wrong-profile applications/resumes, missing tailoring runs, snapshot preconditions, and unsafe artifact paths are handled as user-facing workflow errors rather than raw server failures.
+
+### CV Builder model
+
+The CV Builder is server-rendered and structured around sections, blocks, and bullets. Builder pages show useful empty-state prompts, while rendered resume output hides empty sections and renders section headings in uppercase. Work experience blocks keep company, role, dates, present/current state, optional location, and AI-editable bullets; AI edits bullets by default rather than company or dates.
+
+### Prompt scoping
+
+Prompt instructions resolve in this order: section-specific, resume-specific, profile-specific, then global default. Prompt UI exposes only user instructions. Internal guardrails still enforce untrusted job text handling, no fabrication, private contact exclusion, and structured output.
+
+### Uploads
+
+Resume creation accepts PDF, DOC, and DOCX uploads. Files are stored under the local app data uploads area using safe generated filenames. Automatic resume parsing/import is not part of this first-release scope, and uploaded content is not sent to AI automatically.
+
+### Likely-applied semantics
+
+Copying full tailored resume text, copying a cover letter, or downloading an artifact records likely-applied activity only. The app never claims it submitted an application. The explicit Mark as applied button records the user-confirmed state.

@@ -10,7 +10,7 @@ SQLite is the source of truth for user-managed data. YAML and Markdown are not r
 FastAPI routes -> services -> SQLAlchemy models / LLM clients / exporters / artifact boundary
 ```
 
-Routes stay thin and delegate business logic to services. Services own active-profile resolution, dashboard statistics, resume building, application events, AI tailoring, cover-letter generation, snapshots, and exports.
+Routes stay thin and delegate business logic to services. Services own active-profile resolution, dashboard statistics, resume building, application events, AI tailoring, cover-letter generation, snapshots, uploads, and exports.
 
 ## Core data model
 
@@ -27,11 +27,17 @@ The app-level SQLite database stores:
 - cover letters;
 - artifact metadata.
 
-## Active profile
+Uploaded source resume files are stored in the app-owned artifact/upload area with safe generated filenames. They are not runtime sources of truth and are not sent to AI automatically.
+
+## Active profile and scope
 
 There is one active profile for the local app. `SettingsService` validates that `active_profile_id` points to an existing profile. If the profile is missing, the setting is cleared and the UI shows no active profile.
 
-Dashboard, Application, CV Builder links, facts, and resume selection are profile-scoped. Settings is global and available without an active profile.
+Dashboard, Application, CV Builder links, facts, and resume selection are profile-scoped. Application detail and mutation routes require an active profile and reject wrong-profile access.
+
+## Domain errors
+
+Services and routes use domain errors for expected workflow failures, such as missing active profile, validation issues, profile-scope violations, tailoring preconditions, and export problems. Global FastAPI handlers render a safe error page and keep unexpected exception details out of the UI.
 
 ## Application events
 
@@ -41,11 +47,11 @@ Copy and download events update likely-applied state only. Manual marking is the
 
 ## Prompt templates
 
-Prompt templates are DB-backed. User-editable prompt text is stored separately from protected safety prompt text. Protected safety rules are always preserved and include no fabrication, untrusted job posting, private contact exclusion, and structured output.
+Prompt templates are DB-backed and scoped as global, profile, resume, or section instructions. Resolution order is section, resume, profile, then global. User-editable prompt text is separate from internal guardrails. Prompt builders always preserve no fabrication, untrusted job posting handling, private contact exclusion, and structured output.
 
 ## Snapshots and exports
 
-Approved snapshots are created from accepted AI proposals and intentionally exclude private contact data. Final export rendering adds private contact data only at the final render/export boundary.
+Approved snapshots are created from accepted AI proposals and intentionally exclude private contact data. Snapshot creation requires a tailoring run and at least one accepted proposal. Final export rendering adds private contact data only at the final render/export boundary.
 
 ## Schema changes
 
