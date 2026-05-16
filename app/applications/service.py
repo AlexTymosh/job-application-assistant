@@ -156,6 +156,13 @@ class ApplicationService:
             .order_by(TailoringRun.created_at.desc())
         )
 
+    def latest_snapshot(self, application_id: int) -> TailoredResumeSnapshot | None:
+        return self.session.scalar(
+            select(TailoredResumeSnapshot)
+            .where(TailoredResumeSnapshot.application_id == application_id)
+            .order_by(TailoredResumeSnapshot.created_at.desc())
+        )
+
     def decide_proposals(self, decisions: dict[int, str]) -> None:
         now = datetime.now(UTC)
 
@@ -195,10 +202,6 @@ class ApplicationService:
 
         resume = self._load_resume_for_snapshot(application.resume_id)
 
-        # Important privacy boundary:
-        # The approved snapshot must contain only resume content and accepted changes.
-        # Private contact details are intentionally excluded here and added only during
-        # final export/rendering.
         markdown_without_contact = render_resume_markdown(
             resume,
             accepted_changes=accepted_changes,
@@ -242,7 +245,6 @@ class ApplicationService:
         resume = self._load_resume_for_final_export(snapshot.resume_id)
         accepted_changes = _deserialise_accepted_changes(snapshot.content_json)
 
-        # Contact details are added only at final export time.
         final_markdown = render_resume_markdown(
             resume,
             accepted_changes=accepted_changes,

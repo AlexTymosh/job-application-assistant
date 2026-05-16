@@ -28,15 +28,32 @@
 </form>
 <section class="card" style="margin-top:1rem">
   <h2>Copy and export</h2>
-  <div class="actions">
-    {% if run %}
-      <form data-copy-form method="post" action="/applications/{{ application.id }}/events/copy"><input type="hidden" name="target_type" value="resume_text"><input type="hidden" name="target_id" value="full"><input type="hidden" name="label" value="full tailored resume"><button type="button" data-copy-target="#resume-copy">Copy full tailored resume text</button></form>
-    {% endif %}
-    {% if letter %}<form data-copy-form method="post" action="/applications/{{ application.id }}/events/copy"><input type="hidden" name="target_type" value="cover_letter"><input type="hidden" name="target_id" value="{{ letter.id }}"><input type="hidden" name="label" value="cover letter"><button type="button" data-copy-target="#cover-letter">Copy cover letter</button></form>{% endif %}
+  {% if snapshot %}
+    <p class="muted">Latest approved snapshot: #{{ snapshot.id }}. The copy action below uses the full approved tailored resume snapshot, not only proposal fragments.</p>
+    <div class="actions">
+      <form data-copy-form method="post" action="/applications/{{ application.id }}/events/copy">
+        <input type="hidden" name="target_type" value="resume_text">
+        <input type="hidden" name="target_id" value="snapshot-{{ snapshot.id }}">
+        <input type="hidden" name="label" value="full tailored resume snapshot">
+        <button type="button" data-copy-target="#resume-copy">Copy full tailored resume text</button>
+      </form>
+      <a class="button secondary" href="/applications/{{ application.id }}/exports?snapshot_id={{ snapshot.id }}">Open export page</a>
+    </div>
+    <textarea id="resume-copy" readonly>{{ snapshot.rendered_markdown }}</textarea>
+  {% else %}
+    <p class="muted">Create an approved snapshot before copying the full tailored resume or exporting files.</p>
     <form method="post" action="/applications/{{ application.id }}/snapshot"><button>Create approved snapshot</button></form>
-  </div>
-  <textarea id="resume-copy" readonly>{% if run %}{% for proposal in run.proposals %}{% if proposal.status in [accepted, accepted_edited] %}{{ proposal.after_text }}
-{% endif %}{% endfor %}{% endif %}</textarea>
+  {% endif %}
+  {% if letter %}
+    <div class="actions" style="margin-top:1rem">
+      <form data-copy-form method="post" action="/applications/{{ application.id }}/events/copy">
+        <input type="hidden" name="target_type" value="cover_letter">
+        <input type="hidden" name="target_id" value="{{ letter.id }}">
+        <input type="hidden" name="label" value="cover letter">
+        <button type="button" data-copy-target="#cover-letter">Copy cover letter</button>
+      </form>
+    </div>
+  {% endif %}
   {% if artifacts %}<h3>Downloads</h3><ul>{% for artifact in artifacts %}<li><a href="/applications/{{ application.id }}/download/{{ artifact.id }}">Download {{ artifact.artifact_type|upper }}</a></li>{% endfor %}</ul>{% endif %}
 </section>
 {% endblock %}

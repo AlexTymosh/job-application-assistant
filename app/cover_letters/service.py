@@ -14,6 +14,7 @@ from app.db.models import (
 )
 from app.llm.fake_client import FakeCoverLetterClient
 from app.resumes.renderer import render_resume_markdown
+from app.settings.service import SettingsService
 
 
 class CoverLetterService:
@@ -51,6 +52,9 @@ class CoverLetterService:
             profile_name=resume.profile.display_name,
             resume_markdown=markdown_without_contact,
             job_requirements=[{"id": req.id, "text": req.text} for req in requirements],
+            user_instruction=SettingsService(self.session).get_prompt_instruction(
+                "cover_letter"
+            ),
         )
         letter = CoverLetter(
             application_id=app.id,

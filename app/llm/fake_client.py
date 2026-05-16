@@ -102,11 +102,13 @@ class FakeCoverLetterClient:
         profile_name: str,
         resume_markdown: str,
         job_requirements: list[dict[str, object]],
+        user_instruction: str = "",
     ) -> str:
         payload = build_cover_letter_prompt(
             profile_name=profile_name,
             resume_markdown=resume_markdown,
             job_requirements=job_requirements,
+            user_instruction=user_instruction,
         )
         self.captured_payloads.append(payload)
         requirement = (

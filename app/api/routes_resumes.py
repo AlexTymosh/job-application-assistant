@@ -185,6 +185,7 @@ def new_bullet(resume_id: int, block_id: int, request: Request):
             "resume_id": resume_id,
             "block_id": block_id,
             "bullet": None,
+            "linked_fact_ids": "",
         },
     )
 
@@ -197,11 +198,15 @@ async def create_bullet(
     session: SessionDep,
 ):
     data = await read_form_data(request)
+    fact_ids = [
+        int(value) for value in data.get("fact_ids", "").split(",") if value.strip()
+    ]
     ResumeService(session).add_bullet(
         block_id,
         data["text"],
         ai_edit_enabled=form_bool(data, "ai_edit_enabled"),
         fact_link_required=form_bool(data, "fact_link_required"),
+        fact_ids=fact_ids,
     )
     return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
 
@@ -213,13 +218,18 @@ def edit_bullet(
     request: Request,
     session: SessionDep,
 ):
+    bullet = session.get(ResumeBullet, bullet_id)
+    linked_fact_ids = ""
+    if bullet is not None:
+        linked_fact_ids = ",".join(str(link.fact_id) for link in bullet.fact_links)
     return templates.TemplateResponse(
         "bullet_form.html",
         {
             "request": request,
             "resume_id": resume_id,
             "block_id": None,
-            "bullet": session.get(ResumeBullet, bullet_id),
+            "bullet": bullet,
+            "linked_fact_ids": linked_fact_ids,
         },
     )
 
@@ -232,9 +242,15 @@ async def update_bullet(
     session: SessionDep,
 ):
     data = await read_form_data(request)
-    fact_ids = [
-        int(value) for value in data.get("fact_ids", "").split(",") if value.strip()
-    ]
+    fact_ids = None
+    if "fact_ids" in data:
+        raw_fact_ids = data.get("fact_ids", "").strip()
+        if raw_fact_ids:
+            fact_ids = [
+                int(value) for value in raw_fact_ids.split(",") if value.strip()
+            ]
+        elif form_bool(data, "clear_fact_links"):
+            fact_ids = []
     ResumeService(session).update_bullet(
         bullet_id,
         text=data["text"],

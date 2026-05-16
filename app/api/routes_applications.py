@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.api.dependencies import SessionDep, get_app_data_root, read_form_data
 from app.applications.service import ApplicationService
 from app.cover_letters.service import CoverLetterService
-from app.db.models import Artifact, ProposalStatus
+from app.db.models import Artifact, ProposalStatus, TailoredResumeSnapshot
 from app.settings.service import SettingsService
 from app.web.templating import templates
 
@@ -71,7 +71,9 @@ async def create_application(request: Request, session: SessionDep):
 def _require_active_profile_application(application_id: int, session: SessionDep):
     app = ApplicationService(session).get_application(application_id)
     active_profile = SettingsService(session).get_active_profile()
-    if active_profile is not None and app.profile_id != active_profile.id:
+    if active_profile is None:
+        raise HTTPException(status_code=400, detail="Select an active profile first.")
+    if app.profile_id != active_profile.id:
         raise HTTPException(status_code=404, detail="Application not found.")
     return app
 
@@ -81,6 +83,7 @@ def application_detail(application_id: int, request: Request, session: SessionDe
     service = ApplicationService(session)
     app = _require_active_profile_application(application_id, session)
     run = service.latest_tailoring_run(application_id)
+    snapshot = service.latest_snapshot(application_id)
     letter = CoverLetterService(session).latest(application_id)
     artifacts = list(
         session.scalars(
@@ -93,6 +96,7 @@ def application_detail(application_id: int, request: Request, session: SessionDe
             "request": request,
             "application": app,
             "run": run,
+            "snapshot": snapshot,
             "letter": letter,
             "artifacts": artifacts,
             "accepted": ProposalStatus.ACCEPTED.value,
@@ -152,6 +156,41 @@ def create_snapshot(application_id: int, session: SessionDep):
     return RedirectResponse(
         f"/applications/{application_id}/exports?snapshot_id={snapshot.id}",
         status_code=303,
+    )
+
+
+@router.get("/{application_id}/exports")
+def exports(
+    application_id: int,
+    request: Request,
+    session: SessionDep,
+    snapshot_id: int | None = None,
+):
+    service = ApplicationService(session)
+    application = _require_active_profile_application(application_id, session)
+    snapshot = None
+
+    if snapshot_id is not None:
+        snapshot = session.get(TailoredResumeSnapshot, snapshot_id)
+        if snapshot is None or snapshot.application_id != application_id:
+            raise HTTPException(status_code=404, detail="Snapshot not found.")
+    else:
+        snapshot = service.latest_snapshot(application_id)
+
+    artifacts = list(
+        session.scalars(
+            select(Artifact).where(Artifact.application_id == application_id)
+        )
+    )
+
+    return templates.TemplateResponse(
+        "exports.html",
+        {
+            "request": request,
+            "application": application,
+            "snapshot": snapshot,
+            "artifacts": artifacts,
+        },
     )
 
 
