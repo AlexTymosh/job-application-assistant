@@ -54,7 +54,9 @@ class SettingsService:
         self.ensure_defaults()
         return EffectiveSettings(
             exports=dict(self.get("exports", DEFAULT_SETTINGS["exports"])),
-            ai_policy_defaults=dict(self.get("ai_policy_defaults", DEFAULT_SETTINGS["ai_policy_defaults"])),
+            ai_policy_defaults=dict(
+                self.get("ai_policy_defaults", DEFAULT_SETTINGS["ai_policy_defaults"])
+            ),
             locale=str(self.get("locale", DEFAULT_SETTINGS["locale"])),
             llm_mode=str(self.get("llm_mode", DEFAULT_SETTINGS["llm_mode"])),
         )

@@ -29,15 +29,21 @@ class ResumeService:
             .where(Resume.id == resume_id)
             .options(
                 selectinload(Resume.profile),
-                selectinload(Resume.sections).selectinload(ResumeSection.blocks).selectinload(ResumeBlock.bullets),
+                selectinload(Resume.sections)
+                .selectinload(ResumeSection.blocks)
+                .selectinload(ResumeBlock.bullets),
             )
         )
         if resume is None:
             raise ValueError("Resume not found.")
         return resume
 
-    def create_resume(self, profile_id: int, name: str, target_role: str, language: str = "en") -> Resume:
-        resume = Resume(profile_id=profile_id, name=name, target_role=target_role, language=language)
+    def create_resume(
+        self, profile_id: int, name: str, target_role: str, language: str = "en"
+    ) -> Resume:
+        resume = Resume(
+            profile_id=profile_id, name=name, target_role=target_role, language=language
+        )
         self.session.add(resume)
         self.session.commit()
         return resume
@@ -49,7 +55,11 @@ class ResumeService:
         title: str,
         ai_edit_enabled: bool = False,
     ) -> ResumeSection:
-        order = self.session.scalar(select(ResumeSection).where(ResumeSection.resume_id == resume_id).order_by(ResumeSection.display_order.desc()))
+        order = self.session.scalar(
+            select(ResumeSection)
+            .where(ResumeSection.resume_id == resume_id)
+            .order_by(ResumeSection.display_order.desc())
+        )
         display_order = 10 if order is None else order.display_order + 10
         section = ResumeSection(
             resume_id=resume_id,
@@ -74,7 +84,11 @@ class ResumeService:
         content: str = "",
         ai_edit_enabled: bool = False,
     ) -> ResumeBlock:
-        order = self.session.scalar(select(ResumeBlock).where(ResumeBlock.section_id == section_id).order_by(ResumeBlock.display_order.desc()))
+        order = self.session.scalar(
+            select(ResumeBlock)
+            .where(ResumeBlock.section_id == section_id)
+            .order_by(ResumeBlock.display_order.desc())
+        )
         policy = AiEditPolicy(
             ai_editable=ai_edit_enabled,
             ai_can_rewrite=ai_edit_enabled,
@@ -106,7 +120,11 @@ class ResumeService:
         fact_link_required: bool,
         fact_ids: list[int] | None = None,
     ) -> ResumeBullet:
-        order = self.session.scalar(select(ResumeBullet).where(ResumeBullet.block_id == block_id).order_by(ResumeBullet.display_order.desc()))
+        order = self.session.scalar(
+            select(ResumeBullet)
+            .where(ResumeBullet.block_id == block_id)
+            .order_by(ResumeBullet.display_order.desc())
+        )
         bullet = ResumeBullet(
             block_id=block_id,
             text=text,

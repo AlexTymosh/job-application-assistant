@@ -29,7 +29,9 @@ class SetupStatus:
 
 
 class SetupStatusService:
-    def __init__(self, session: Session, app_data_root: Path, key_available: bool) -> None:
+    def __init__(
+        self, session: Session, app_data_root: Path, key_available: bool
+    ) -> None:
         self.session = session
         self.app_data_root = app_data_root
         self.key_available = key_available
@@ -79,7 +81,8 @@ class SetupStatusService:
             SetupCheck(
                 "resume_content",
                 "Resume content",
-                self.session.scalar(select(ResumeSection.id).limit(1)) is not None and self.session.scalar(select(ResumeBlock.id).limit(1)) is not None,
+                self.session.scalar(select(ResumeSection.id).limit(1)) is not None
+                and self.session.scalar(select(ResumeBlock.id).limit(1)) is not None,
                 "Add at least one section and block.",
                 "Open a resume and add structured content.",
             ),

@@ -5,13 +5,9 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from app.core.config import load_profile_config
-from app.core.paths import build_profile_paths
-
-# Import models so SQLAlchemy metadata is populated.
 from app.db import models  # noqa: F401
 from app.db.base import Base
-from app.db.session import build_sqlite_url
+from app.storage.bootstrap import bootstrap_app_data_dirs
 
 config = context.config
 
@@ -22,9 +18,8 @@ target_metadata = Base.metadata
 
 
 def get_database_url() -> str:
-    project_config = load_profile_config()
-    profile_paths = build_profile_paths(project_config)
-    return build_sqlite_url(profile_paths.database_file)
+    paths = bootstrap_app_data_dirs()
+    return f"sqlite:///{paths.database_file.as_posix()}"
 
 
 def run_migrations_offline() -> None:

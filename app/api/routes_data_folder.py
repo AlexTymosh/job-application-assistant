@@ -6,7 +6,10 @@ from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
 from app.api.dependencies import read_form_data
-from app.storage.location import get_app_data_location_status, set_user_selected_app_data_root
+from app.storage.location import (
+    get_app_data_location_status,
+    set_user_selected_app_data_root,
+)
 from app.web.templating import templates
 
 router = APIRouter(prefix="/data-folder", tags=["data-folder"])
@@ -14,7 +17,10 @@ router = APIRouter(prefix="/data-folder", tags=["data-folder"])
 
 @router.get("")
 def data_folder(request: Request):
-    return templates.TemplateResponse("data_folder.html", {"request": request, "status": get_app_data_location_status()})
+    return templates.TemplateResponse(
+        "data_folder.html",
+        {"request": request, "status": get_app_data_location_status()},
+    )
 
 
 @router.post("")

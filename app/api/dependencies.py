@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Annotated
 from urllib.parse import parse_qs
 
-from fastapi import Request
+from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 
@@ -16,6 +17,10 @@ def get_session(request: Request) -> Iterator[Session]:
 
 def get_app_data_root(request: Request) -> Path:
     return request.app.state.app_data_paths.root
+
+
+SessionDep = Annotated[Session, Depends(get_session)]
+AppDataRootDep = Annotated[Path, Depends(get_app_data_root)]
 
 
 async def read_form_data(request: Request) -> dict[str, str]:

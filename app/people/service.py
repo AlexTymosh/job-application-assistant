@@ -11,10 +11,18 @@ class PeopleService:
         self.session = session
 
     def list_profiles(self) -> list[PersonProfile]:
-        return list(self.session.scalars(select(PersonProfile).order_by(PersonProfile.display_name)))
+        return list(
+            self.session.scalars(
+                select(PersonProfile).order_by(PersonProfile.display_name)
+            )
+        )
 
-    def create_profile(self, display_name: str, full_name: str = "", location: str = "") -> PersonProfile:
-        profile = PersonProfile(display_name=display_name, full_name=full_name, location=location)
+    def create_profile(
+        self, display_name: str, full_name: str = "", location: str = ""
+    ) -> PersonProfile:
+        profile = PersonProfile(
+            display_name=display_name, full_name=full_name, location=location
+        )
         profile.contact = ProfileContact()
         self.session.add(profile)
         self.session.commit()
@@ -76,4 +84,10 @@ class PeopleService:
         return fact
 
     def list_facts(self, profile_id: int) -> list[Fact]:
-        return list(self.session.scalars(select(Fact).where(Fact.profile_id == profile_id).order_by(Fact.fact_key)))
+        return list(
+            self.session.scalars(
+                select(Fact)
+                .where(Fact.profile_id == profile_id)
+                .order_by(Fact.fact_key)
+            )
+        )

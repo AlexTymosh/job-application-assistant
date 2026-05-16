@@ -13,7 +13,10 @@ from app.tailoring.service import TailoringService
 
 def test_full_happy_path_without_real_ai(session, tmp_path):
     settings = SettingsService(session)
-    settings.set("exports", {"markdown": False, "html": False, "pdf": True, "docx": True})
+    settings.set(
+        "exports",
+        {"markdown": True, "html": False, "pdf": True, "docx": True},
+    )
     profile = PeopleService(session).create_profile("Alex", "Alex Example", "Remote")
     PeopleService(session).update_profile(
         profile.id,
@@ -39,8 +42,20 @@ def test_full_happy_path_without_real_ai(session, tmp_path):
     resumes = ResumeService(session)
     resume = resumes.create_resume(profile.id, "Backend Developer", "Backend Developer")
     section = resumes.add_section(resume.id, "work_experience", "Work Experience", True)
-    block = resumes.add_block(section.id, block_type="work_experience", title="API work", organisation="Example", content="Backend delivery")
-    resumes.add_bullet(block.id, "Built FastAPI services.", ai_edit_enabled=True, fact_link_required=True, fact_ids=[fact.id])
+    block = resumes.add_block(
+        section.id,
+        block_type="work_experience",
+        title="API work",
+        organisation="Example",
+        content="Backend delivery",
+    )
+    resumes.add_bullet(
+        block.id,
+        "Built FastAPI services.",
+        ai_edit_enabled=True,
+        fact_link_required=True,
+        fact_ids=[fact.id],
+    )
     app_service = ApplicationService(session)
     application = app_service.create_application(
         profile_id=profile.id,
@@ -55,9 +70,27 @@ def test_full_happy_path_without_real_ai(session, tmp_path):
     assert run.proposals
     app_service.decide_proposals({run.proposals[0].id: "accepted"})
     snapshot = app_service.create_snapshot(application.id)
-    assert "alex@example.com" in snapshot.rendered_markdown
+    assert "alex@example.com" not in snapshot.rendered_markdown
+    assert "+1 555 0100" not in snapshot.rendered_markdown
+    assert "Private Street" not in snapshot.rendered_markdown
     artifacts = app_service.export_snapshot(snapshot.id, tmp_path)
-    assert {artifact.artifact_type for artifact in artifacts} == {"pdf", "docx"}
+    markdown_artifact = next(
+        artifact for artifact in artifacts if artifact.artifact_type == "markdown"
+    )
+    exported_markdown = (tmp_path / markdown_artifact.relative_path).read_text(
+        encoding="utf-8"
+    )
+
+    assert "alex@example.com" in exported_markdown
+    assert "+1 555 0100" in exported_markdown
+    assert {artifact.artifact_type for artifact in artifacts} == {
+        "markdown",
+        "pdf",
+        "docx",
+    }
     letter = CoverLetterService(session).generate(application.id)
     assert "Dear hiring team" in letter.content
-    assert all(not artifact.relative_path.startswith("/") for artifact in session.scalars(select(Artifact)))
+    assert all(
+        not artifact.relative_path.startswith("/")
+        for artifact in session.scalars(select(Artifact))
+    )

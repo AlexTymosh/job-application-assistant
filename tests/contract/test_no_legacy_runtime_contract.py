@@ -10,7 +10,9 @@ def test_legacy_profile_examples_removed():
 
 def test_documentation_does_not_instruct_yaml_source_of_truth():
     docs = [Path("README.md"), *Path("docs").glob("*.md")]
-    combined = "\n".join(path.read_text(encoding="utf-8") for path in docs if path.exists()).lower()
+    combined = "\n".join(
+        path.read_text(encoding="utf-8") for path in docs if path.exists()
+    ).lower()
     assert "fact_bank.yaml" not in combined
     assert "config.yaml" not in combined
     assert "markdown cv" not in combined

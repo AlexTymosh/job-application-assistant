@@ -72,7 +72,10 @@ def build_tailored_cv_markdown_path(
 
 
 def build_tailored_cv_markdown_relative_path(*, artifact_dir_name: str) -> str:
-    return f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{TAILORED_CV_MARKDOWN_FILENAME}"
+    return (
+        f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/"
+        f"{TAILORED_CV_MARKDOWN_FILENAME}"
+    )
 
 
 def build_tailored_cv_html_path(
@@ -90,7 +93,9 @@ def build_tailored_cv_html_path(
 
 
 def build_tailored_cv_html_relative_path(*, artifact_dir_name: str) -> str:
-    return f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{TAILORED_CV_HTML_FILENAME}"
+    return (
+        f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{TAILORED_CV_HTML_FILENAME}"
+    )
 
 
 def build_tailored_cv_pdf_path(
@@ -108,7 +113,9 @@ def build_tailored_cv_pdf_path(
 
 
 def build_tailored_cv_pdf_relative_path(*, artifact_dir_name: str) -> str:
-    return f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{TAILORED_CV_PDF_FILENAME}"
+    return (
+        f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{TAILORED_CV_PDF_FILENAME}"
+    )
 
 
 def build_tailored_cv_docx_path(
@@ -126,7 +133,9 @@ def build_tailored_cv_docx_path(
 
 
 def build_tailored_cv_docx_relative_path(*, artifact_dir_name: str) -> str:
-    return f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{TAILORED_CV_DOCX_FILENAME}"
+    return (
+        f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{TAILORED_CV_DOCX_FILENAME}"
+    )
 
 
 def build_evidence_matrix_path(
@@ -144,7 +153,9 @@ def build_evidence_matrix_path(
 
 
 def build_evidence_matrix_relative_path(*, artifact_dir_name: str) -> str:
-    return f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{EVIDENCE_MATRIX_FILENAME}"
+    return (
+        f"{APPLICATIONS_ARTEFACT_ROOT}/{artifact_dir_name}/{EVIDENCE_MATRIX_FILENAME}"
+    )
 
 
 def build_match_report_path(

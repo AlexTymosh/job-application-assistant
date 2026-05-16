@@ -55,7 +55,10 @@ def _build_story(markdown: str) -> list[object]:
     def flush_list() -> None:
         if list_items:
             add_spacer()
-            items = [ListItem(Paragraph(escape(item), styles["BodyText"])) for item in list_items]
+            items = [
+                ListItem(Paragraph(escape(item), styles["BodyText"]))
+                for item in list_items
+            ]
             story.append(ListFlowable(items, bulletType="bullet", leftIndent=18))
             list_items.clear()
 

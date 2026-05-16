@@ -25,7 +25,9 @@ def create_sqlite_engine(database_file: Path | str) -> Engine:
 
 
 def create_session_factory(engine: Engine) -> sessionmaker[Session]:
-    return sessionmaker(bind=engine, expire_on_commit=False, autoflush=False, future=True)
+    return sessionmaker(
+        bind=engine, expire_on_commit=False, autoflush=False, future=True
+    )
 
 
 def initialise_database(engine: Engine) -> None:

@@ -22,8 +22,12 @@ def build_resume(session):
         allowed_claim_level="practical",
     )
     resume_service = ResumeService(session)
-    resume = resume_service.create_resume(profile.id, "Backend Developer", "Backend Developer")
-    section = resume_service.add_section(resume.id, "work_experience", "Work Experience", True)
+    resume = resume_service.create_resume(
+        profile.id, "Backend Developer", "Backend Developer"
+    )
+    section = resume_service.add_section(
+        resume.id, "work_experience", "Work Experience", True
+    )
     block = resume_service.add_block(
         section.id,
         block_type="work_experience",
@@ -58,7 +62,11 @@ def test_sql_first_resume_tailoring_and_export_flow(session, tmp_path):
     assert requirements
 
     run = TailoringService(session).run_tailoring(application.id)
-    proposals = list(session.scalars(select(AiChangeProposal).where(AiChangeProposal.tailoring_run_id == run.id)))
+    proposals = list(
+        session.scalars(
+            select(AiChangeProposal).where(AiChangeProposal.tailoring_run_id == run.id)
+        )
+    )
     assert proposals
     assert proposals[0].target_id == bullet.id
     assert proposals[0].status == "proposed"
@@ -67,7 +75,9 @@ def test_sql_first_resume_tailoring_and_export_flow(session, tmp_path):
     snapshot = app_service.create_snapshot(application.id)
     assert "Alex Example" in snapshot.rendered_markdown
 
-    SettingsService(session).set("exports", {"markdown": False, "html": False, "pdf": True, "docx": True})
+    SettingsService(session).set(
+        "exports", {"markdown": False, "html": False, "pdf": True, "docx": True}
+    )
     artifacts = app_service.export_snapshot(snapshot.id, tmp_path)
     assert {artifact.artifact_type for artifact in artifacts} == {"pdf", "docx"}
     assert all(not artifact.relative_path.startswith("/") for artifact in artifacts)

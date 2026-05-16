@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_app_data_root, get_session, read_form_data
+from app.api.dependencies import (
+    SessionDep,
+    get_app_data_root,
+    read_form_data,
+)
 from app.applications.service import ApplicationService
 from app.cover_letters.service import CoverLetterService
 from app.db.models import Artifact, PersonProfile, ProposalStatus, Resume
@@ -16,7 +19,7 @@ router = APIRouter(prefix="/applications", tags=["applications"])
 
 
 @router.get("")
-def applications(request: Request, session: Session = Depends(get_session)):
+def applications(request: Request, session: SessionDep):
     return templates.TemplateResponse(
         "applications.html",
         {
@@ -27,8 +30,10 @@ def applications(request: Request, session: Session = Depends(get_session)):
 
 
 @router.get("/new")
-def new_application(request: Request, session: Session = Depends(get_session)):
-    profiles = list(session.scalars(select(PersonProfile).order_by(PersonProfile.display_name)))
+def new_application(request: Request, session: SessionDep):
+    profiles = list(
+        session.scalars(select(PersonProfile).order_by(PersonProfile.display_name))
+    )
     resumes = list(session.scalars(select(Resume).order_by(Resume.name)))
     return templates.TemplateResponse(
         "application_form.html",
@@ -37,13 +42,15 @@ def new_application(request: Request, session: Session = Depends(get_session)):
 
 
 @router.post("/new")
-async def create_application(request: Request, session: Session = Depends(get_session)):
+async def create_application(request: Request, session: SessionDep):
     data = await read_form_data(request)
     profile_id = int(data["profile_id"])
     resume_id = int(data["resume_id"])
     resume = session.get(Resume, resume_id)
     if resume is None or resume.profile_id != profile_id:
-        raise HTTPException(status_code=400, detail="Resume must belong to the selected profile.")
+        raise HTTPException(
+            status_code=400, detail="Resume must belong to the selected profile."
+        )
     app = ApplicationService(session).create_application(
         profile_id=profile_id,
         resume_id=resume_id,
@@ -56,12 +63,16 @@ async def create_application(request: Request, session: Session = Depends(get_se
 
 
 @router.get("/{application_id}")
-def application_detail(application_id: int, request: Request, session: Session = Depends(get_session)):
+def application_detail(application_id: int, request: Request, session: SessionDep):
     service = ApplicationService(session)
     app = service.get_application(application_id)
     run = service.latest_tailoring_run(application_id)
     letter = CoverLetterService(session).latest(application_id)
-    artifacts = list(session.scalars(select(Artifact).where(Artifact.application_id == application_id)))
+    artifacts = list(
+        session.scalars(
+            select(Artifact).where(Artifact.application_id == application_id)
+        )
+    )
     return templates.TemplateResponse(
         "application_detail.html",
         {
@@ -75,19 +86,21 @@ def application_detail(application_id: int, request: Request, session: Session =
 
 
 @router.post("/{application_id}/extract")
-def extract(application_id: int, session: Session = Depends(get_session)):
+def extract(application_id: int, session: SessionDep):
     ApplicationService(session).extract_requirements(application_id)
     return RedirectResponse(f"/applications/{application_id}", status_code=303)
 
 
 @router.post("/{application_id}/tailoring/run")
-def run_tailoring(application_id: int, session: Session = Depends(get_session)):
+def run_tailoring(application_id: int, session: SessionDep):
     TailoringService(session).run_tailoring(application_id)
-    return RedirectResponse(f"/applications/{application_id}/tailoring", status_code=303)
+    return RedirectResponse(
+        f"/applications/{application_id}/tailoring", status_code=303
+    )
 
 
 @router.get("/{application_id}/tailoring")
-def tailoring(application_id: int, request: Request, session: Session = Depends(get_session)):
+def tailoring(application_id: int, request: Request, session: SessionDep):
     service = ApplicationService(session)
     app = service.get_application(application_id)
     run = service.latest_tailoring_run(application_id)
@@ -104,18 +117,20 @@ def tailoring(application_id: int, request: Request, session: Session = Depends(
 
 
 @router.post("/{application_id}/tailoring/decide")
-async def decide(application_id: int, request: Request, session: Session = Depends(get_session)):
+async def decide(application_id: int, request: Request, session: SessionDep):
     data = await read_form_data(request)
     decisions: dict[int, str] = {}
     for key, value in data.items():
         if key.startswith("decision_"):
             decisions[int(key.removeprefix("decision_"))] = value
     ApplicationService(session).decide_proposals(decisions)
-    return RedirectResponse(f"/applications/{application_id}/tailoring", status_code=303)
+    return RedirectResponse(
+        f"/applications/{application_id}/tailoring", status_code=303
+    )
 
 
 @router.post("/{application_id}/snapshot")
-def create_snapshot(application_id: int, session: Session = Depends(get_session)):
+def create_snapshot(application_id: int, session: SessionDep):
     snapshot = ApplicationService(session).create_snapshot(application_id)
     return RedirectResponse(
         f"/applications/{application_id}/exports?snapshot_id={snapshot.id}",
@@ -123,35 +138,17 @@ def create_snapshot(application_id: int, session: Session = Depends(get_session)
     )
 
 
-@router.get("/{application_id}/exports")
-def exports(
-    application_id: int,
-    request: Request,
-    snapshot_id: int | None = None,
-    session: Session = Depends(get_session),
-):
-    app = ApplicationService(session).get_application(application_id)
-    artifacts = list(session.scalars(select(Artifact).where(Artifact.application_id == application_id)))
-    return templates.TemplateResponse(
-        "exports.html",
-        {
-            "request": request,
-            "application": app,
-            "snapshot_id": snapshot_id,
-            "artifacts": artifacts,
-        },
-    )
-
-
 @router.post("/{application_id}/exports")
 async def run_exports(
     application_id: int,
     request: Request,
-    snapshot_id: int | None = None,
-    session: Session = Depends(get_session),
+    session: SessionDep,
 ):
     data = await read_form_data(request)
-    ApplicationService(session).export_snapshot(int(data["snapshot_id"]), get_app_data_root(request))
+    ApplicationService(session).export_snapshot(
+        int(data["snapshot_id"]),
+        get_app_data_root(request),
+    )
     return RedirectResponse(f"/applications/{application_id}", status_code=303)
 
 
@@ -160,7 +157,7 @@ def download(
     application_id: int,
     artifact_id: int,
     request: Request,
-    session: Session = Depends(get_session),
+    session: SessionDep,
 ):
     artifact = session.get(Artifact, artifact_id)
     if artifact is None or artifact.application_id != application_id:
@@ -175,13 +172,17 @@ def download(
 
 
 @router.get("/{application_id}/cover-letter")
-def cover_letter(application_id: int, request: Request, session: Session = Depends(get_session)):
+def cover_letter(application_id: int, request: Request, session: SessionDep):
     app = ApplicationService(session).get_application(application_id)
     letter = CoverLetterService(session).latest(application_id)
-    return templates.TemplateResponse("cover_letter.html", {"request": request, "application": app, "letter": letter})
+    return templates.TemplateResponse(
+        "cover_letter.html", {"request": request, "application": app, "letter": letter}
+    )
 
 
 @router.post("/{application_id}/cover-letter")
-def generate_cover_letter(application_id: int, session: Session = Depends(get_session)):
+def generate_cover_letter(application_id: int, session: SessionDep):
     CoverLetterService(session).generate(application_id)
-    return RedirectResponse(f"/applications/{application_id}/cover-letter", status_code=303)
+    return RedirectResponse(
+        f"/applications/{application_id}/cover-letter", status_code=303
+    )

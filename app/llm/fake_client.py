@@ -68,8 +68,16 @@ class FakeTailoringClient:
             )
         before = str(target.get("text", ""))
         suffix = str(requirement["text"])
-        after = before if suffix.lower() in before.lower() else f"{before} Aligns with {suffix.lower()}."
-        operation = "update_title" if target["target_type"] == "resume_block_title" else "rewrite"
+        after = (
+            before
+            if suffix.lower() in before.lower()
+            else f"{before} Aligns with {suffix.lower()}."
+        )
+        operation = (
+            "update_title"
+            if target["target_type"] == "resume_block_title"
+            else "rewrite"
+        )
         return AiChangeProposalSchema(
             target_type=target["target_type"],
             target_id=int(target["id"]),
@@ -101,5 +109,13 @@ class FakeCoverLetterClient:
             job_requirements=job_requirements,
         )
         self.captured_payloads.append(payload)
-        requirement = job_requirements[0]["text"] if job_requirements else "the role requirements"
-        return f"Dear hiring team,\n\nI am interested in this role because my verified resume background matches {requirement}.\n\nSincerely,\n{profile_name}\n"
+        requirement = (
+            job_requirements[0]["text"] if job_requirements else "the role requirements"
+        )
+        return (
+            "Dear hiring team,\n\n"
+            "I am interested in this role because my verified resume background "
+            f"matches {requirement}.\n\n"
+            "Sincerely,\n"
+            f"{profile_name}\n"
+        )

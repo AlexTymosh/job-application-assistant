@@ -48,12 +48,20 @@ def create_app(*, openai_secret_service: OpenAISecretService | None = None) -> F
     app.state.app_data_paths = paths
     app.state.engine = engine
     app.state.session_factory = session_factory
-    app.state.openai_secret_service = openai_secret_service or build_openai_secret_service()
+    app.state.openai_secret_service = (
+        openai_secret_service or build_openai_secret_service()
+    )
 
     @app.middleware("http")
-    async def setup_gate(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    async def setup_gate(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         path = request.url.path
-        if path == "/" or path.startswith(_SETUP_GATE_EXEMPT_PREFIXES) or path.startswith("/applications"):
+        if (
+            path == "/"
+            or path.startswith(_SETUP_GATE_EXEMPT_PREFIXES)
+            or path.startswith("/applications")
+        ):
             return await call_next(request)
         return await call_next(request)
 

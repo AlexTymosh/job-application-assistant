@@ -66,7 +66,9 @@ def get_app_data_pointer_file() -> Path:
     return config_dir / POINTER_FILE_NAME
 
 
-def read_user_selected_app_data_root(*, pointer_file: Path | None = None) -> Path | None:
+def read_user_selected_app_data_root(
+    *, pointer_file: Path | None = None
+) -> Path | None:
     pointer_path = pointer_file or get_app_data_pointer_file()
     try:
         raw_value = pointer_path.read_text(encoding="utf-8").strip()
@@ -77,7 +79,9 @@ def read_user_selected_app_data_root(*, pointer_file: Path | None = None) -> Pat
     return Path(raw_value).expanduser()
 
 
-def set_user_selected_app_data_root(root: Path, *, pointer_file: Path | None = None) -> Path:
+def set_user_selected_app_data_root(
+    root: Path, *, pointer_file: Path | None = None
+) -> Path:
     pointer_path = pointer_file or get_app_data_pointer_file()
     pointer_path.parent.mkdir(parents=True, exist_ok=True)
     normalised_root = normalise_app_data_root(root)

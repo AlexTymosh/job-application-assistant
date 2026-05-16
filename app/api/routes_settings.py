@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
 
-from app.api.dependencies import form_bool, get_session, read_form_data
+from app.api.dependencies import SessionDep, form_bool, read_form_data
 from app.settings.service import SettingsService
 from app.web.templating import templates
 
@@ -12,7 +11,7 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 
 
 @router.get("")
-def settings_page(request: Request, session: Session = Depends(get_session)):
+def settings_page(request: Request, session: SessionDep):
     settings = SettingsService(session).effective()
     secret_service = request.app.state.openai_secret_service
     try:
@@ -26,7 +25,7 @@ def settings_page(request: Request, session: Session = Depends(get_session)):
 
 
 @router.post("")
-async def update_settings(request: Request, session: Session = Depends(get_session)):
+async def update_settings(request: Request, session: SessionDep):
     data = await read_form_data(request)
     service = SettingsService(session)
     service.set(
@@ -49,5 +48,7 @@ async def update_settings(request: Request, session: Session = Depends(get_sessi
     )
     service.set("locale", data.get("locale") or "en")
     if data.get("openai_api_key", "").strip():
-        request.app.state.openai_secret_service.set_api_key(data["openai_api_key"].strip())
+        request.app.state.openai_secret_service.set_api_key(
+            data["openai_api_key"].strip()
+        )
     return RedirectResponse("/settings", status_code=303)

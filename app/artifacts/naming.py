@@ -15,7 +15,9 @@ UNKNOWN_ROLE_SLUG = "unknown-role"
 
 _SEPARATOR = "__"
 _UNSAFE_WINDOWS_FILENAME_CHARS = '<>:"/\\|?*'
-_UNSAFE_TRANSLATION = str.maketrans({char: "-" for char in _UNSAFE_WINDOWS_FILENAME_CHARS})
+_UNSAFE_TRANSLATION = str.maketrans(
+    {char: "-" for char in _UNSAFE_WINDOWS_FILENAME_CHARS}
+)
 _CONTROL_CHAR_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
 _WHITESPACE_UNDERSCORE_PATTERN = re.compile(r"[\s_]+")
 _HYPHEN_PATTERN = re.compile(r"-+")
@@ -51,14 +53,19 @@ def format_application_display_number(application_number: int) -> str:
     """Return the public application number used in normal UI text."""
 
     _validate_application_number(application_number)
-    return f"{APPLICATION_NUMBER_PREFIX.upper()}-{application_number:0{APPLICATION_NUMBER_WIDTH}d}"
+    return (
+        f"{APPLICATION_NUMBER_PREFIX.upper()}-"
+        f"{application_number:0{APPLICATION_NUMBER_WIDTH}d}"
+    )
 
 
 def format_application_path_number(application_number: int) -> str:
     """Return the public application number suffix used in artefact paths."""
 
     _validate_application_number(application_number)
-    return f"{APPLICATION_NUMBER_PREFIX}-{application_number:0{APPLICATION_NUMBER_WIDTH}d}"
+    return (
+        f"{APPLICATION_NUMBER_PREFIX}-{application_number:0{APPLICATION_NUMBER_WIDTH}d}"
+    )
 
 
 def build_application_artifact_dir_name(
@@ -152,11 +159,15 @@ def _fit_artifact_dir_name(
     available_for_slugs = MAX_ARTIFACT_DIR_NAME_LENGTH - fixed_length
 
     if available_for_slugs < len(UNKNOWN_COMPANY_SLUG) + len(UNKNOWN_ROLE_SLUG):
-        raise ValueError("MAX_ARTIFACT_DIR_NAME_LENGTH is too small for required parts.")
+        raise ValueError(
+            "MAX_ARTIFACT_DIR_NAME_LENGTH is too small for required parts."
+        )
 
     if len(company_slug) + len(role_slug) > available_for_slugs:
         overflow = len(company_slug) + len(role_slug) - available_for_slugs
-        role_slug = _truncate_slug(role_slug, max(len(UNKNOWN_ROLE_SLUG), len(role_slug) - overflow))
+        role_slug = _truncate_slug(
+            role_slug, max(len(UNKNOWN_ROLE_SLUG), len(role_slug) - overflow)
+        )
 
     if len(company_slug) + len(role_slug) > available_for_slugs:
         overflow = len(company_slug) + len(role_slug) - available_for_slugs

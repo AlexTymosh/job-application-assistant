@@ -17,7 +17,9 @@ from app.resumes.renderer import render_resume_markdown
 
 
 class CoverLetterService:
-    def __init__(self, session: Session, client: FakeCoverLetterClient | None = None) -> None:
+    def __init__(
+        self, session: Session, client: FakeCoverLetterClient | None = None
+    ) -> None:
         self.session = session
         self.client = client or FakeCoverLetterClient()
 
@@ -30,12 +32,20 @@ class CoverLetterService:
             .where(Resume.id == app.resume_id)
             .options(
                 selectinload(Resume.profile),
-                selectinload(Resume.sections).selectinload(ResumeSection.blocks).selectinload(ResumeBlock.bullets),
+                selectinload(Resume.sections)
+                .selectinload(ResumeSection.blocks)
+                .selectinload(ResumeBlock.bullets),
             )
         )
         if resume is None:
             raise ValueError("Resume not found.")
-        requirements = list(self.session.scalars(select(ExtractedJobRequirement).where(ExtractedJobRequirement.application_id == app.id)))
+        requirements = list(
+            self.session.scalars(
+                select(ExtractedJobRequirement).where(
+                    ExtractedJobRequirement.application_id == app.id
+                )
+            )
+        )
         markdown_without_contact = render_resume_markdown(resume, contact=None)
         content = self.client.generate(
             profile_name=resume.profile.display_name,
@@ -55,4 +65,8 @@ class CoverLetterService:
         return letter
 
     def latest(self, application_id: int) -> CoverLetter | None:
-        return self.session.scalar(select(CoverLetter).where(CoverLetter.application_id == application_id).order_by(CoverLetter.created_at.desc()))
+        return self.session.scalar(
+            select(CoverLetter)
+            .where(CoverLetter.application_id == application_id)
+            .order_by(CoverLetter.created_at.desc())
+        )
