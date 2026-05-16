@@ -1,9 +1,55 @@
-{% extends "base.html" %}{% block content %}
-<h1>Dashboard</h1><p class="muted">Create profiles and structured resumes, paste a job description, review AI proposals, then export approved documents.</p>
-<div class="grid">
-  <section class="card"><h2>Profiles</h2><p>{{ profile_count }} person profiles</p><a class="button" href="/profiles">Manage profiles</a></section>
-  <section class="card"><h2>Resumes</h2><p>{{ resume_count }} structured resumes</p><a class="button" href="/profiles">Open builder</a></section>
-  <section class="card"><h2>Applications</h2><p>{{ application_count }} saved applications</p><a class="button" href="/applications/new">New application</a></section>
-  <section class="card"><h2>Safety</h2><p>Private contact details are added only during final rendering/export.</p><a class="button secondary" href="/setup">View setup</a></section>
-</div>
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="badge">🏠 Dashboard</p>
+  <h1>Profile-scoped application dashboard</h1>
+  <p class="muted">Statistics are calculated for the active profile only. Copy and download activity means likely applied, not confirmed submission.</p>
+</section>
+{% if not active_profile %}
+  <div class="empty">
+    <h2>No active profile</h2>
+    <p>Create or select a profile in Settings to unlock the Dashboard and Application workspace.</p>
+    <a class="button" href="/settings">Open Settings</a>
+    <a class="button secondary" href="/profiles/new">Create profile</a>
+  </div>
+{% else %}
+  <div class="grid">
+    <div class="card"><span class="muted">Active profile</span><h2>{{ stats.profile_name }}</h2></div>
+    <div class="card"><span class="muted">Resumes</span><h2>{{ stats.resume_count }}</h2></div>
+    <div class="card"><span class="muted">Applications</span><h2>{{ stats.application_count }}</h2></div>
+    <div class="card"><span class="muted">Last 30 days</span><h2>{{ stats.applications_last_30_days }}</h2></div>
+    <div class="card"><span class="muted">Likely applied</span><h2>{{ stats.likely_applied_count }}</h2></div>
+    <div class="card"><span class="muted">Manually marked applied</span><h2>{{ stats.manually_marked_applied_count }}</h2></div>
+  </div>
+  <section class="card" style="margin-top:1rem">
+    <h2>Application activity over the last 30 days</h2>
+    <p class="muted">Bars count applications by creation date.</p>
+    <div class="chart" role="img" aria-label="Application activity chart">
+      {% for day in stats.activity_days %}
+        <span class="bar" title="{{ day.date }}: {{ day.count }}" style="height:{{ day.height }}px"></span>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="card" style="margin-top:1rem">
+    <h2>Recent applications</h2>
+    {% if stats.recent_applications %}
+      <table>
+        <thead><tr><th>Job</th><th>Company</th><th>Status</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        {% for application in stats.recent_applications %}
+          <tr>
+            <td>{{ application.job_title or "Untitled role" }}</td>
+            <td>{{ application.company_name or "Unknown company" }}</td>
+            <td><span class="badge">{{ application.status }}</span></td>
+            <td>{{ application.created_at.date() }}</td>
+            <td><a href="/applications/{{ application.id }}">Review</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">No applications yet. Use the Application workspace to paste a job and adapt a resume.</p>
+    {% endif %}
+  </section>
+{% endif %}
 {% endblock %}

@@ -53,6 +53,7 @@ class ClaimLevel(StrEnum):
 class ProposalStatus(StrEnum):
     PROPOSED = "proposed"
     ACCEPTED = "accepted"
+    ACCEPTED_EDITED = "accepted_edited"
     REJECTED = "rejected"
 
 
@@ -74,6 +75,10 @@ class ApplicationStatus(StrEnum):
     REVIEW_IN_PROGRESS = "review_in_progress"
     CHANGES_APPROVED = "changes_approved"
     EXPORTED = "exported"
+    COPIED_LIKELY_APPLIED = "copied_likely_applied"
+    DOWNLOADED_LIKELY_APPLIED = "downloaded_likely_applied"
+    LIKELY_APPLIED = "likely_applied"
+    MANUALLY_MARKED_APPLIED = "manually_marked_applied"
     COVER_LETTER_GENERATED = "cover_letter_generated"
     QA_WARNING = "qa_warning"
 
@@ -347,6 +352,28 @@ class Application(Base, TimestampMixin):
     requirements: Mapped[list[ExtractedJobRequirement]] = relationship(
         back_populates="application", cascade="all, delete-orphan"
     )
+    events: Mapped[list[ApplicationEvent]] = relationship(
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="ApplicationEvent.created_at",
+    )
+
+
+class ApplicationEvent(Base):
+    __tablename__ = "application_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    message: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    metadata_json: Mapped[Any] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+    application: Mapped[Application] = relationship(back_populates="events")
 
 
 class ExtractedJobRequirement(Base):

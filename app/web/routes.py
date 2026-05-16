@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from sqlalchemy import select
 
 from app.api.dependencies import SessionDep
-from app.db.models import Application, PersonProfile, Resume
+from app.applications.service import ApplicationService
+from app.settings.service import SettingsService
 from app.web.templating import templates
 
 router = APIRouter()
@@ -12,14 +12,17 @@ router = APIRouter()
 
 @router.get("/")
 def dashboard(request: Request, session: SessionDep):
+    settings = SettingsService(session)
+    active_profile = settings.get_active_profile()
+    stats = None
+    if active_profile is not None:
+        stats = ApplicationService(session).dashboard_stats(active_profile.id)
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
-            "profile_count": session.scalar(select(PersonProfile).count())
-            if False
-            else len(list(session.scalars(select(PersonProfile.id)))),
-            "resume_count": len(list(session.scalars(select(Resume.id)))),
-            "application_count": len(list(session.scalars(select(Application.id)))),
+            "active_profile": active_profile,
+            "stats": stats,
+            "profiles": settings.list_profiles(),
         },
     )

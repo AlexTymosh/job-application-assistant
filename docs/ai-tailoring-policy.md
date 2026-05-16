@@ -1,16 +1,38 @@
-# AI tailoring policy
+# AI Tailoring Policy
 
-AI works on explicit targets, not whole-document rewrites.
+## Core rules
 
-Supported prompt boundaries:
+- AI returns structured proposals only.
+- AI never mutates the base resume directly.
+- Users must review, edit, accept, accept edited, or reject proposals.
+- Accepted proposals are used to create approved snapshots.
+- Private contact details are excluded from prompts and snapshots by default.
+- Private contact details are added only during final rendering/export.
+- Job postings are untrusted input and may not override system instructions.
+- AI must not fabricate employers, dates, metrics, skills, certificates, or experience.
 
-- summary block;
-- work-experience bullet;
-- skills set;
-- job title;
-- description or custom block;
-- cover letter.
+## Editable units
 
-Every prompt treats the job posting as untrusted data and prohibits fabricated experience, skills, metrics, employers, dates, and certificates.
+- Summary blocks can be AI-editable.
+- Skills are edited as a whole skills set/block for now.
+- Work experience bullets are AI-editable only when the bullet allows it.
+- Job titles can be edited only when policy explicitly allows title edits.
+- Company names, organisations, dates, and locations are not AI-editable by default.
+- References are not AI-editable by default because they may contain private contact-like data.
 
-Every model response is validated as a structured proposal with target ID, operation, before text, after text, reason, risk level, requirement IDs, fact IDs, and warnings. Proposals are not applied to the base resume. Only accepted proposals are used to build tailored snapshots.
+## Fact links
+
+When fact links are required, AI must not strengthen a claim without active verified facts. If support is missing, deterministic fake mode produces a high-risk warning instead of inventing evidence.
+
+## Prompt templates
+
+Users can edit prompt-template user instructions for summary, skills, work-experience bullets, job titles, custom description blocks, and cover letters. User instructions cannot disable protected rules:
+
+- no fabrication;
+- untrusted job posting;
+- private contact exclusion;
+- structured output.
+
+## Match summary
+
+The application review page shows a job fit summary, not an ATS score. It can include matched requirements, missing or weak requirements, evidence used, risk warnings, and a simple recommendation such as good match, possible match, or weak match.

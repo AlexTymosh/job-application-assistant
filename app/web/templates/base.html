@@ -3,41 +3,83 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ title or "Resume Builder" }}</title>
+  <title>{{ title or "AI JOB APPLICATION ASSISTANT" }}</title>
   <style>
-    :root { color-scheme: light; --bg:#f6f7fb; --panel:#fff; --text:#1f2937; --muted:#6b7280; --brand:#2563eb; --line:#e5e7eb; --good:#15803d; --warn:#b45309; --bad:#b91c1c; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-    header { background:#111827; color:#fff; padding:1rem 1.5rem; }
-    nav { display:flex; flex-wrap:wrap; gap:.75rem; margin-top:.75rem; }
-    nav a { color:#dbeafe; text-decoration:none; font-weight:600; }
-    main { width:min(1180px, calc(100% - 2rem)); margin:1.5rem auto 3rem; }
-    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; }
-    .card, form, table { background:var(--panel); border:1px solid var(--line); border-radius:16px; box-shadow:0 8px 24px rgba(15,23,42,.05); }
+    :root { --bg:#f5f7fb; --panel:#fff; --text:#172033; --muted:#64748b; --brand:#2563eb; --brand-dark:#1d4ed8; --line:#e2e8f0; --good:#15803d; --warn:#b45309; --bad:#b91c1c; --shadow:0 18px 42px rgba(15,23,42,.08); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+    a { color:var(--brand); }
+    .shell-header { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between; padding:.9rem 1.25rem; background:#0f172a; color:white; box-shadow:0 10px 30px rgba(15,23,42,.25); }
+    .brand { display:flex; align-items:center; gap:.8rem; font-weight:900; letter-spacing:.04em; }
+    .brand-icon { display:grid; place-items:center; width:2.4rem; height:2.4rem; border-radius:.9rem; background:#1e40af; }
+    nav { display:flex; gap:.45rem; align-items:center; }
+    nav a { color:#dbeafe; text-decoration:none; font-weight:800; padding:.55rem .8rem; border-radius:999px; }
+    nav a:hover { background:rgba(255,255,255,.12); color:#fff; }
+    .profile-switcher { display:flex; gap:.5rem; align-items:center; color:#e2e8f0; }
+    .profile-switcher select { width:13rem; padding:.45rem .6rem; border-radius:999px; border:1px solid #334155; background:#111827; color:white; }
+    main { width:min(1220px, calc(100% - 2rem)); margin:1.35rem auto 3rem; }
+    .hero, .card, form, table { background:var(--panel); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow); }
+    .hero { padding:1.35rem; margin-bottom:1rem; }
     .card { padding:1rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(235px, 1fr)); gap:1rem; }
+    .two-column { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1rem; }
     form { padding:1rem; display:grid; gap:.85rem; }
-    label { font-weight:700; display:grid; gap:.35rem; }
-    input, textarea, select { width:100%; padding:.7rem; border:1px solid #cbd5e1; border-radius:10px; font:inherit; }
-    textarea { min-height:130px; }
-    button, .button { display:inline-block; width:max-content; border:0; border-radius:999px; background:var(--brand); color:white; padding:.65rem 1rem; font-weight:700; text-decoration:none; cursor:pointer; }
-    .secondary { background:#475569; }
-    .danger { background:var(--bad); }
+    label { font-weight:800; display:grid; gap:.35rem; }
+    input, textarea, select { width:100%; padding:.72rem; border:1px solid #cbd5e1; border-radius:12px; font:inherit; background:white; }
+    textarea { min-height:120px; }
+    button, .button { display:inline-block; width:max-content; border:0; border-radius:999px; background:var(--brand); color:white; padding:.65rem 1rem; font-weight:900; text-decoration:none; cursor:pointer; }
+    button:hover, .button:hover { background:var(--brand-dark); color:white; }
+    .secondary { background:#475569; } .danger { background:var(--bad); } .ghost { background:#e2e8f0; color:#172033; }
     table { width:100%; border-collapse:collapse; overflow:hidden; }
     th, td { padding:.75rem; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
-    .badge { border-radius:999px; padding:.2rem .55rem; font-size:.85rem; font-weight:700; background:#e0e7ff; color:#3730a3; }
+    .badge { border-radius:999px; padding:.22rem .58rem; font-size:.84rem; font-weight:900; background:#e0e7ff; color:#3730a3; display:inline-block; }
     .badge.good { background:#dcfce7; color:var(--good); } .badge.warn { background:#fef3c7; color:var(--warn); } .badge.bad { background:#fee2e2; color:var(--bad); }
     .muted { color:var(--muted); } .actions { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
-    .compare { display:grid; grid-template-columns:1fr 1fr; gap:1rem; } .before,.after { padding:1rem; border-radius:12px; background:#f8fafc; border:1px solid var(--line); }
-    @media (max-width:760px){ .compare { grid-template-columns:1fr; } }
+    .empty { padding:2rem; text-align:center; border:1px dashed #cbd5e1; border-radius:20px; background:#fff; }
+    .tabs { display:flex; gap:.5rem; margin:.75rem 0; } .tab { padding:.55rem .8rem; border-radius:999px; background:#e2e8f0; font-weight:900; }
+    .tab.active { background:#dbeafe; color:#1d4ed8; }
+    .compare { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; }
+    .before,.after { padding:1rem; border-radius:14px; background:#f8fafc; border:1px solid var(--line); white-space:pre-wrap; }
+    .chart { display:flex; gap:.25rem; align-items:end; height:96px; padding:.75rem; border:1px solid var(--line); border-radius:14px; background:#f8fafc; }
+    .bar { flex:1; min-width:4px; background:#93c5fd; border-radius:999px 999px 0 0; }
+    .section-card { border:1px solid var(--line); border-radius:18px; padding:1rem; background:#fff; margin:1rem 0; }
+    .block-card { border:1px solid #dbeafe; border-radius:16px; padding:1rem; background:#f8fbff; margin:.8rem 0; }
+    @media (max-width:720px) { .shell-header { align-items:flex-start; } nav { width:100%; overflow-x:auto; } .profile-switcher { width:100%; } }
   </style>
 </head>
 <body>
-  <header>
-    <strong>Local Resume Builder + AI Tailoring</strong>
-    <nav>
-      <a href="/">Dashboard</a><a href="/setup">Setup</a><a href="/settings">Settings</a><a href="/data-folder">Data Folder</a><a href="/profiles">Profiles</a><a href="/applications">Applications</a>
+  <header class="shell-header">
+    <div class="brand"><span class="brand-icon">🤖</span><span>AI JOB APPLICATION ASSISTANT</span></div>
+    <nav aria-label="Main navigation">
+      <a href="/">🏠 Dashboard</a>
+      <a href="/applications">📄 Application</a>
+      <a href="/settings">⚙ Settings</a>
     </nav>
+    <form class="profile-switcher" action="/settings/active-profile" method="post">
+      <input type="hidden" name="next" value="{{ request.url.path }}">
+      <span>{{ shell.active_profile.display_name if shell.active_profile else "No active profile" }}</span>
+      {% if shell.profiles %}
+        <select name="active_profile_id" onchange="this.form.submit()">
+          {% for profile in shell.profiles %}
+            <option value="{{ profile.id }}" {% if shell.active_profile and shell.active_profile.id == profile.id %}selected{% endif %}>{{ profile.display_name }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+    </form>
   </header>
-  <main>{% block content %}{% endblock %}</main>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    document.querySelectorAll('[data-copy-target]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const target = document.querySelector(button.dataset.copyTarget);
+        if (!target) return;
+        await navigator.clipboard.writeText(target.value || target.textContent || '');
+        const form = button.closest('[data-copy-form]');
+        if (form) form.submit();
+      });
+    });
+  </script>
 </body>
 </html>

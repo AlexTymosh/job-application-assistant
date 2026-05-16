@@ -28,6 +28,7 @@ def build_summary_prompt(
     requirements: list[dict[str, Any]],
     facts: list[dict[str, Any]],
     policy: dict[str, Any],
+    user_instruction: str = "",
 ) -> PromptPayload:
     return _payload(
         "summary_block",
@@ -35,6 +36,7 @@ def build_summary_prompt(
         requirements=requirements,
         facts=facts,
         policy=policy,
+        user_instruction=user_instruction,
     )
 
 
@@ -44,6 +46,7 @@ def build_work_experience_bullet_prompt(
     requirements: list[dict[str, Any]],
     facts: list[dict[str, Any]],
     policy: dict[str, Any],
+    user_instruction: str = "",
 ) -> PromptPayload:
     return _payload(
         "work_experience_bullet",
@@ -51,6 +54,7 @@ def build_work_experience_bullet_prompt(
         requirements=requirements,
         facts=facts,
         policy=policy,
+        user_instruction=user_instruction,
     )
 
 
@@ -60,9 +64,15 @@ def build_skills_prompt(
     requirements: list[dict[str, Any]],
     facts: list[dict[str, Any]],
     policy: dict[str, Any],
+    user_instruction: str = "",
 ) -> PromptPayload:
     return _payload(
-        "skills_set", block=block, requirements=requirements, facts=facts, policy=policy
+        "skills_set",
+        block=block,
+        requirements=requirements,
+        facts=facts,
+        policy=policy,
+        user_instruction=user_instruction,
     )
 
 
@@ -72,9 +82,15 @@ def build_job_title_prompt(
     requirements: list[dict[str, Any]],
     facts: list[dict[str, Any]],
     policy: dict[str, Any],
+    user_instruction: str = "",
 ) -> PromptPayload:
     return _payload(
-        "job_title", block=block, requirements=requirements, facts=facts, policy=policy
+        "job_title",
+        block=block,
+        requirements=requirements,
+        facts=facts,
+        policy=policy,
+        user_instruction=user_instruction,
     )
 
 
@@ -84,6 +100,7 @@ def build_description_prompt(
     requirements: list[dict[str, Any]],
     facts: list[dict[str, Any]],
     policy: dict[str, Any],
+    user_instruction: str = "",
 ) -> PromptPayload:
     return _payload(
         "description_custom_block",
@@ -91,6 +108,7 @@ def build_description_prompt(
         requirements=requirements,
         facts=facts,
         policy=policy,
+        user_instruction=user_instruction,
     )
 
 
@@ -101,6 +119,7 @@ def _payload(
     requirements: list[dict[str, Any]],
     facts: list[dict[str, Any]],
     policy: dict[str, Any],
+    user_instruction: str,
 ) -> PromptPayload:
     safe_block = {
         key: value
@@ -111,6 +130,7 @@ def _payload(
         prompt_key=prompt_key,
         system_prompt=f"{UNTRUSTED_JOB_TEXT_WARNING}\n{NO_FABRICATION_RULES}",
         user_payload={
+            "user_instruction": user_instruction,
             "target": safe_block,
             "job_requirements": requirements,
             "allowed_facts": facts,

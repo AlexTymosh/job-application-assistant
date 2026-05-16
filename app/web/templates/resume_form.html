@@ -1,1 +1,11 @@
-{% extends "base.html" %}{% block content %}<h1>Create resume</h1><form method="post"><label>Name<input name="name" required></label><label>Target role<input name="target_role"></label><label>Content language<input name="language" value="en"></label><button>Create resume</button></form>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="hero"><p class="badge">CV Builder</p><h1>Create resume</h1><p class="muted">Create a profile-scoped resume version such as Software Engineer, Automation Engineer, Data Analyst, or Backend Developer.</p></section>
+<form method="post">
+  <label>Resume name <input name="name" required></label>
+  <label>Target role <input name="target_role"></label>
+  <label>Language <input name="language" value="en"></label>
+  <label><input type="checkbox" name="create_standard_sections" checked> Create standard CV sections</label>
+  <button>Create resume</button>
+</form>
+{% endblock %}

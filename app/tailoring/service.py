@@ -27,6 +27,7 @@ from app.llm.prompts.tailoring import (
     build_work_experience_bullet_prompt,
 )
 from app.resumes.policies import AiEditPolicy
+from app.settings.service import SettingsService
 from app.tailoring.schema import AiChangeProposalSchema
 
 
@@ -81,6 +82,13 @@ class TailoringService:
             application_id=app.id,
             resume_id=resume.id,
             status="proposed",
+            warnings_json={
+                "match_level": "possible match",
+                "matched_requirements": [req.text for req in requirements[:3]],
+                "missing_or_weak_requirements": [],
+                "risk_warnings": [],
+                "recommendation": "possible match",
+            },
             completed_at=datetime.now(UTC),
         )
         self.session.add(run)
@@ -131,6 +139,7 @@ class TailoringService:
             "text": block.content or block.title,
             "block_type": block.block_type,
         }
+        settings = SettingsService(self.session)
 
         if block.block_type == "summary":
             payload = build_summary_prompt(
@@ -138,6 +147,7 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
+                user_instruction=settings.get_prompt_instruction("summary"),
             )
         elif block.block_type == "skills":
             target["target_type"] = "skills_set"
@@ -146,6 +156,7 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
+                user_instruction=settings.get_prompt_instruction("skills"),
             )
         elif block.block_type == "title":
             if not policy.get("ai_can_edit_title"):
@@ -157,6 +168,7 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
+                user_instruction=settings.get_prompt_instruction("job_title"),
             )
         else:
             payload = build_description_prompt(
@@ -164,6 +176,9 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
+                user_instruction=settings.get_prompt_instruction(
+                    "description_custom_block"
+                ),
             )
 
         proposal = self.client.propose(payload)
@@ -208,6 +223,9 @@ class TailoringService:
             requirements=requirements,
             facts=allowed_facts,
             policy=policy,
+            user_instruction=SettingsService(self.session).get_prompt_instruction(
+                "work_experience_bullet"
+            ),
         )
 
         proposal = self.client.propose(payload)
@@ -247,6 +265,10 @@ class TailoringService:
                 raise TailoringValidationError(
                     "Target bullet does not exist or is not AI-editable."
                 )
+            if not self._bullet_belongs_to_resume(bullet, resume_id):
+                raise TailoringValidationError(
+                    "Target bullet does not belong to the selected resume."
+                )
             if (
                 bullet.fact_link_required
                 and proposal.risk_level != "high"
@@ -265,6 +287,10 @@ class TailoringService:
                 raise TailoringValidationError(
                     "Target block does not exist or is not AI-editable."
                 )
+            if not self._block_belongs_to_resume(block, resume_id):
+                raise TailoringValidationError(
+                    "Target block does not belong to the selected resume."
+                )
             if (
                 proposal.target_type == "resume_block_title"
                 and not AiEditPolicy.from_json(block.policy_json).ai_can_edit_title
@@ -272,3 +298,13 @@ class TailoringService:
                 raise TailoringValidationError("Title edits are forbidden by policy.")
         else:
             raise TailoringValidationError("Unsupported target type.")
+
+    def _bullet_belongs_to_resume(self, bullet: ResumeBullet, resume_id: int) -> bool:
+        block = self.session.get(ResumeBlock, bullet.block_id)
+        if block is None:
+            return False
+        return self._block_belongs_to_resume(block, resume_id)
+
+    def _block_belongs_to_resume(self, block: ResumeBlock, resume_id: int) -> bool:
+        section = self.session.get(ResumeSection, block.section_id)
+        return section is not None and section.resume_id == resume_id
