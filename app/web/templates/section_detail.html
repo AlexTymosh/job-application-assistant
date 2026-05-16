@@ -1,1 +1,2 @@
-{% extends "base.html" %}{% block content %}<h1>{{ section.title }}</h1><section class="card"><p>Section type: {{ section.section_type }}</p><p>Visible: {{ section.is_visible }}</p><p>AI editing: {{ section.ai_edit_enabled }}</p><a class="button" href="/resumes/{{ resume_id }}">Back to resume</a></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}<section class="hero"><p class="badge">CV Builder</p><h1>{{ section.title }}</h1><p>{{ section.section_type }}</p><a class="button" href="/resumes/{{ resume_id }}">Back to builder</a></section>{% endblock %}

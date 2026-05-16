@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from app.api.dependencies import SessionDep, read_form_data
 from app.db.models import ClaimLevel, PersonProfile
 from app.people.service import PeopleService
+from app.settings.service import SettingsService
 from app.web.templating import templates
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -32,6 +33,8 @@ async def create_profile(request: Request, session: SessionDep):
     profile = PeopleService(session).create_profile(
         data["display_name"], data.get("full_name", ""), data.get("location", "")
     )
+    if SettingsService(session).get_active_profile() is None:
+        SettingsService(session).set_active_profile(profile.id)
     return RedirectResponse(f"/profiles/{profile.id}", status_code=303)
 
 
@@ -108,3 +111,9 @@ async def create_fact(profile_id: int, request: Request, session: SessionDep):
         ),
     )
     return RedirectResponse(f"/profiles/{profile_id}/facts", status_code=303)
+
+
+@router.post("/{profile_id}/set-active")
+def set_active_profile(profile_id: int, session: SessionDep):
+    SettingsService(session).set_active_profile(profile_id)
+    return RedirectResponse("/", status_code=303)

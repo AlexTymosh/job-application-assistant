@@ -1,1 +1,12 @@
-{% extends "base.html" %}{% block content %}<h1>{{ 'Edit bullet' if bullet else 'Add bullet' }}</h1><form method="post"><label>Bullet text<textarea name="text" required>{{ bullet.text if bullet else '' }}</textarea></label><label><input type="checkbox" name="ai_edit_enabled" value="true" {% if bullet and bullet.ai_edit_enabled %}checked{% endif %}> AI may rewrite this bullet</label><label><input type="checkbox" name="fact_link_required" value="true" {% if not bullet or bullet.fact_link_required %}checked{% endif %}> Require verified fact support</label><button>Save bullet</button></form>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="hero"><p class="badge">CV Builder</p><h1>{{ "Edit bullet" if bullet else "Add bullet" }}</h1></section>
+<form method="post">
+  <label>Bullet text <textarea name="text" required>{{ bullet.text if bullet else '' }}</textarea></label>
+  <label><input type="checkbox" name="is_visible" {% if not bullet or bullet.is_visible %}checked{% endif %}> Visible</label>
+  <label><input type="checkbox" name="ai_edit_enabled" {% if bullet and bullet.ai_edit_enabled %}checked{% endif %}> AI may edit this bullet</label>
+  <label><input type="checkbox" name="fact_link_required" {% if not bullet or bullet.fact_link_required %}checked{% endif %}> Fact link required</label>
+  <label>Linked fact IDs <input name="fact_ids" placeholder="Comma-separated fact IDs"></label>
+  <button>Save bullet</button>
+</form>
+{% endblock %}

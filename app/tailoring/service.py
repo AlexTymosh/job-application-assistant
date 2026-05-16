@@ -81,6 +81,13 @@ class TailoringService:
             application_id=app.id,
             resume_id=resume.id,
             status="proposed",
+            warnings_json={
+                "match_level": "possible match",
+                "matched_requirements": [req.text for req in requirements[:3]],
+                "missing_or_weak_requirements": [],
+                "risk_warnings": [],
+                "recommendation": "possible match",
+            },
             completed_at=datetime.now(UTC),
         )
         self.session.add(run)

@@ -1,1 +1,5 @@
-{% extends "base.html" %}{% block content %}<div class="actions"><h1>Resumes</h1><a class="button" href="/profiles/{{ profile_id }}/resumes/new">Create resume</a></div><div class="grid">{% for resume in resumes %}<section class="card"><h2>{{ resume.name }}</h2><p>{{ resume.target_role }}</p><a class="button" href="/resumes/{{ resume.id }}">Open builder</a></section>{% else %}<section class="card"><p>No resumes yet.</p></section>{% endfor %}</div>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="hero"><p class="badge">CV Builder</p><h1>Profile resumes</h1><p class="muted">Resume versions are content templates for different roles, not visual design themes.</p><a class="button" href="/profiles/{{ profile_id }}/resumes/new">Create resume</a></section>
+<div class="grid">{% for resume in resumes %}<section class="card"><h2>{{ resume.name }}</h2><p>{{ resume.target_role }}</p><a class="button" href="/resumes/{{ resume.id }}">Open builder</a></section>{% else %}<div class="empty"><p>No resumes yet.</p></div>{% endfor %}</div>
+{% endblock %}

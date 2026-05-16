@@ -1,120 +1,42 @@
 {% extends "base.html" %}
-
 {% block content %}
-  <h1>Application Detail</h1>
-
-  <p><a href="/applications/{{ application.application_number }}/review">Open review page</a></p>
-
-  <form method="post" action="/applications/{{ application.application_number }}/run-local-pipeline">
-    <button type="submit">Run local fake pipeline</button>
-  </form>
-
-  <dl>
-    <dt>Application number</dt>
-    <dd>{{ application.display_number }}</dd>
-
-
-    <dt>Profile</dt>
-    <dd>{{ application.profile_name }}</dd>
-
-    <dt>Status</dt>
-    <dd>{{ application.status }}</dd>
-
-    <dt>Source URL</dt>
-    <dd>{{ application.source_url or "Not provided" }}</dd>
-
-    <dt>Normalised URL</dt>
-    <dd>{{ application.normalized_url or "Not available" }}</dd>
-
-    <dt>Selected CV variant</dt>
-    <dd>{{ application.selected_cv_variant or "Not selected" }}</dd>
-
-    <dt>Job text hash</dt>
-    <dd>{% if has_job_text_hash %}Present{% else %}Not available{% endif %}</dd>
-  </dl>
-
-  <details>
-    <summary>Technical details</summary>
-    <dl>
-      <dt>Database UUID</dt>
-      <dd><small><code>{{ application.id }}</code></small></dd>
-    </dl>
-  </details>
-
-
-  {% if approval_required and not final_export_ready and application.status == "awaiting_approval" %}
-    <section>
-      <h2>Approval required</h2>
-      <p>Final PDF/DOCX exports are waiting for human approval. Review artefacts are available, but final documents have not been created.</p>
-    </section>
-  {% elif approval_required and not final_export_ready and application.status == "qa_warning" %}
-    <section>
-      <h2>Review warnings before approval</h2>
-      <p>QA warnings must be reviewed before approval. Final PDF/DOCX exports have not been created.</p>
-    </section>
-  {% elif final_export_ready %}
-    <section>
-      <h2>Final exports ready</h2>
-      <p>Final PDF/DOCX exports are available for download.</p>
-    </section>
-  {% endif %}
-
-
-  <section>
-    <h2>Changed CV downloads</h2>
-    {% if changed_cv_artifacts %}
-      <ul>
-        {% for artifact in changed_cv_artifacts %}
-          <li>
-            <strong>{{ artifact.artifact_type }}</strong>:
-            <a href="/applications/{{ application.application_number }}/artifacts/{{ artifact.id }}/download">
-              Download {{ artifact.path.split('/')[-1] }}
-            </a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No changed CV artefacts available yet. Run the local pipeline first.</p>
+<section class="hero">
+  <p class="badge">Adapted result / review</p>
+  <h1>{{ application.job_title or "Untitled role" }}{% if application.company_name %} at {{ application.company_name }}{% endif %}</h1>
+  <p>Status: <span class="badge">{{ application.status }}</span></p>
+  <p class="muted">Copy/download events mark this application as likely applied. Only the manual button confirms that you marked it as applied.</p>
+  <form action="/applications/{{ application.id }}/mark-applied" method="post"><button>Mark as applied</button></form>
+</section>
+<div class="grid">
+  <section class="card"><h2>Job requirements</h2>{% for req in application.requirements %}<p><span class="badge">{{ req.requirement_type }}</span> {{ req.text }}</p>{% else %}<p class="muted">No requirements extracted.</p>{% endfor %}</section>
+  <section class="card"><h2>Job fit summary</h2>{% if run and run.warnings_json %}<p><strong>{{ run.warnings_json.recommendation or run.warnings_json.match_level }}</strong></p><h3>Matched requirements</h3><ul>{% for item in run.warnings_json.matched_requirements %}<li>{{ item }}</li>{% endfor %}</ul><h3>Risk warnings</h3><ul>{% for item in run.warnings_json.risk_warnings %}<li>{{ item }}</li>{% else %}<li>No deterministic risk warnings.</li>{% endfor %}</ul>{% else %}<p class="muted">Run adaptation to create a fit summary.</p>{% endif %}</section>
+</div>
+<form method="post" action="/applications/{{ application.id }}/review" style="margin-top:1rem">
+  <h2>Side-by-side AI proposals</h2>
+  {% if run and run.proposals %}
+    {% for proposal in run.proposals %}
+      <section class="card" style="margin-bottom:1rem">
+        <p><span class="badge">{{ proposal.target_type }}</span> <span class="muted">{{ proposal.reason }}</span></p>
+        <div class="compare"><div><h3>Base resume</h3><div class="before">{{ proposal.before_text }}</div></div><div><h3>Tailored editable copy</h3><textarea id="after-{{ proposal.id }}" name="after_text_{{ proposal.id }}">{{ proposal.after_text }}</textarea></div></div>
+        <div class="actions"><label><input type="radio" name="decision_{{ proposal.id }}" value="{{ accepted }}" {% if proposal.status == accepted %}checked{% endif %}> Accept</label><label><input type="radio" name="decision_{{ proposal.id }}" value="{{ accepted_edited }}" {% if proposal.status == accepted_edited %}checked{% endif %}> Accept edited</label><label><input type="radio" name="decision_{{ proposal.id }}" value="{{ rejected }}" {% if proposal.status == rejected %}checked{% endif %}> Reject</label></div>
+      </section>
+    {% endfor %}
+  {% else %}<p class="muted">No proposals yet.</p>{% endif %}
+  <h2>Cover letter</h2>
+  {% if letter %}<input type="hidden" name="cover_letter_id" value="{{ letter.id }}"><textarea id="cover-letter" name="cover_letter_content">{{ letter.content }}</textarea>{% else %}<p class="muted">No cover letter generated yet.</p>{% endif %}
+  <button>Save review edits and decisions</button>
+</form>
+<section class="card" style="margin-top:1rem">
+  <h2>Copy and export</h2>
+  <div class="actions">
+    {% if run %}
+      <form data-copy-form method="post" action="/applications/{{ application.id }}/events/copy"><input type="hidden" name="target_type" value="resume_text"><input type="hidden" name="target_id" value="full"><input type="hidden" name="label" value="full tailored resume"><button type="button" data-copy-target="#resume-copy">Copy full tailored resume text</button></form>
     {% endif %}
-  </section>
-
-
-  <section>
-    <h2>Warnings</h2>
-    {% if warnings %}
-      <ul>
-        {% for warning in warnings %}
-          <li><strong>{{ warning.code }}</strong> ({{ warning.level }}): {{ warning.message }}</li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No warnings recorded.</p>
-    {% endif %}
-  </section>
-
-  <section>
-    <h2>Events</h2>
-    {% if events %}
-      <ol>
-        {% for event in events %}
-          <li>{{ event.occurred_at }} — <strong>{{ event.event_type }}</strong>: {{ event.message or "No message" }}</li>
-        {% endfor %}
-      </ol>
-    {% else %}
-      <p>No events recorded.</p>
-    {% endif %}
-  </section>
-
-  <section>
-    <h2>Artifacts</h2>
-    {% if artifacts %}
-      <ul>
-        {% for artifact in artifacts %}
-          <li><strong>{{ artifact.artifact_type }}</strong>: <code>{{ artifact.path }}</code> — <a href="/applications/{{ application.application_number }}/artifacts/{{ artifact.id }}/download">Download</a></li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No artifacts recorded.</p>
-    {% endif %}
-  </section>
+    {% if letter %}<form data-copy-form method="post" action="/applications/{{ application.id }}/events/copy"><input type="hidden" name="target_type" value="cover_letter"><input type="hidden" name="target_id" value="{{ letter.id }}"><input type="hidden" name="label" value="cover letter"><button type="button" data-copy-target="#cover-letter">Copy cover letter</button></form>{% endif %}
+    <form method="post" action="/applications/{{ application.id }}/snapshot"><button>Create approved snapshot</button></form>
+  </div>
+  <textarea id="resume-copy" readonly>{% if run %}{% for proposal in run.proposals %}{% if proposal.status in [accepted, accepted_edited] %}{{ proposal.after_text }}
+{% endif %}{% endfor %}{% endif %}</textarea>
+  {% if artifacts %}<h3>Downloads</h3><ul>{% for artifact in artifacts %}<li><a href="/applications/{{ application.id }}/download/{{ artifact.id }}">Download {{ artifact.artifact_type|upper }}</a></li>{% endfor %}</ul>{% endif %}
+</section>
 {% endblock %}

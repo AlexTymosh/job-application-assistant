@@ -1,1 +1,31 @@
-{% extends "base.html" %}{% block content %}<div class="actions"><h1>Applications</h1><a class="button" href="/applications/new">New application</a></div><table><thead><tr><th>No.</th><th>Role</th><th>Company</th><th>Status</th><th></th></tr></thead><tbody>{% for app in applications %}<tr><td>APP-{{ '%06d'|format(app.application_number) }}</td><td>{{ app.job_title }}</td><td>{{ app.company_name }}</td><td><span class="badge">{{ app.status }}</span></td><td><a class="button" href="/applications/{{ app.id }}">Open</a></td></tr>{% endfor %}</tbody></table>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="badge">📄 Application</p>
+  <h1>Adapt a resume for a job</h1>
+  <p class="muted">One workspace for job input, AI proposals, side-by-side review, cover letter editing, copy/download tracking, and manual applied status.</p>
+</section>
+{% if not active_profile %}
+  <div class="empty"><h2>Select an active profile first</h2><p>The Application workspace is profile-scoped.</p><a class="button" href="/settings">Open Settings</a></div>
+{% else %}
+  <div class="tabs"><span class="tab active">1. New application / job input</span><span class="tab">2. Adapted result / review</span></div>
+  <section class="card">
+    <h2>New application for {{ active_profile.display_name }}</h2>
+    <form method="post" action="/applications/adapt">
+      <label>Resume
+        <select name="resume_id" required>
+          {% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}{% if resume.target_role %} — {{ resume.target_role }}{% endif %}</option>{% endfor %}
+        </select>
+      </label>
+      <div class="two-column"><label>Job title <input name="job_title"></label><label>Company <input name="company_name"></label></div>
+      <label>Source URL <input name="source_url"></label>
+      <label>Job description <textarea name="raw_job_text" required placeholder="Paste the job description here"></textarea></label>
+      <button>Adapt</button>
+    </form>
+  </section>
+  <section class="card" style="margin-top:1rem">
+    <h2>Application history for active profile</h2>
+    {% if applications %}<table><thead><tr><th>Job</th><th>Company</th><th>Status</th><th></th></tr></thead><tbody>{% for application in applications %}<tr><td>{{ application.job_title or "Untitled role" }}</td><td>{{ application.company_name }}</td><td><span class="badge">{{ application.status }}</span></td><td><a href="/applications/{{ application.id }}">Open review</a></td></tr>{% endfor %}</tbody></table>{% else %}<p class="muted">No applications for this profile yet.</p>{% endif %}
+  </section>
+{% endif %}
+{% endblock %}

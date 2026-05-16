@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero"><p class="badge">Prompt templates</p><h1>Protected AI instructions</h1><p class="muted">Edit user guidance only. Safety rules remain enforced.</p></section>
+{% for template in prompt_templates %}
+  <form method="post" action="/settings/prompts/{{ template.id }}" class="card" style="margin-bottom:1rem">
+    <h2>{{ template.name }}</h2>
+    <p><span class="badge">{{ template.block_type }}</span></p>
+    <label>Protected safety rules<textarea readonly>{{ template.system_prompt }}</textarea></label>
+    <label>User-editable instruction<textarea name="user_prompt_template">{{ template.user_prompt_template }}</textarea></label>
+    <button>Save prompt template</button>
+  </form>
+{% endfor %}
+{% endblock %}

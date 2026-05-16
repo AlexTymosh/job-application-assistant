@@ -37,7 +37,7 @@ _SETUP_GATE_EXEMPT_PREFIXES = (
 
 
 def create_app(*, openai_secret_service: OpenAISecretService | None = None) -> FastAPI:
-    app = FastAPI(title="Local Resume Builder and AI Tailoring", version="0.2.0")
+    app = FastAPI(title="AI JOB APPLICATION ASSISTANT", version="0.3.0")
     paths = bootstrap_app_data_dirs()
     engine = create_sqlite_engine(paths.database_file)
     initialise_database(engine)

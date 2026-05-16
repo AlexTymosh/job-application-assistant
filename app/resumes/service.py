@@ -39,12 +39,94 @@ class ResumeService:
         return resume
 
     def create_resume(
-        self, profile_id: int, name: str, target_role: str, language: str = "en"
+        self,
+        profile_id: int,
+        name: str,
+        target_role: str,
+        language: str = "en",
+        *,
+        create_standard_sections: bool = False,
     ) -> Resume:
         resume = Resume(
             profile_id=profile_id, name=name, target_role=target_role, language=language
         )
         self.session.add(resume)
+        self.session.flush()
+        if create_standard_sections:
+            self.create_standard_skeleton(resume.id, commit=False)
+        self.session.commit()
+        return resume
+
+    def create_standard_skeleton(
+        self, resume_id: int, *, commit: bool = True
+    ) -> list[ResumeSection]:
+        sections: list[ResumeSection] = []
+        skeleton = [
+            ("summary", "Summary"),
+            ("skills", "Skills"),
+            ("work_experience", "Work Experience"),
+            ("education", "Education"),
+            ("languages", "Languages"),
+            ("certifications", "Certifications"),
+            ("references", "References"),
+        ]
+        for index, (section_type, title) in enumerate(skeleton, start=1):
+            section = ResumeSection(
+                resume_id=resume_id,
+                section_type=section_type,
+                title=title,
+                display_order=index * 10,
+                ai_edit_enabled=section_type
+                in {"summary", "skills", "work_experience"},
+                ai_prompt_key=f"{section_type}_prompt",
+            )
+            self.session.add(section)
+            self.session.flush()
+            sections.append(section)
+            if section_type == "summary":
+                self.add_block(
+                    section.id,
+                    block_type="summary",
+                    title="Professional Summary",
+                    content="",
+                    ai_edit_enabled=True,
+                    commit=False,
+                )
+            if section_type == "skills":
+                self.add_block(
+                    section.id,
+                    block_type="skills",
+                    title="Hard Skills",
+                    content="",
+                    ai_edit_enabled=True,
+                    commit=False,
+                )
+                self.add_block(
+                    section.id,
+                    block_type="skills",
+                    title="Soft Skills",
+                    content="",
+                    ai_edit_enabled=True,
+                    commit=False,
+                )
+            if section_type == "references":
+                self.add_block(
+                    section.id,
+                    block_type="custom",
+                    title="References",
+                    content="Available on request.",
+                    ai_edit_enabled=False,
+                    commit=False,
+                )
+        if commit:
+            self.session.commit()
+        return sections
+
+    def update_resume(self, resume_id: int, **values: str) -> Resume:
+        resume = self.get_resume(resume_id)
+        for field in ["name", "target_role", "language"]:
+            if field in values:
+                setattr(resume, field, values[field])
         self.session.commit()
         return resume
 
@@ -73,16 +155,39 @@ class ResumeService:
         self.session.commit()
         return section
 
+    def update_section(
+        self,
+        section_id: int,
+        *,
+        title: str,
+        is_visible: bool,
+        ai_edit_enabled: bool,
+    ) -> ResumeSection:
+        section = self.session.get(ResumeSection, section_id)
+        if section is None:
+            raise ValueError("Section not found.")
+        section.title = title
+        section.is_visible = is_visible
+        section.ai_edit_enabled = ai_edit_enabled
+        self.session.commit()
+        return section
+
     def add_block(
         self,
         section_id: int,
         *,
         block_type: str,
         title: str = "",
+        subtitle: str = "",
         role_title: str = "",
         organisation: str = "",
+        location: str = "",
+        start_date: str = "",
+        end_date: str = "",
+        is_current: bool = False,
         content: str = "",
         ai_edit_enabled: bool = False,
+        commit: bool = True,
     ) -> ResumeBlock:
         order = self.session.scalar(
             select(ResumeBlock)
@@ -99,8 +204,13 @@ class ResumeService:
             section_id=section_id,
             block_type=block_type,
             title=title,
+            subtitle=subtitle,
             role_title=role_title,
             organisation=organisation,
+            location=location,
+            start_date=start_date,
+            end_date=end_date,
+            is_current=is_current,
             content=content,
             display_order=10 if order is None else order.display_order + 10,
             ai_edit_enabled=ai_edit_enabled,
@@ -108,6 +218,33 @@ class ResumeService:
             policy_json=policy.to_json(),
         )
         self.session.add(block)
+        if commit:
+            self.session.commit()
+        else:
+            self.session.flush()
+        return block
+
+    def update_block(self, block_id: int, **values: object) -> ResumeBlock:
+        block = self.session.get(ResumeBlock, block_id)
+        if block is None:
+            raise ValueError("Block not found.")
+        for field in [
+            "block_type",
+            "title",
+            "subtitle",
+            "role_title",
+            "organisation",
+            "location",
+            "start_date",
+            "end_date",
+            "content",
+        ]:
+            if field in values:
+                setattr(block, field, str(values[field] or ""))
+        for field in ["is_current", "is_visible", "ai_edit_enabled"]:
+            if field in values:
+                setattr(block, field, bool(values[field]))
+        block.ai_edit_mode = "block" if block.ai_edit_enabled else "none"
         self.session.commit()
         return block
 
@@ -134,7 +271,114 @@ class ResumeService:
         )
         self.session.add(bullet)
         self.session.flush()
-        for fact_id in fact_ids or []:
-            self.session.add(ResumeBulletFactLink(bullet_id=bullet.id, fact_id=fact_id))
+        self.update_bullet_fact_links(bullet.id, fact_ids or [], commit=False)
         self.session.commit()
         return bullet
+
+    def update_bullet(
+        self,
+        bullet_id: int,
+        *,
+        text: str,
+        is_visible: bool,
+        ai_edit_enabled: bool,
+        fact_link_required: bool,
+        fact_ids: list[int] | None = None,
+    ) -> ResumeBullet:
+        bullet = self.session.get(ResumeBullet, bullet_id)
+        if bullet is None:
+            raise ValueError("Bullet not found.")
+        bullet.text = text
+        bullet.is_visible = is_visible
+        bullet.ai_edit_enabled = ai_edit_enabled
+        bullet.fact_link_required = fact_link_required
+        if fact_ids is not None:
+            self.update_bullet_fact_links(bullet.id, fact_ids, commit=False)
+        self.session.commit()
+        return bullet
+
+    def update_bullet_fact_links(
+        self, bullet_id: int, fact_ids: list[int], *, commit: bool = True
+    ) -> None:
+        for link in list(
+            self.session.scalars(
+                select(ResumeBulletFactLink).where(
+                    ResumeBulletFactLink.bullet_id == bullet_id
+                )
+            )
+        ):
+            self.session.delete(link)
+        self.session.flush()
+        for fact_id in fact_ids:
+            self.session.add(ResumeBulletFactLink(bullet_id=bullet_id, fact_id=fact_id))
+        if commit:
+            self.session.commit()
+
+    def move_section(self, section_id: int, direction: str) -> None:
+        section = self.session.get(ResumeSection, section_id)
+        if section is None:
+            raise ValueError("Section not found.")
+        peers = list(
+            self.session.scalars(
+                select(ResumeSection)
+                .where(ResumeSection.resume_id == section.resume_id)
+                .order_by(ResumeSection.display_order)
+            )
+        )
+        self._move_ordered(peers, section, direction)
+
+    def move_block(self, block_id: int, direction: str) -> None:
+        block = self.session.get(ResumeBlock, block_id)
+        if block is None:
+            raise ValueError("Block not found.")
+        peers = list(
+            self.session.scalars(
+                select(ResumeBlock)
+                .where(ResumeBlock.section_id == block.section_id)
+                .order_by(ResumeBlock.display_order)
+            )
+        )
+        self._move_ordered(peers, block, direction)
+
+    def move_bullet(self, bullet_id: int, direction: str) -> None:
+        bullet = self.session.get(ResumeBullet, bullet_id)
+        if bullet is None:
+            raise ValueError("Bullet not found.")
+        peers = list(
+            self.session.scalars(
+                select(ResumeBullet)
+                .where(ResumeBullet.block_id == bullet.block_id)
+                .order_by(ResumeBullet.display_order)
+            )
+        )
+        self._move_ordered(peers, bullet, direction)
+
+    def delete_section(self, section_id: int) -> None:
+        section = self.session.get(ResumeSection, section_id)
+        if section is not None:
+            self.session.delete(section)
+            self.session.commit()
+
+    def delete_block(self, block_id: int) -> None:
+        block = self.session.get(ResumeBlock, block_id)
+        if block is not None:
+            self.session.delete(block)
+            self.session.commit()
+
+    def delete_bullet(self, bullet_id: int) -> None:
+        bullet = self.session.get(ResumeBullet, bullet_id)
+        if bullet is not None:
+            self.session.delete(bullet)
+            self.session.commit()
+
+    def _move_ordered(self, peers: list[object], item: object, direction: str) -> None:
+        index = peers.index(item)
+        target_index = index - 1 if direction == "up" else index + 1
+        if target_index < 0 or target_index >= len(peers):
+            return
+        target = peers[target_index]
+        item.display_order, target.display_order = (
+            target.display_order,
+            item.display_order,
+        )
+        self.session.commit()

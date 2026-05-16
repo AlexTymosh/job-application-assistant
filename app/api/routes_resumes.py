@@ -44,6 +44,7 @@ async def create_resume(profile_id: int, request: Request, session: SessionDep):
         data["name"],
         data.get("target_role", ""),
         data.get("language", "en"),
+        create_standard_sections=form_bool(data, "create_standard_sections"),
     )
     return RedirectResponse(f"/resumes/{resume.id}", status_code=303)
 
@@ -119,7 +120,12 @@ async def create_block(resume_id: int, request: Request, session: SessionDep):
         title=data.get("title", ""),
         role_title=data.get("role_title", ""),
         organisation=data.get("organisation", ""),
+        subtitle=data.get("subtitle", ""),
         content=data.get("content", ""),
+        location=data.get("location", ""),
+        start_date=data.get("start_date", ""),
+        end_date=data.get("end_date", ""),
+        is_current=form_bool(data, "is_current"),
         ai_edit_enabled=form_bool(data, "ai_edit_enabled"),
     )
     return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
@@ -142,6 +148,32 @@ def edit_block(
             "block_types": [item.value for item in BlockType],
         },
     )
+
+
+@router.post("/resumes/{resume_id}/blocks/{block_id}/edit")
+async def update_block(
+    resume_id: int,
+    block_id: int,
+    request: Request,
+    session: SessionDep,
+):
+    data = await read_form_data(request)
+    ResumeService(session).update_block(
+        block_id,
+        block_type=data.get("block_type", "custom"),
+        title=data.get("title", ""),
+        subtitle=data.get("subtitle", ""),
+        role_title=data.get("role_title", ""),
+        organisation=data.get("organisation", ""),
+        location=data.get("location", ""),
+        start_date=data.get("start_date", ""),
+        end_date=data.get("end_date", ""),
+        content=data.get("content", ""),
+        is_current=form_bool(data, "is_current"),
+        is_visible=form_bool(data, "is_visible"),
+        ai_edit_enabled=form_bool(data, "ai_edit_enabled"),
+    )
+    return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
 
 
 @router.get("/resumes/{resume_id}/blocks/{block_id}/bullets/new")
@@ -190,3 +222,52 @@ def edit_bullet(
             "bullet": session.get(ResumeBullet, bullet_id),
         },
     )
+
+
+@router.post("/resumes/{resume_id}/bullets/{bullet_id}/edit")
+async def update_bullet(
+    resume_id: int,
+    bullet_id: int,
+    request: Request,
+    session: SessionDep,
+):
+    data = await read_form_data(request)
+    fact_ids = [
+        int(value) for value in data.get("fact_ids", "").split(",") if value.strip()
+    ]
+    ResumeService(session).update_bullet(
+        bullet_id,
+        text=data["text"],
+        is_visible=form_bool(data, "is_visible"),
+        ai_edit_enabled=form_bool(data, "ai_edit_enabled"),
+        fact_link_required=form_bool(data, "fact_link_required"),
+        fact_ids=fact_ids,
+    )
+    return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
+
+
+@router.post("/resumes/{resume_id}/sections/{section_id}/move")
+async def move_section(
+    resume_id: int, section_id: int, request: Request, session: SessionDep
+):
+    data = await read_form_data(request)
+    ResumeService(session).move_section(section_id, data.get("direction", "down"))
+    return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
+
+
+@router.post("/resumes/{resume_id}/blocks/{block_id}/move")
+async def move_block(
+    resume_id: int, block_id: int, request: Request, session: SessionDep
+):
+    data = await read_form_data(request)
+    ResumeService(session).move_block(block_id, data.get("direction", "down"))
+    return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
+
+
+@router.post("/resumes/{resume_id}/bullets/{bullet_id}/move")
+async def move_bullet(
+    resume_id: int, bullet_id: int, request: Request, session: SessionDep
+):
+    data = await read_form_data(request)
+    ResumeService(session).move_bullet(bullet_id, data.get("direction", "down"))
+    return RedirectResponse(f"/resumes/{resume_id}", status_code=303)

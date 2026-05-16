@@ -1,1 +1,16 @@
-{% extends "base.html" %}{% block content %}<h1>{{ 'Edit block' if block else 'Add block' }}</h1><form method="post"><label>Section<select name="section_id">{% for section in resume.sections %}<option value="{{ section.id }}" {% if block and block.section_id == section.id %}selected{% endif %}>{{ section.title }}</option>{% endfor %}</select></label><label>Block type<select name="block_type">{% for type in block_types %}<option value="{{ type }}" {% if block and block.block_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}</select></label><label>Title<input name="title" value="{{ block.title if block else '' }}"></label><label>Role title<input name="role_title" value="{{ block.role_title if block else '' }}"></label><label>Organisation<input name="organisation" value="{{ block.organisation if block else '' }}"></label><label>Content<textarea name="content">{{ block.content if block else '' }}</textarea></label><label><input type="checkbox" name="ai_edit_enabled" value="true" {% if block and block.ai_edit_enabled %}checked{% endif %}> AI may edit this block</label><button>Save block</button></form>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="hero"><p class="badge">CV Builder</p><h1>{{ "Edit block" if block else "Add block" }}</h1></section>
+<form method="post">
+  {% if not block %}<label>Section <select name="section_id">{% for section in resume.sections %}<option value="{{ section.id }}">{{ section.title }}</option>{% endfor %}</select></label>{% endif %}
+  <label>Block type <select name="block_type">{% for type in block_types %}<option value="{{ type }}" {% if block and block.block_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}</select></label>
+  <div class="two-column"><label>Title <input name="title" value="{{ block.title if block else '' }}"></label><label>Subtitle / degree / level <input name="subtitle" value="{{ block.subtitle if block else '' }}"></label></div>
+  <div class="two-column"><label>Role title <input name="role_title" value="{{ block.role_title if block else '' }}"></label><label>Company / organisation / issuer <input name="organisation" value="{{ block.organisation if block else '' }}"></label></div>
+  <div class="two-column"><label>Location <input name="location" value="{{ block.location if block else '' }}"></label><label>Start date <input name="start_date" value="{{ block.start_date if block else '' }}"></label></div>
+  <div class="two-column"><label>End date <input name="end_date" value="{{ block.end_date if block else '' }}"></label><label><input type="checkbox" name="is_current" {% if block and block.is_current %}checked{% endif %}> Current / present</label></div>
+  <label>Content / achievements / details <textarea name="content">{{ block.content if block else '' }}</textarea></label>
+  <label><input type="checkbox" name="is_visible" {% if not block or block.is_visible %}checked{% endif %}> Visible</label>
+  <label><input type="checkbox" name="ai_edit_enabled" {% if block and block.ai_edit_enabled %}checked{% endif %}> AI may edit this block</label>
+  <button>Save block</button>
+</form>
+{% endblock %}

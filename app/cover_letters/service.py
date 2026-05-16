@@ -64,6 +64,15 @@ class CoverLetterService:
         self.session.commit()
         return letter
 
+    def update_content(self, cover_letter_id: int, content: str) -> CoverLetter:
+        letter = self.session.get(CoverLetter, cover_letter_id)
+        if letter is None:
+            raise ValueError("Cover letter not found.")
+        letter.content = content
+        letter.status = "edited"
+        self.session.commit()
+        return letter
+
     def latest(self, application_id: int) -> CoverLetter | None:
         return self.session.scalar(
             select(CoverLetter)
