@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +20,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "locale": "en",
     "llm_mode": "fake",
     "active_profile_id": None,
+    "openai_model_default": os.getenv("OPENAI_MODEL", "gpt-5.4-mini"),
+    "openai_model_qa": os.getenv("OPENAI_MODEL_QA", "gpt-5.4-mini"),
+    "openai_model_extract": os.getenv("OPENAI_MODEL_EXTRACT", "gpt-5.4-nano"),
+    "openai_model_tailor": os.getenv("OPENAI_MODEL_TAILOR", "gpt-5.4-mini"),
 }
 
 PROMPT_TEMPLATE_TYPES = [
@@ -58,6 +63,10 @@ class EffectiveSettings:
     locale: str
     llm_mode: str
     active_profile_id: int | None
+    openai_model_default: str
+    openai_model_qa: str
+    openai_model_extract: str
+    openai_model_tailor: str
 
 
 class SettingsService:
@@ -93,6 +102,22 @@ class SettingsService:
             locale=str(self.get("locale", DEFAULT_SETTINGS["locale"])),
             llm_mode=str(self.get("llm_mode", DEFAULT_SETTINGS["llm_mode"])),
             active_profile_id=self.get_active_profile_id(),
+            openai_model_default=str(
+                self.get(
+                    "openai_model_default", DEFAULT_SETTINGS["openai_model_default"]
+                )
+            ),
+            openai_model_qa=str(
+                self.get("openai_model_qa", DEFAULT_SETTINGS["openai_model_qa"])
+            ),
+            openai_model_extract=str(
+                self.get(
+                    "openai_model_extract", DEFAULT_SETTINGS["openai_model_extract"]
+                )
+            ),
+            openai_model_tailor=str(
+                self.get("openai_model_tailor", DEFAULT_SETTINGS["openai_model_tailor"])
+            ),
         )
 
     def get_active_profile_id(self) -> int | None:

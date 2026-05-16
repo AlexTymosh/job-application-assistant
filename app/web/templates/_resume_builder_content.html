@@ -1,0 +1,25 @@
+<section class="hero">
+  <p class="badge">CV Builder</p>
+  <h1>{{ resume.name }}</h1>
+  <p class="muted">Build structured sections, blocks, bullets, visibility controls, and AI edit policy for {{ resume.profile.display_name }}.</p>
+  <div class="toolbar"><a class="button compact" href="/resumes/{{ resume.id }}/sections/new">Add section</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/blocks/new">Add work experience / education / custom block</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/edit">Edit resume name</a></div>
+</section>
+{% for section in resume.sections %}
+  <section class="section-card" data-section-type="{{ section.section_type }}">
+    <div class="section-header-row">
+      <div class="actions"><h2>{{ section.title }}</h2>{% if section.is_visible %}<span class="badge good">visible</span>{% else %}<span class="badge warn">hidden</span>{% endif %}{% if section.ai_edit_enabled %}<span class="badge">AI editable</span>{% endif %}{% if not section.blocks %}<span class="badge warn">empty</span>{% endif %}</div>
+      <div class="toolbar"><a title="Edit section" aria-label="Edit section" href="/resumes/{{ resume.id }}/sections/{{ section.id }}">⋯</a><a href="/settings/prompts?resume_id={{ resume.id }}&section_id={{ section.id }}">Prompt</a><form method="post" action="/resumes/{{ resume.id }}/sections/{{ section.id }}/move"><input type="hidden" name="direction" value="up"><button class="icon-button ghost" title="Move section up" aria-label="Move section up">↑</button></form><form method="post" action="/resumes/{{ resume.id }}/sections/{{ section.id }}/move"><input type="hidden" name="direction" value="down"><button class="icon-button ghost" title="Move section down" aria-label="Move section down">↓</button></form></div>
+    </div>
+    {% for block in section.blocks %}
+      {% set fixed_block_order = section.section_type in ['summary', 'skills'] %}
+      <article class="block-card" data-block-type="{{ block.block_type }}" data-block-title="{{ block.title }}">
+        <div class="section-header-row"><div class="actions"><h3>{{ block.title or block.role_title or block.block_type.replace('_', ' ')|title }}</h3>{% if block.ai_edit_enabled %}<span class="badge">AI editable block</span>{% endif %}{% if not block.is_visible %}<span class="badge warn">hidden</span>{% endif %}</div>{% if not fixed_block_order %}<div class="toolbar"><form method="post" action="/resumes/{{ resume.id }}/blocks/{{ block.id }}/move"><input type="hidden" name="direction" value="up"><button class="icon-button ghost" title="Move block up" aria-label="Move block up">↑</button></form><form method="post" action="/resumes/{{ resume.id }}/blocks/{{ block.id }}/move"><input type="hidden" name="direction" value="down"><button class="icon-button ghost" title="Move block down" aria-label="Move block down">↓</button></form></div>{% endif %}</div>
+        {% if block.role_title or block.organisation or block.location %}<p><strong>{{ block.role_title }}</strong> {{ block.organisation }} {{ block.location }}</p>{% endif %}
+        {% if block.start_date or block.end_date or block.is_current %}<p class="muted">{{ block.start_date }} – {{ "Present" if block.is_current else block.end_date }}</p>{% endif %}
+        {% if block.content %}<p>{{ block.content }}</p>{% endif %}
+        <div class="toolbar"><a title="Edit block" aria-label="Edit block" href="/resumes/{{ resume.id }}/blocks/{{ block.id }}/edit">⋯</a>{% if section.section_type not in ['summary', 'skills'] %}<a href="/resumes/{{ resume.id }}/blocks/{{ block.id }}/bullets/new">Add bullet</a>{% endif %}</div>
+        {% if block.bullets %}<ul>{% for bullet in block.bullets %}<li><span>{{ bullet.text }}</span> {% if bullet.ai_edit_enabled %}<span class="badge">AI editable bullet</span>{% endif %} {% if bullet.fact_link_required %}<span class="badge warn">fact required</span>{% endif %} <a title="Edit bullet" aria-label="Edit bullet" href="/resumes/{{ resume.id }}/bullets/{{ bullet.id }}/edit">⋯</a> {% if section.section_type != 'summary' %}<form style="display:inline-flex;padding:0;border:0;box-shadow:none" method="post" action="/resumes/{{ resume.id }}/bullets/{{ bullet.id }}/move"><input type="hidden" name="direction" value="up"><button class="icon-button ghost" title="Move bullet up" aria-label="Move bullet up">↑</button></form><form style="display:inline-flex;padding:0;border:0;box-shadow:none" method="post" action="/resumes/{{ resume.id }}/bullets/{{ bullet.id }}/move"><input type="hidden" name="direction" value="down"><button class="icon-button ghost" title="Move bullet down" aria-label="Move bullet down">↓</button></form>{% endif %}</li>{% endfor %}</ul>{% endif %}
+      </article>
+    {% else %}<div class="empty-state"><p>{% if section.section_type == 'skills' %}Add Hard Skills and Soft Skills.{% else %}Add {{ section.title|lower }}.{% endif %}</p><a class="button compact secondary" href="/resumes/{{ resume.id }}/blocks/new">Add content</a></div>{% endfor %}
+  </section>
+{% else %}<div class="empty-state"><p>No sections yet. Add standard CV sections or create sections manually.</p></div>{% endfor %}

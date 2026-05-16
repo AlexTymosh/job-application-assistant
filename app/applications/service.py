@@ -54,6 +54,7 @@ class DashboardStats:
     resume_count: int
     application_count: int
     applications_last_30_days: int
+    selected_days: int
     likely_applied_count: int
     manually_marked_applied_count: int
     recent_applications: list[Application]
@@ -492,10 +493,11 @@ class ApplicationService:
         self.session.commit()
         return event
 
-    def dashboard_stats(self, profile_id: int) -> DashboardStats:
+    def dashboard_stats(self, profile_id: int, *, days: int = 30) -> DashboardStats:
         profile = self.session.get(PersonProfile, profile_id)
         if profile is None:
             raise ValueError("Profile not found.")
+        days = days if days in {10, 20, 30} else 30
         applications = self.list_applications(profile_id)
         resume_count = (
             self.session.scalar(
@@ -513,7 +515,7 @@ class ApplicationService:
         ]
         counts_by_day: dict[str, int] = {}
         today = datetime.now(UTC).date()
-        for offset in range(29, -1, -1):
+        for offset in range(days - 1, -1, -1):
             key = (today - timedelta(days=offset)).isoformat()
             counts_by_day[key] = 0
         for app in applications:
@@ -525,7 +527,8 @@ class ApplicationService:
             {
                 "date": date,
                 "count": count,
-                "height": max(8, int(count / max_count * 72)),
+                "height": max(8, int(count / max_count * 98)),
+                "title": f"{date}: {count} application" + ("" if count == 1 else "s"),
             }
             for date, count in counts_by_day.items()
         ]
@@ -535,6 +538,7 @@ class ApplicationService:
             resume_count=int(resume_count),
             application_count=len(applications),
             applications_last_30_days=len(last_30),
+            selected_days=days,
             likely_applied_count=len(likely),
             manually_marked_applied_count=len(manual),
             recent_applications=applications[:8],

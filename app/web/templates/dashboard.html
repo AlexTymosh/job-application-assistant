@@ -22,11 +22,18 @@
     <div class="card"><span class="muted">Manually marked applied</span><h2>{{ stats.manually_marked_applied_count }}</h2></div>
   </div>
   <section class="card" style="margin-top:1rem">
-    <h2>Application activity over the last 30 days</h2>
-    <p class="muted">Bars count applications by creation date.</p>
-    <div class="chart" role="img" aria-label="Application activity chart">
+    <h2>Application activity over the last {{ stats.selected_days }} days</h2>
+    <p class="muted">Bars count applications by creation date. Hover a bar to see the exact count.</p>
+    <div class="range-tabs" aria-label="Dashboard activity range">
+      {% for option in allowed_days %}
+        <a class="tab {% if option == stats.selected_days %}active{% endif %}" href="/?days={{ option }}">{{ option }} days</a>
+      {% endfor %}
+    </div>
+    {% set total_activity = stats.activity_days | sum(attribute='count') %}
+    {% if total_activity == 0 %}<p class="muted">No application activity in this period yet.</p>{% endif %}
+    <div class="chart" role="img" aria-label="Application activity chart for {{ stats.selected_days }} days">
       {% for day in stats.activity_days %}
-        <span class="bar" title="{{ day.date }}: {{ day.count }}" style="height:{{ day.height }}px"></span>
+        <span class="bar" data-activity-bar="{{ loop.index }}" title="{{ day.title }}" aria-label="{{ day.title }}" style="height:{{ day.height }}px"></span>
       {% endfor %}
     </div>
   </section>

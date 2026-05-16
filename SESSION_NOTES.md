@@ -56,3 +56,16 @@ The first usable local release stage is completed for the SQL-first AI JOB APPLI
 - Improved CV Builder controls with compact arrow move buttons and section-aware fields, including Work Experience role/company/date/current fields.
 - Updated rendering to hide empty final sections and uppercase rendered section headings.
 - Expanded regression coverage for facts, Adapt, snapshots, active-profile access, uploads, prompt resolution, error pages, work experience, metadata edits, and render behaviour.
+
+## First-release fix-up polish
+
+- Added an explicit idempotent SQLite schema-repair bridge for local MVP databases. Startup still creates missing tables, and now also adds known missing columns such as `facts.claim`, prompt-template scope IDs, event/upload table columns, timestamps, policy JSON fields, and application workflow fields to older local SQLite files.
+- Fixed split Settings forms so locale, OpenAI key, export formats, AI policy defaults, and model settings update only their own sections and preserve unrelated values.
+- Kept OpenAI API keys in the OS keyring boundary only. OpenAI model IDs are configurable non-secret SQLite settings with environment defaults for default, QA, extraction, and tailoring use cases.
+- Added the top-level `/cv-builder` route and moved CV Builder into the main navigation. Settings now sits in the right-side header tools next to the active profile selector.
+- Improved the dashboard activity chart with 10/20/30 day range switching, normalised unsupported ranges to 30 days, hover count titles, and clearer empty-state styling.
+- Reworked Settings into a left-menu/right-panel layout with sections for profiles, CV Builder, prompts, app configuration, OpenAI/keyring, exports, AI policy, data folder, and safety/privacy.
+- Updated prompt-template UX to use global/profile/resume/section scope selectors with named profile, resume, and section options instead of raw ID-only text fields. Internal guardrails remain hidden and non-editable.
+- Hardened resume upload creation so invalid file types are rejected before resume/section/upload rows or files are created.
+- Polished Resume Builder controls with compact icon actions, removed duplicate type badges, kept Summary and Skills internal blocks fixed, and introduced type-specific block edit forms.
+- Hardened Adapt validation for empty job text and active-profile resume scope, and verified no-facts and repaired old-facts-schema flows do not crash.

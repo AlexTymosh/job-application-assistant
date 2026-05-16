@@ -39,3 +39,16 @@
 34. Add a Work Experience block with Present checked, add bullets, and confirm it renders in the final resume.
 35. Confirm empty final resume sections are hidden and rendered section headings are uppercase.
 36. Confirm prompt overrides resolve in section, resume, profile, global order.
+
+## First-release fix-up update
+
+- Existing local SQLite databases are repaired idempotently at startup for the first MVP release. Missing SQL-first columns and first-release tables are added explicitly so older databases do not crash on facts, Adapt, uploads, prompt scopes, or application events.
+- The active-profile workflow remains the boundary for Dashboard, Application, CV Builder, facts, and resume selection. Settings remains available without an active profile.
+- Dashboard activity supports 10, 20, and 30 day ranges via the `days` query parameter and uses hover titles for exact counts.
+- Navigation is Dashboard / Application / CV Builder, with Settings in the right-side tools area beside the active profile selector.
+- Settings uses a left-menu/right-panel layout for profiles, CV Builder, prompt templates, app configuration, OpenAI/keyring, exports, AI policy, data folder, and safety/privacy.
+- OpenAI API keys stay in the OS keyring boundary and are not stored in SQLite. OpenAI model IDs are configurable non-secret settings with environment defaults.
+- The data-folder UI uses a path input and validation/create-if-missing flow. A native OS folder picker is not available in this server-rendered local web UI yet.
+- Prompt-template scoping is global/profile/resume/section. Users select named objects from the UI; internal privacy and anti-fabrication guardrails stay hidden and non-editable.
+- Resume uploads store PDF/DOC/DOCX files locally as reference artifacts only. Full parsing is not implemented yet, and invalid uploads are rejected before creating resume data.
+- Resume Builder block forms are type-specific, and Summary/Skills internal blocks do not show irrelevant move or subsection controls.

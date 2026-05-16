@@ -135,3 +135,29 @@ Prompt instructions are scoped in SQLite with this resolution order: section, re
 Resume creation accepts optional `.pdf`, `.doc`, and `.docx` uploads. Uploaded files are stored under the app-owned `artifacts/uploads` area with safe generated filenames. Automatic parsing of complex resume layouts is intentionally not implemented for the first release; the file is kept as local reference material for manual import.
 
 Expected first-release limitations remain: no automatic submission, no LinkedIn automation, no email sending, no broad scraping, no fake ATS score, and no YAML or Markdown runtime source of truth. Copy/download events mean likely applied only; only the explicit Mark as applied action records a manually confirmed application.
+
+## First-release stability and UX notes
+
+### Local SQLite schema repair
+
+This local-first MVP keeps SQLite as the runtime source of truth. On startup the app creates missing tables and applies an explicit, idempotent SQLite compatibility bridge for older local databases created during the SQL-first reset. The bridge repairs known missing columns such as `facts.claim`, evidence/source/claim-level fields, prompt-template scope IDs, uploads, application events, timestamps, and policy metadata. This avoids the old `facts.claim` runtime crash when opening facts or running Adapt on an existing local database.
+
+### Navigation, Dashboard, and CV Builder
+
+The main header now shows Dashboard, Application, and CV Builder. Settings is kept on the right near the active profile selector, and the project link points to `https://github.com/AlexTymosh/job-application-assistant`. The Dashboard remains scoped to the active profile and supports `/?days=10`, `/?days=20`, and `/?days=30` activity ranges with hover count titles. Unsupported values fall back to 30 days.
+
+`/cv-builder` is the primary resume editing entry point. Without an active profile it shows an empty state. With an active profile but no resumes it prompts the user to create a resume. With resumes it shows a left resume list and the selected builder in the main panel.
+
+### Settings, OpenAI, and data folder
+
+Settings uses a left menu and right content panel. Locale can be stored as English or Russian, but Russian UI is only planned. OpenAI API keys are stored through the OS keyring boundary and are never written to SQLite. Model IDs are non-secret app settings (`openai_model_default`, `openai_model_qa`, `openai_model_extract`, and `openai_model_tailor`) that can override environment defaults.
+
+A server-rendered local web UI cannot reliably open a native OS folder picker like an IDE. The first release uses a path input with validation/create-if-missing behaviour in the data-folder settings.
+
+### Prompt instructions, uploads, and resume forms
+
+Prompt instructions are scoped as global, profile, resume, or section instructions selected from named dropdowns rather than raw ID-only fields. Internal privacy, anti-fabrication, untrusted-job-posting, and structured-output guardrails remain hidden and non-editable in prompt builders.
+
+Resume upload stores `.pdf`, `.doc`, and `.docx` files as local reference artifacts under the app-owned data folder. Full parsing is intentionally not implemented yet. Invalid uploads are rejected before creating a resume, standard sections, upload rows, or files.
+
+Resume Builder edit forms are type-specific: Summary shows only a description, Skills shows only the skill text, Work Experience uses role/company and month inputs, Education/Certifications use appropriate period/date fields, Languages use language/level fields, and References expose contact-style fields with AI editing disabled by default where created by the standard skeleton.

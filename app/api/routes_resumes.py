@@ -45,6 +45,8 @@ def new_resume(profile_id: int, request: Request):
 async def create_resume(profile_id: int, request: Request, session: SessionDep):
     data, upload = await _read_resume_create_payload(request)
     service = ResumeService(session)
+    if upload is not None:
+        service.validate_upload_filename(str(upload["filename"]))
     resume = service.create_resume(
         profile_id,
         data["name"],
@@ -259,21 +261,27 @@ async def update_block(
     session: SessionDep,
 ):
     data = await read_form_data(request)
-    ResumeService(session).update_block(
-        block_id,
-        block_type=data.get("block_type", "custom"),
-        title=data.get("title", ""),
-        subtitle=data.get("subtitle", ""),
-        role_title=data.get("role_title", ""),
-        organisation=data.get("organisation", ""),
-        location=data.get("location", ""),
-        start_date=data.get("start_date", ""),
-        end_date=data.get("end_date", ""),
-        content=data.get("content", ""),
+    values = {
+        key: data[key]
+        for key in [
+            "block_type",
+            "title",
+            "subtitle",
+            "role_title",
+            "organisation",
+            "location",
+            "start_date",
+            "end_date",
+            "content",
+        ]
+        if key in data
+    }
+    values.update(
         is_current=form_bool(data, "is_current"),
         is_visible=form_bool(data, "is_visible"),
         ai_edit_enabled=form_bool(data, "ai_edit_enabled"),
     )
+    ResumeService(session).update_block(block_id, **values)
     return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
 
 

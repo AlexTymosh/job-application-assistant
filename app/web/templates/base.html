@@ -18,6 +18,7 @@
     nav { display:flex; gap:.35rem; align-items:center; }
     nav a { color:#334155; text-decoration:none; font-weight:600; padding:.42rem .65rem; border-radius:999px; }
     nav a:hover { background:#eef2ff; color:#1d4ed8; }
+    .header-tools { display:flex; gap:.5rem; align-items:center; margin-left:auto; }
     .profile-switcher { display:flex; gap:.45rem; align-items:center; color:#334155; padding:0; border:0; box-shadow:none; background:transparent; }
     .profile-switcher label { font-weight:600; display:flex; gap:.45rem; align-items:center; }
     .profile-switcher select { width:13rem; padding:.4rem .55rem; border-radius:999px; border:1px solid #cbd5e1; background:white; color:#172033; }
@@ -49,22 +50,29 @@
     .tab.active { background:#dbeafe; color:#1d4ed8; }
     .compare { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:.8rem; }
     .before,.after { padding:.8rem; border-radius:12px; background:#f8fafc; border:1px solid var(--line); white-space:pre-wrap; }
-    .chart { display:flex; gap:.25rem; align-items:end; height:96px; padding:.75rem; border:1px solid var(--line); border-radius:14px; background:#f8fafc; }
-    .bar { flex:1; min-width:4px; background:#93c5fd; border-radius:999px 999px 0 0; }
+    .chart { display:flex; gap:.3rem; align-items:end; height:130px; padding:.85rem; border:1px solid var(--line); border-radius:14px; background:linear-gradient(180deg,#f8fbff,#eef6ff); }
+    .bar { flex:1; min-width:6px; background:linear-gradient(180deg,#2563eb,#93c5fd); border-radius:8px 8px 2px 2px; box-shadow:0 4px 10px rgba(37,99,235,.18); }
+    .range-tabs { display:flex; gap:.4rem; flex-wrap:wrap; margin:.5rem 0 .8rem; }
+    .settings-layout, .cv-layout, .resume-management-layout { display:grid; grid-template-columns:minmax(210px, 280px) 1fr; gap:.9rem; align-items:start; }
+    .side-menu { display:grid; gap:.35rem; }
+    .side-menu a { text-decoration:none; padding:.55rem .65rem; border-radius:10px; color:#334155; font-weight:700; }
+    .side-menu a.active, .side-menu a:hover { background:#dbeafe; color:#1d4ed8; }
     .section-card { border:1px solid var(--line); border-radius:14px; padding:.85rem; background:#fff; margin:.85rem 0; }
     .block-card { border:1px solid #dbeafe; border-radius:12px; padding:.8rem; background:#f8fbff; margin:.65rem 0; }
     .section-header-row { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.5rem; align-items:center; }
-    @media (max-width:720px) { .shell-header { align-items:flex-start; } nav { width:100%; overflow-x:auto; } .profile-switcher { width:100%; } }
+    @media (max-width:720px) { .shell-header { align-items:flex-start; } nav, .header-tools { width:100%; overflow-x:auto; } .profile-switcher { width:100%; } .settings-layout, .cv-layout, .resume-management-layout { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
   <header class="shell-header">
-    <div class="brand"><span class="brand-icon">✦</span><span>AI JOB APPLICATION ASSISTANT by Alex Tymoshenko<small><a href="https://github.com/alextymoshenko">GitHub: Alex Tymoshenko</a></small></span></div>
+    <div class="brand"><span class="brand-icon">✦</span><span>AI JOB APPLICATION ASSISTANT by Alex Tymoshenko<small><a href="https://github.com/AlexTymosh/job-application-assistant">Project on GitHub</a></small></span></div>
     <nav aria-label="Main navigation">
       <a href="/">🏠 Dashboard</a>
       <a href="/applications">📄 Application</a>
-      <a href="/settings">⚙ Settings</a>
+      <a href="/cv-builder">🧩 CV Builder</a>
     </nav>
+    <div class="header-tools" aria-label="Header tools">
+      <a class="button compact secondary" href="/settings">⚙ Settings</a>
     <form class="profile-switcher" action="/settings/active-profile" method="post">
       <input type="hidden" name="next" value="{{ request.url.path }}">
       <label>Active profile
@@ -79,6 +87,7 @@
       {% endif %}
       </label>
     </form>
+    </div>
   </header>
   <main>
     {% block content %}{% endblock %}

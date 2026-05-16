@@ -4,6 +4,7 @@
   <p class="badge">Facts</p>
   <h1>Active profile facts</h1>
   <p class="muted">Facts are profile-scoped evidence that can support AI-editable resume bullets.</p>
+  {% if active_profile %}<p>Active profile: <strong>{{ active_profile.display_name }}</strong></p>{% endif %}
 </section>
 {% if not profile_id %}
   <div class="empty-state"><h2>No active profile</h2><p>Create or select a profile before managing facts.</p><div class="toolbar"><a class="button compact" href="/profiles/new">Create profile</a><a class="button compact secondary" href="/settings">Select profile</a></div></div>

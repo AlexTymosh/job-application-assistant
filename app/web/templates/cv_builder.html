@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="badge">🧩 CV Builder</p>
+  <h1>CV Builder</h1>
+  <p class="muted">Edit structured resumes for the active profile.</p>
+</section>
+{% if not active_profile %}
+  <div class="empty-state"><h2>No active profile</h2><p>Create or select a profile before using the CV Builder.</p><div class="toolbar"><a class="button compact" href="/profiles/new">Create profile</a><a class="button compact secondary" href="/settings?section=profiles">Select profile</a></div></div>
+{% elif not resumes %}
+  <div class="empty-state"><h2>Create resume first</h2><p>{{ active_profile.display_name }} does not have a resume yet.</p><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a></div>
+{% else %}
+  <div class="cv-layout">
+    <aside class="card">
+      <h2>{{ active_profile.display_name }}</h2>
+      <p class="toolbar"><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a></p>
+      <nav class="side-menu" aria-label="Resume list">
+        {% for item in resumes %}<a class="{% if resume and item.id == resume.id %}active{% endif %}" href="/cv-builder?resume_id={{ item.id }}">{{ item.name }}</a>{% endfor %}
+      </nav>
+    </aside>
+    <section>
+      {% include "_resume_builder_content.html" %}
+    </section>
+  </div>
+{% endif %}
+{% endblock %}

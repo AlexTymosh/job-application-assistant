@@ -130,6 +130,15 @@ class ResumeService:
             self.session.commit()
         return sections
 
+    def validate_upload_filename(self, original_filename: str) -> str:
+        from app.core.errors import ResumeBuilderError
+
+        source_name = Path(original_filename or "resume-upload").name
+        suffix = Path(source_name).suffix.lower()
+        if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
+            raise ResumeBuilderError("Upload a PDF, DOC, or DOCX resume file.")
+        return source_name
+
     def attach_upload(
         self,
         resume_id: int,
@@ -142,10 +151,8 @@ class ResumeService:
         from app.core.errors import ResumeBuilderError
 
         resume = self.get_resume(resume_id)
-        source_name = Path(original_filename or "resume-upload").name
+        source_name = self.validate_upload_filename(original_filename)
         suffix = Path(source_name).suffix.lower()
-        if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
-            raise ResumeBuilderError("Upload a PDF, DOC, or DOCX resume file.")
         stem = (
             SAFE_FILENAME_RE.sub("-", Path(source_name).stem).strip(".-_") or "resume"
         )

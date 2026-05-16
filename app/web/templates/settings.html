@@ -2,92 +2,104 @@
 {% block content %}
 <section class="hero">
   <p class="badge">⚙ Settings</p>
-  <h1>Workspace hub</h1>
-  <p class="muted">Manage profiles, CV Builder, prompt instructions, local configuration, exports, and privacy settings.</p>
+  <h1>Workspace settings</h1><span class="sr-only">Workspace hub</span>
+  <p class="muted">Manage profiles, CV Builder links, prompt instructions, local configuration, exports, AI defaults, and privacy settings.</p>
 </section>
-<div class="settings-grid">
+{% set current_section = section or request.query_params.get('section', 'profiles') %}
+<div class="settings-layout">
+  <aside class="card side-menu" aria-label="Settings sections">
+    <a class="{% if current_section == 'profiles' %}active{% endif %}" href="/settings?section=profiles">Profiles</a>
+    <a class="{% if current_section == 'cv-builder' %}active{% endif %}" href="/settings?section=cv-builder">CV Builder</a>
+    <a class="{% if current_section == 'prompts' %}active{% endif %}" href="/settings?section=prompts">Prompt templates</a>
+    <a class="{% if current_section == 'app' %}active{% endif %}" href="/settings?section=app">App configuration</a>
+    <a class="{% if current_section == 'openai' %}active{% endif %}" href="/settings?section=openai">OpenAI / keyring</a>
+    <a class="{% if current_section == 'exports' %}active{% endif %}" href="/settings?section=exports">Export formats</a>
+    <a class="{% if current_section == 'ai-policy' %}active{% endif %}" href="/settings?section=ai-policy">AI policy defaults</a>
+    <a class="{% if current_section == 'data-folder' %}active{% endif %}" href="/settings?section=data-folder">Data folder</a>
+    <a class="{% if current_section == 'privacy' %}active{% endif %}" href="/settings?section=privacy">Safety and privacy</a>
+  </aside>
   <section class="card">
-    <h2>Profiles</h2>
-    <p>Active profile: <strong>{{ active_profile.display_name if active_profile else "No active profile" }}</strong></p>
-    <form action="/settings/active-profile" method="post" class="compact-form">
-      <input type="hidden" name="next" value="/settings">
-      <select name="active_profile_id">
-        <option value="">No active profile</option>
-        {% for profile in profiles %}<option value="{{ profile.id }}" {% if active_profile and profile.id == active_profile.id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}
-      </select>
-      <button class="compact">Select active profile</button>
-    </form>
-    <p class="toolbar"><a class="button compact secondary" href="/profiles">Manage profiles</a><a class="button compact" href="/profiles/new">Create profile</a></p>
-  </section>
-
-  <section class="card">
-    <h2>Create/Edit Resume or CV Builder</h2>
-    {% if active_profile %}
-      <p class="muted">Active profile: {{ active_profile.display_name }}</p>
-      <p class="toolbar"><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a><a class="button compact secondary" href="/profiles/{{ active_profile.id }}/resumes">All resumes</a><a class="button compact secondary" href="/settings/facts">Facts</a></p>
-      {% if active_profile.resumes %}<ul>{% for resume in active_profile.resumes %}<li><a href="/resumes/{{ resume.id }}">Edit {{ resume.name }}</a></li>{% endfor %}</ul>{% else %}<p class="muted">No resumes yet. Create a resume first.</p>{% endif %}
+    {% if current_section == 'profiles' %}
+      <h2>Profiles</h2>
+      <p>Active profile: <strong>{{ active_profile.display_name if active_profile else "No active profile" }}</strong></p>
+      <form action="/settings/active-profile" method="post" class="compact-form">
+        <input type="hidden" name="next" value="/settings?section=profiles">
+        <select name="active_profile_id">
+          <option value="">No active profile</option>
+          {% for profile in profiles %}<option value="{{ profile.id }}" {% if active_profile and profile.id == active_profile.id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}
+        </select>
+        <button class="compact">Select active profile</button>
+      </form>
+      <p class="toolbar"><a class="button compact secondary" href="/profiles">Manage profiles</a><a class="button compact" href="/profiles/new">Create profile</a>{% if active_profile %}<a class="button compact secondary" href="/profiles/{{ active_profile.id }}/resumes">All resumes</a><a class="button compact secondary" href="/settings/facts">Facts</a>{% endif %}</p>
+    {% elif current_section == 'cv-builder' %}
+      <h2>CV Builder</h2>
+      {% if active_profile %}
+        <p class="muted">Create and edit resumes for {{ active_profile.display_name }}.</p>
+        <p class="toolbar"><a class="button compact" href="/cv-builder">Open CV Builder</a><a class="button compact secondary" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a><a class="button compact secondary" href="/profiles/{{ active_profile.id }}/resumes">All resumes</a><a class="button compact secondary" href="/settings/facts">Facts</a></p>
+      {% else %}
+        <div class="empty-state"><p>Select or create a profile to manage resumes and facts.</p><a class="button compact" href="/profiles/new">Create profile</a></div>
+      {% endif %}
+    {% elif current_section == 'prompts' %}
+      <h2>Prompt templates</h2>
+      <p class="muted">Manage global, profile, resume, and section instructions. Internal privacy and anti-fabrication guardrails are applied automatically and are not editable here.</p>
+      <a class="button compact" href="/settings/prompts">Manage prompt templates</a>
+    {% elif current_section == 'app' %}
+      <h2>App configuration</h2>
+      <form method="post" action="/settings" class="compact-form">
+        <input type="hidden" name="next" value="/settings?section=app">
+        <label>Language
+          <select name="locale">
+            <option value="en" {% if settings.locale == 'en' %}selected{% endif %}>English</option>
+            <option value="ru" {% if settings.locale == 'ru' %}selected{% endif %}>Russian</option>
+          </select>
+        </label>
+        <p class="muted">Russian UI is planned but not implemented yet.</p>
+        <button class="compact">Save configuration</button>
+      </form>
+    {% elif current_section == 'openai' %}
+      <h2>OpenAI / keyring</h2>
+      <p>The API key is stored in the OS keyring boundary, not SQLite. Model IDs are normal app settings and can override environment defaults.</p>
+      <p><a href="https://platform.openai.com/settings/organization/api-keys">OpenAI API keys</a> · <a href="https://platform.openai.com/docs/models">OpenAI Models documentation</a></p>
+      <form method="post" action="/settings" class="compact-form">
+        <input type="hidden" name="next" value="/settings?section=openai">
+        <label>OpenAI API key <input name="openai_api_key" type="password" placeholder="Stored in OS keyring only"></label>
+        <p class="muted">Key status: {{ key_status }}. Raw API keys are never stored in SQLite.</p>
+        <div class="two-column">
+          <label>Default model<input name="openai_model_default" value="{{ settings.openai_model_default }}"></label>
+          <label>QA model<input name="openai_model_qa" value="{{ settings.openai_model_qa }}"></label>
+          <label>Extraction model<input name="openai_model_extract" value="{{ settings.openai_model_extract }}"></label>
+          <label>Tailoring model<input name="openai_model_tailor" value="{{ settings.openai_model_tailor }}"></label>
+        </div>
+        <button class="compact">Save OpenAI settings</button>
+      </form>
+    {% elif current_section == 'exports' %}
+      <h2>Export formats</h2>
+      <form method="post" action="/settings" class="compact-form">
+        <input type="hidden" name="next" value="/settings?section=exports">
+        <label><input type="checkbox" name="export_pdf" {% if settings.exports.pdf %}checked{% endif %}> Export PDF</label>
+        <label><input type="checkbox" name="export_docx" {% if settings.exports.docx %}checked{% endif %}> Export DOCX</label>
+        <label><input type="checkbox" name="export_markdown" {% if settings.exports.markdown %}checked{% endif %}> Optional Markdown export</label>
+        <label><input type="checkbox" name="export_html" {% if settings.exports.html %}checked{% endif %}> Optional HTML export</label>
+        <button class="compact">Save formats</button>
+      </form>
+    {% elif current_section == 'ai-policy' %}
+      <h2>AI policy defaults</h2>
+      <form method="post" action="/settings" class="compact-form">
+        <input type="hidden" name="next" value="/settings?section=ai-policy">
+        <label><input type="checkbox" name="fact_links_required" {% if settings.ai_policy_defaults.fact_links_required %}checked{% endif %}> Require fact links</label>
+        <label><input type="checkbox" name="allow_new_bullets" {% if settings.ai_policy_defaults.allow_new_bullets %}checked{% endif %}> Allow new bullets</label>
+        <label><input type="checkbox" name="allow_hide_bullets" {% if settings.ai_policy_defaults.allow_hide_bullets %}checked{% endif %}> Allow hiding bullets</label>
+        <label><input type="checkbox" name="allow_title_edits" {% if settings.ai_policy_defaults.allow_title_edits %}checked{% endif %}> Allow title edits</label>
+        <button class="compact">Save AI policy</button>
+      </form>
+    {% elif current_section == 'data-folder' %}
+      <h2>Data folder</h2>
+      <p class="muted">A server-rendered local web app cannot reliably open an OS-native folder picker like an IDE. The MVP uses a path input with validation and creation.</p>
+      <a class="button compact secondary" href="/data-folder">Open data folder settings</a>
     {% else %}
-      <div class="empty-state"><p>Select or create a profile to manage resumes and facts.</p><a class="button compact" href="/profiles/new">Create profile</a></div>
+      <h2>Safety and privacy</h2>
+      <p>Private contact data is excluded from AI prompts and added only during final render/export. Prompt instructions cannot disable no-fabrication, untrusted-job-text handling, contact exclusion, or structured output.</p>
     {% endif %}
-  </section>
-
-  <section class="card">
-    <h2>Prompt templates</h2>
-    <p class="muted">Manage global, profile, resume, and section instructions. Internal safety guardrails are enforced separately.</p>
-    <a class="button compact" href="/settings/prompts">Manage prompt templates</a>
-  </section>
-
-  <section class="card">
-    <h2>App configuration</h2>
-    <form method="post" action="/settings" class="compact-form">
-      <label>Locale <input name="locale" value="{{ settings.locale }}"></label>
-      <button class="compact">Save configuration</button>
-    </form>
-  </section>
-
-  <section class="card">
-    <h2>OpenAI / keyring</h2>
-    <form method="post" action="/settings" class="compact-form">
-      <input type="hidden" name="locale" value="{{ settings.locale }}">
-      <label>OpenAI API key <input name="openai_api_key" type="password" placeholder="Stored in OS keyring only"></label>
-      <p class="muted">Key status: {{ key_status }}. Raw API keys are never stored in SQLite.</p>
-      <button class="compact">Save key</button>
-    </form>
-  </section>
-
-  <section class="card">
-    <h2>Export formats</h2>
-    <form method="post" action="/settings" class="compact-form">
-      <input type="hidden" name="locale" value="{{ settings.locale }}">
-      <label><input type="checkbox" name="export_pdf" {% if settings.exports.pdf %}checked{% endif %}> Export PDF</label>
-      <label><input type="checkbox" name="export_docx" {% if settings.exports.docx %}checked{% endif %}> Export DOCX</label>
-      <label><input type="checkbox" name="export_markdown" {% if settings.exports.markdown %}checked{% endif %}> Optional Markdown export</label>
-      <label><input type="checkbox" name="export_html" {% if settings.exports.html %}checked{% endif %}> Optional HTML export</label>
-      <button class="compact">Save formats</button>
-    </form>
-  </section>
-
-  <section class="card">
-    <h2>AI policy defaults</h2>
-    <form method="post" action="/settings" class="compact-form">
-      <input type="hidden" name="locale" value="{{ settings.locale }}">
-      <label><input type="checkbox" name="fact_links_required" {% if settings.ai_policy_defaults.fact_links_required %}checked{% endif %}> Require fact links</label>
-      <label><input type="checkbox" name="allow_new_bullets" {% if settings.ai_policy_defaults.allow_new_bullets %}checked{% endif %}> Allow new bullets</label>
-      <label><input type="checkbox" name="allow_hide_bullets" {% if settings.ai_policy_defaults.allow_hide_bullets %}checked{% endif %}> Allow hiding bullets</label>
-      <label><input type="checkbox" name="allow_title_edits" {% if settings.ai_policy_defaults.allow_title_edits %}checked{% endif %}> Allow title edits</label>
-      <button class="compact">Save AI policy</button>
-    </form>
-  </section>
-
-  <section class="card">
-    <h2>Safety and privacy</h2>
-    <p>Private contact data is excluded from AI prompts and added only during final render/export. Prompt instructions cannot disable no-fabrication, untrusted-job-text handling, contact exclusion, or structured output.</p>
-  </section>
-
-  <section class="card">
-    <h2>Data folder</h2>
-    <p class="muted">SQLite and app-owned artifacts stay under the selected local app data folder.</p>
-    <a class="button compact secondary" href="/data-folder">Open data folder settings</a>
   </section>
 </div>
 {% endblock %}
