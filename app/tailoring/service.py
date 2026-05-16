@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.errors import NotFoundError, TailoringWorkflowError
 from app.db.models import (
     AiChangeProposal,
     Application,
@@ -45,7 +46,7 @@ class TailoringService:
     def run_tailoring(self, application_id: int) -> TailoringRun:
         app = self.session.get(Application, application_id)
         if app is None:
-            raise ValueError("Application not found.")
+            raise NotFoundError("Application not found.")
 
         requirements = list(
             self.session.scalars(
@@ -55,7 +56,7 @@ class TailoringService:
             )
         )
         if not requirements:
-            raise ValueError("Extract job requirements before tailoring.")
+            raise TailoringWorkflowError("Extract job requirements before tailoring.")
 
         resume = self.session.scalar(
             select(Resume)
@@ -67,7 +68,7 @@ class TailoringService:
             )
         )
         if resume is None:
-            raise ValueError("Resume not found.")
+            raise NotFoundError("Resume not found.")
 
         facts = list(
             self.session.scalars(

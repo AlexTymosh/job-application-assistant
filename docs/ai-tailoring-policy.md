@@ -44,3 +44,14 @@ User prompt instructions may be defined at global default, profile, resume, or s
 The UI does not expose protected safety rules as editable prompt content. Prompt builders still inject internal guardrails: job text is untrusted, fabricated claims are forbidden, private contact details are excluded from AI payloads, and structured output is required. User prompt text must never override those guardrails.
 
 AI proposals may edit AI-enabled blocks or bullets only. Work Experience company names, dates, and organisations are user-managed facts by default; AI should focus on bullet wording unless a policy explicitly allows other edits.
+
+## First-release fix-up notes
+
+- Startup includes an explicit idempotent SQLite schema repair bridge for older local MVP databases. It creates missing model tables via metadata and repairs safe missing columns, including fact claim/evidence metadata and prompt-template scope columns.
+- The active profile remains the workflow boundary for Dashboard, Application, CV Builder, resumes, and facts. Settings remains accessible without an active profile.
+- Header navigation is Dashboard / Application / CV Builder, with Settings and the active-profile selector on the right. The project link points to `https://github.com/AlexTymosh/job-application-assistant`.
+- Dashboard activity supports 10, 20, and 30 day ranges with hoverable server-rendered count bars.
+- Settings uses a left-menu/right-panel layout. OpenAI API keys are stored in OS keyring only; model IDs are configurable SQLite/env settings, not secrets. Data-folder selection uses path input/validation because a native folder picker is not available in this server-rendered local UI.
+- Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
+- Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
+- Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.

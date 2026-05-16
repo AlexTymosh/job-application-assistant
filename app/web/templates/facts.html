@@ -2,7 +2,7 @@
 {% block content %}
 <section class="hero">
   <p class="badge">Facts</p>
-  <h1>Active profile facts</h1>
+  <h1>Active profile facts</h1>{% if active_profile %}<p><strong>{{ active_profile.display_name }}</strong></p>{% endif %}
   <p class="muted">Facts are profile-scoped evidence that can support AI-editable resume bullets.</p>
 </section>
 {% if not profile_id %}

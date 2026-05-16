@@ -22,34 +22,33 @@
     <div class="card"><span class="muted">Manually marked applied</span><h2>{{ stats.manually_marked_applied_count }}</h2></div>
   </div>
   <section class="card" style="margin-top:1rem">
-    <h2>Application activity over the last 30 days</h2>
-    <p class="muted">Bars count applications by creation date.</p>
-    <div class="chart" role="img" aria-label="Application activity chart">
-      {% for day in stats.activity_days %}
-        <span class="bar" title="{{ day.date }}: {{ day.count }}" style="height:{{ day.height }}px"></span>
-      {% endfor %}
+    <div class="section-header-row">
+      <div><h2>Application activity over the last {{ stats.activity_range_days }} days</h2><p class="muted">Hover over a bar to see the date and application count.</p></div>
+      <div class="tabs" aria-label="Activity range">
+        {% for option in [10, 20, 30] %}<a class="tab {% if stats.activity_range_days == option %}active{% endif %}" href="/?days={{ option }}">{{ option }} days</a>{% endfor %}
+      </div>
     </div>
+    {% set has_activity = stats.activity_days | selectattr('count') | list | length > 0 %}
+    {% if has_activity %}
+      <div class="chart" role="img" aria-label="Application activity chart for {{ stats.activity_range_days }} days" data-chart-days="{{ stats.activity_range_days }}">
+        {% for day in stats.activity_days %}
+          <span class="bar {% if day.count == 0 %}empty-bar{% endif %}" data-chart-bar="1" title="{{ day.label }}" style="height:{{ day.height }}px"></span>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state"><p>No application activity in the selected period.</p></div>
+      <div class="chart" role="img" aria-label="Empty application activity chart for {{ stats.activity_range_days }} days" data-chart-days="{{ stats.activity_range_days }}">
+        {% for day in stats.activity_days %}<span class="bar empty-bar" data-chart-bar="1" title="{{ day.label }}" style="height:0px"></span>{% endfor %}
+      </div>
+    {% endif %}
   </section>
   <section class="card" style="margin-top:1rem">
     <h2>Recent applications</h2>
     {% if stats.recent_applications %}
-      <table>
-        <thead><tr><th>Job</th><th>Company</th><th>Status</th><th>Created</th><th></th></tr></thead>
-        <tbody>
-        {% for application in stats.recent_applications %}
-          <tr>
-            <td>{{ application.job_title or "Untitled role" }}</td>
-            <td>{{ application.company_name or "Unknown company" }}</td>
-            <td><span class="badge">{{ application.status }}</span></td>
-            <td>{{ application.created_at.date() }}</td>
-            <td><a href="/applications/{{ application.id }}">Review</a></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="muted">No applications yet. Use the Application workspace to paste a job and adapt a resume.</p>
-    {% endif %}
+      <table><thead><tr><th>Job</th><th>Company</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>
+      {% for application in stats.recent_applications %}<tr><td>{{ application.job_title or "Untitled role" }}</td><td>{{ application.company_name or "Unknown company" }}</td><td><span class="badge">{{ application.status }}</span></td><td>{{ application.created_at.date() }}</td><td><a href="/applications/{{ application.id }}">Review</a></td></tr>{% endfor %}
+      </tbody></table>
+    {% else %}<p class="muted">No applications yet. Use the Application workspace to paste a job and adapt a resume.</p>{% endif %}
   </section>
 {% endif %}
 {% endblock %}

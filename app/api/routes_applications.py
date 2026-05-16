@@ -64,7 +64,7 @@ async def adapt_application(request: Request, session: SessionDep):
         job_title=data.get("job_title", ""),
         company_name=data.get("company_name", ""),
         source_url=data.get("source_url", ""),
-        raw_job_text=data["raw_job_text"],
+        raw_job_text=data.get("raw_job_text", ""),
     )
     return RedirectResponse(f"/applications/{app.id}", status_code=303)
 
