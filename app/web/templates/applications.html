@@ -3,24 +3,25 @@
 <section class="hero">
   <p class="badge">📄 Application</p>
   <h1>Adapt a resume for a job</h1>
-  <p class="muted">One workspace for job input, AI proposals, side-by-side review, cover letter editing, copy/download tracking, and manual applied status.</p>
+  <p class="muted">Paste a job description, choose an active-profile resume, review structured proposals, then copy or download only after human approval.</p>
 </section>
 {% if not active_profile %}
-  <div class="empty"><h2>Select an active profile first</h2><p>The Application workspace is profile-scoped.</p><a class="button" href="/settings">Open Settings</a></div>
+  <div class="empty-state"><h2>Select an active profile first</h2><p>The Application workspace is profile-scoped and never opens applications without an active profile.</p><a class="button compact" href="/settings">Open Settings</a></div>
+{% elif not resumes %}
+  <div class="empty-state"><h2>Create resume first</h2><p>{{ active_profile.display_name }} does not have any resumes yet.</p><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a></div>
 {% else %}
   <div class="tabs"><span class="tab active">1. New application / job input</span><span class="tab">2. Adapted result / review</span></div>
   <section class="card">
-    <h2>New application for {{ active_profile.display_name }}</h2>
-    <form method="post" action="/applications/adapt">
+    <div class="section-header-row"><h2>New application for {{ active_profile.display_name }}</h2><span class="badge good">Active profile</span></div>
+    <form method="post" action="/applications/adapt" class="compact-form">
       <label>Resume
         <select name="resume_id" required>
           {% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}{% if resume.target_role %} — {{ resume.target_role }}{% endif %}</option>{% endfor %}
         </select>
       </label>
-      <div class="two-column"><label>Job title <input name="job_title"></label><label>Company <input name="company_name"></label></div>
-      <label>Source URL <input name="source_url"></label>
-      <label>Job description <textarea name="raw_job_text" required placeholder="Paste the job description here"></textarea></label>
-      <button>Adapt</button>
+      <label>Source URL <input name="source_url" placeholder="Optional job posting URL"></label>
+      <label>Job description <textarea class="job-description" name="raw_job_text" required placeholder="Paste the job description here"></textarea></label>
+      <button class="compact">Adapt</button>
     </form>
   </section>
   <section class="card" style="margin-top:1rem">

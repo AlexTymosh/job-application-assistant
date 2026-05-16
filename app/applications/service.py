@@ -8,6 +8,12 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.errors import (
+    ApplicationWorkflowError,
+    ExportWorkflowError,
+    NotFoundError,
+    ProfileScopeError,
+)
 from app.cover_letters.service import CoverLetterService
 from app.db.models import (
     AiChangeProposal,
@@ -110,7 +116,7 @@ class ApplicationService:
             )
         )
         if application is None:
-            raise ValueError("Application not found.")
+            raise NotFoundError("Application not found.")
         return application
 
     def extract_requirements(
@@ -188,7 +194,9 @@ class ApplicationService:
         run = self.latest_tailoring_run(application_id)
 
         if run is None:
-            raise ValueError("Run tailoring before creating a snapshot.")
+            raise ApplicationWorkflowError(
+                "Run tailoring before creating an approved snapshot."
+            )
 
         accepted_changes = {
             (proposal.target_type, proposal.target_id): proposal.after_text
@@ -199,6 +207,18 @@ class ApplicationService:
                 ProposalStatus.ACCEPTED_EDITED.value,
             }
         }
+        if not accepted_changes:
+            raise ApplicationWorkflowError(
+                "Accept or accept-edit at least one proposal before creating an "
+                "approved snapshot."
+            )
+
+        existing_snapshot = self.latest_snapshot(application_id)
+        if (
+            existing_snapshot is not None
+            and existing_snapshot.tailoring_run_id == run.id
+        ):
+            return existing_snapshot
 
         resume = self._load_resume_for_snapshot(application.resume_id)
 
@@ -239,7 +259,7 @@ class ApplicationService:
     ) -> list[Artifact]:
         snapshot = self.session.get(TailoredResumeSnapshot, snapshot_id)
         if snapshot is None:
-            raise ValueError("Snapshot not found.")
+            raise ExportWorkflowError("Snapshot not found.", status_code=404)
 
         application = self.get_application(snapshot.application_id)
         resume = self._load_resume_for_final_export(snapshot.resume_id)
@@ -323,7 +343,11 @@ class ApplicationService:
     ) -> Application:
         resume = self.session.get(Resume, resume_id)
         if resume is None or resume.profile_id != profile_id:
-            raise ValueError("Resume must belong to the active profile.")
+            raise ProfileScopeError("Resume must belong to the active profile.")
+        if not raw_job_text.strip():
+            raise ApplicationWorkflowError(
+                "Paste a job description before adapting a resume."
+            )
         application = self.create_application(
             profile_id=profile_id,
             resume_id=resume_id,
@@ -348,7 +372,7 @@ class ApplicationService:
     ) -> None:
         run = self.latest_tailoring_run(application_id)
         if run is None:
-            raise ValueError("Run tailoring before saving review edits.")
+            raise ApplicationWorkflowError("Run tailoring before saving review edits.")
         for proposal in run.proposals:
             if proposal.id in edited_after_text:
                 proposal.after_text = edited_after_text[proposal.id]
@@ -370,7 +394,7 @@ class ApplicationService:
         edited_after_text = edited_after_text or {}
         run = self.latest_tailoring_run(application_id)
         if run is None:
-            raise ValueError("Run tailoring before saving decisions.")
+            raise ApplicationWorkflowError("Run tailoring before saving decisions.")
         now = datetime.now(UTC)
         for proposal in run.proposals:
             decision = decisions.get(proposal.id)
@@ -532,7 +556,7 @@ class ApplicationService:
             )
         )
         if resume is None:
-            raise ValueError("Resume not found.")
+            raise NotFoundError("Resume not found.")
         return resume
 
     def _load_resume_for_final_export(self, resume_id: int) -> Resume:
@@ -547,7 +571,7 @@ class ApplicationService:
             )
         )
         if resume is None:
-            raise ValueError("Resume not found.")
+            raise NotFoundError("Resume not found.")
         return resume
 
     def _upsert_artifact(

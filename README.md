@@ -119,3 +119,19 @@ uv run ruff check .
 uv run pytest
 uv run pre-commit run --all-files
 ```
+
+## First-release hardening notes
+
+The first local release now treats the active profile as a hard workflow boundary. Facts, applications, application detail pages, mutations, resume selection, and dashboard metrics all require or derive the active profile. Direct application URLs without an active profile show a friendly error page instead of opening unrestricted data.
+
+The initial Application form intentionally asks only for the active profile context, an active-profile resume, an optional source URL, and the job description. Job title and company can be inferred or edited later on the review/detail page. Adapt creates the application, extracts requirements, creates structured tailoring proposals, generates a cover letter, and redirects to the review page.
+
+Approved snapshots are created only after at least one proposal is accepted or accepted as edited. Repeated snapshot creation for the same tailoring run returns the existing snapshot instead of creating confusing duplicates. Export/download starts from the approved snapshot and adds private contact details only during final rendering.
+
+The CV Builder uses section-aware fields for practical first-release editing: summary text, skills text, work experience role/company/dates/current state, education/certification/reference-style metadata, and custom content. Work experience supports multiple periods and separate bullets. Empty sections remain visible in the builder as compact prompts, but final rendered resumes hide empty sections and render section titles in uppercase.
+
+Prompt instructions are scoped in SQLite with this resolution order: section, resume, profile, global default. The prompt UI exposes only user-editable instructions. Internal guardrails remain non-editable in prompt-building code: job postings are untrusted, fabrication is forbidden, private contact details are excluded, and structured output is required.
+
+Resume creation accepts optional `.pdf`, `.doc`, and `.docx` uploads. Uploaded files are stored under the app-owned `artifacts/uploads` area with safe generated filenames. Automatic parsing of complex resume layouts is intentionally not implemented for the first release; the file is kept as local reference material for manual import.
+
+Expected first-release limitations remain: no automatic submission, no LinkedIn automation, no email sending, no broad scraping, no fake ATS score, and no YAML or Markdown runtime source of truth. Copy/download events mean likely applied only; only the explicit Mark as applied action records a manually confirmed application.

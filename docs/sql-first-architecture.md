@@ -50,3 +50,13 @@ Approved snapshots are created from accepted AI proposals and intentionally excl
 ## Schema changes
 
 Current initialisation is deterministic through SQLAlchemy metadata creation. Any future persistent-user release should add explicit versioned migrations before relying on existing user data upgrades.
+
+## First-release schema and persistence notes
+
+The SQLite database remains the source of truth for profiles, resumes, resume sections/blocks/bullets, facts, applications, tailoring runs, proposals, snapshots, cover letters, prompt templates, uploads, artifacts, and events.
+
+Prompt templates now include optional `profile_id`, `resume_id`, and `section_id` columns for scoped prompt resolution. Initialisation applies these columns idempotently for existing local databases.
+
+Resume uploads are represented by `ResumeUpload` records and stored under app-owned artifact paths. Stored filenames are generated from safe filename components and a UUID. Uploads are never sent to AI automatically.
+
+Domain errors live in `app/core/errors.py` and provide stable, user-safe failure categories for validation, missing active profile, profile scoping, resume builder, application workflow, tailoring workflow, and export workflow problems.

@@ -1,1 +1,18 @@
-{% extends "base.html" %}{% block content %}<h1>{{ 'Edit profile' if profile else 'Create profile' }}</h1><form method="post"><label>Display name<input name="display_name" value="{{ profile.display_name if profile else '' }}" required></label><label>Full name<input name="full_name" value="{{ profile.full_name if profile else '' }}"></label>{% if profile %}<label>Preferred name<input name="preferred_name" value="{{ profile.preferred_name }}"></label>{% endif %}<label>Location<input name="location" value="{{ profile.location if profile else '' }}"></label>{% if profile %}<h2>Private contact layer</h2><label>Email<input name="email" value="{{ profile.contact.email if profile.contact else '' }}"></label><label>Phone<input name="phone" value="{{ profile.contact.phone if profile.contact else '' }}"></label><label>Address<input name="address_line" value="{{ profile.contact.address_line if profile.contact else '' }}"></label><label>City<input name="city" value="{{ profile.contact.city if profile.contact else '' }}"></label><label>Country<input name="country" value="{{ profile.contact.country if profile.contact else '' }}"></label>{% endif %}<button>Save profile</button></form>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="hero"><h1>{{ 'Edit profile' if profile else 'Create profile' }}</h1><p class="muted">Profiles hold local resume data. Contact details stay private and are added only during final rendering/export.</p></section>
+<form method="post">
+  <label>Display name<input name="display_name" value="{{ profile.display_name if profile else '' }}" required></label>
+  <label>Full name<input name="full_name" value="{{ profile.full_name if profile else '' }}"></label>
+  {% if profile %}<label>Preferred name<input name="preferred_name" value="{{ profile.preferred_name }}"></label>{% endif %}
+  {% if profile %}
+    <h2>Private contact layer</h2>
+    <label>Email<input name="email" value="{{ profile.contact.email if profile.contact else '' }}"></label>
+    <label>Phone<input name="phone" value="{{ profile.contact.phone if profile.contact else '' }}"></label>
+    <label>Address<input name="address_line" value="{{ profile.contact.address_line if profile.contact else '' }}"></label>
+    <label>City<input name="city" value="{{ profile.contact.city if profile.contact else '' }}"></label>
+    <label>Country<input name="country" value="{{ profile.contact.country if profile.contact else '' }}"></label>
+  {% endif %}
+  <button class="compact">Save profile</button>
+</form>
+{% endblock %}

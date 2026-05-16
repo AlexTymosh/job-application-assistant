@@ -25,3 +25,17 @@
 23. Confirm Dashboard metrics and the 30-day chart update for the active profile.
 24. Confirm another profile does not show the active profile's applications.
 25. Confirm no private contact data appears in AI prompt payload tests or logs.
+
+## Additional first-release smoke checks
+
+26. Open Settings -> Facts with no active profile and confirm a clean empty state.
+27. Confirm Settings -> Facts works after selecting an active profile.
+28. Confirm `/applications` with no active profile and with no resumes shows clean empty states.
+29. Confirm the Application form contains resume, source URL, and job description fields, without initial Job Title or Company fields.
+30. Confirm the job description textarea resizes vertically only.
+31. Try to create a snapshot before accepting proposals and confirm a friendly error.
+32. Upload a PDF/DOC/DOCX when creating a resume and confirm it is stored locally; try a disallowed extension and confirm it is rejected.
+33. Rename a resume and confirm the new name appears in the list, builder, and Application selector.
+34. Add a Work Experience block with Present checked, add bullets, and confirm it renders in the final resume.
+35. Confirm empty final resume sections are hidden and rendered section headings are uppercase.
+36. Confirm prompt overrides resolve in section, resume, profile, global order.

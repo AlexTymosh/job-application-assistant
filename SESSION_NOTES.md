@@ -42,3 +42,17 @@ The first usable local release stage is completed for the SQL-first AI JOB APPLI
 3. Add visual diff highlighting for before/after proposal review.
 4. Add export buttons that create snapshots and artifacts in one guided action.
 5. Harden real OpenAI client integration behind deterministic contract tests.
+
+## Current hardening update
+
+- Added domain error classes and friendly error rendering for expected workflow failures, HTTP errors, and unexpected exceptions.
+- Hardened active-profile access for facts and application detail/mutation routes.
+- Fixed first-release runtime failures around active-profile facts, Adapt, and approved snapshot creation.
+- Reworked the Settings hub order and made active-profile facts a safe card action.
+- Compactly polished the header, menu, active-profile selector, cards, buttons, textareas, and empty states.
+- Removed Location from profile forms while leaving the legacy database column in place.
+- Added resume metadata editing and optional safe PDF/DOC/DOCX upload storage under app-owned artifacts.
+- Added scoped prompt instructions for global, profile, resume, and section levels while keeping safety guardrails internal and non-editable.
+- Improved CV Builder controls with compact arrow move buttons and section-aware fields, including Work Experience role/company/date/current fields.
+- Updated rendering to hide empty final sections and uppercase rendered section headings.
+- Expanded regression coverage for facts, Adapt, snapshots, active-profile access, uploads, prompt resolution, error pages, work experience, metadata edits, and render behaviour.

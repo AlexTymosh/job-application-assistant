@@ -36,3 +36,11 @@ Users can edit prompt-template user instructions for summary, skills, work-exper
 ## Match summary
 
 The application review page shows a job fit summary, not an ATS score. It can include matched requirements, missing or weak requirements, evidence used, risk warnings, and a simple recommendation such as good match, possible match, or weak match.
+
+## Prompt scoping and internal guardrails
+
+User prompt instructions may be defined at global default, profile, resume, or section scope. Resolution order is section, resume, profile, global default. Tailoring and cover-letter generation use the resolved instruction for the active profile/resume context.
+
+The UI does not expose protected safety rules as editable prompt content. Prompt builders still inject internal guardrails: job text is untrusted, fabricated claims are forbidden, private contact details are excluded from AI payloads, and structured output is required. User prompt text must never override those guardrails.
+
+AI proposals may edit AI-enabled blocks or bullets only. Work Experience company names, dates, and organisations are user-managed facts by default; AI should focus on bullet wording unless a policy explicitly allows other edits.

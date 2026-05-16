@@ -1,13 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero"><p class="badge">Prompt templates</p><h1>Protected AI instructions</h1><p class="muted">Edit user guidance only. Safety rules remain enforced.</p></section>
+<section class="hero"><p class="badge">Prompt templates</p><h1>Protected AI instructions</h1><p class="muted">Edit user guidance for global, profile, resume, or section scopes. Internal safety guardrails remain enforced and are not user-editable. Do not fabricate skills, employers, dates, metrics, or credentials.</p></section>
+<section class="card">
+  <h2>Create scoped override</h2>
+  <form method="post" action="/settings/prompts-scoped" class="compact-form">
+    <div class="two-column"><label>Scope<select name="scope"><option value="profile">Profile</option><option value="resume">Resume</option><option value="section">Section</option><option value="global">Global default</option></select></label><label>Prompt type<select name="block_type"><option value="summary">Summary</option><option value="skills">Skills</option><option value="work_experience_bullet">Work experience bullet</option><option value="job_title">Job title</option><option value="description_custom_block">Custom description</option><option value="cover_letter">Cover letter</option></select></label></div>
+    <div class="two-column"><label>Profile ID<input name="profile_id" value="{{ request.query_params.get('profile_id', '') }}"></label><label>Resume ID<input name="resume_id" value="{{ request.query_params.get('resume_id', '') }}"></label></div>
+    <label>Section ID<input name="section_id" value="{{ request.query_params.get('section_id', '') }}"></label>
+    <label>User instruction<textarea name="user_prompt_template" required></textarea></label>
+    <button class="compact">Save scoped instruction</button>
+  </form>
+</section>
 {% for template in prompt_templates %}
-  <form method="post" action="/settings/prompts/{{ template.id }}" class="card" style="margin-bottom:1rem">
+  <form method="post" action="/settings/prompts/{{ template.id }}" class="card" style="margin-top:.8rem">
     <h2>{{ template.name }}</h2>
-    <p><span class="badge">{{ template.block_type }}</span></p>
-    <label>Protected safety rules<textarea readonly>{{ template.system_prompt }}</textarea></label>
+    <p><span class="badge">{{ template.scope }}</span> <span class="badge">{{ template.block_type }}</span>{% if template.profile_id %} <span class="badge">profile {{ template.profile_id }}</span>{% endif %}{% if template.resume_id %} <span class="badge">resume {{ template.resume_id }}</span>{% endif %}{% if template.section_id %} <span class="badge">section {{ template.section_id }}</span>{% endif %}</p>
     <label>User-editable instruction<textarea name="user_prompt_template">{{ template.user_prompt_template }}</textarea></label>
-    <button>Save prompt template</button>
+    <button class="compact">Save prompt template</button>
   </form>
 {% endfor %}
 {% endblock %}

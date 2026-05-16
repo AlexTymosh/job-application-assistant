@@ -62,3 +62,25 @@ References are not AI-editable by default because they may contain private conta
 ## Likely-applied tracking
 
 Copy and download actions create events and move the application into a likely-applied state. This means the user probably used the material externally. It does not mean the app submitted the application. Manual Mark as applied records a user-confirmed application status.
+
+## First-release workflow details
+
+### Active profile facts
+
+Settings provides a dedicated Facts action for the active profile. If no active profile exists, the facts page shows an empty state with links to create or select a profile. Missing facts, contact details, or deleted profiles must not produce a raw server error.
+
+### Application adaptation
+
+The Application page is active-profile scoped. Without an active profile it shows a clear empty state. With an active profile but no resumes, it asks the user to create a resume first. The resume selector lists only resumes owned by the active profile. Adapt creates an application, extracts requirements, runs tailoring, generates a cover letter, and redirects to the review page.
+
+### Review, snapshot, copy, and download
+
+The review page shows a deterministic fit summary, base resume text, tailored editable proposal text, and the cover letter. A snapshot requires at least one accepted or accepted-edited proposal. Copy and download actions record likely-applied events; Mark as applied records a manual confirmation.
+
+### CV Builder
+
+The builder keeps standard sections visible as compact prompts when they are empty. Work Experience supports multiple work periods with role title, company or organisation, start date, end date, present/current state, optional location, and separate bullets. Final rendered/exported resumes hide empty sections and uppercase section titles.
+
+### Prompt scopes
+
+Prompt instruction resolution is section override, resume override, profile override, then global default. The Settings prompt hub manages scoped prompt instructions; section prompt links are available from the builder. Safety guardrails remain internal rather than user-editable prompt template text.

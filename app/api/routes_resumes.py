@@ -3,7 +3,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
-from app.api.dependencies import SessionDep, form_bool, read_form_data
+from app.api.dependencies import (
+    SessionDep,
+    form_bool,
+    get_app_data_root,
+    read_form_data,
+)
 from app.db.models import (
     BlockType,
     ResumeBlock,
@@ -38,15 +43,111 @@ def new_resume(profile_id: int, request: Request):
 
 @router.post("/profiles/{profile_id}/resumes/new")
 async def create_resume(profile_id: int, request: Request, session: SessionDep):
-    data = await read_form_data(request)
-    resume = ResumeService(session).create_resume(
+    data, upload = await _read_resume_create_payload(request)
+    service = ResumeService(session)
+    resume = service.create_resume(
         profile_id,
         data["name"],
         data.get("target_role", ""),
         data.get("language", "en"),
         create_standard_sections=form_bool(data, "create_standard_sections"),
     )
+    if upload is not None:
+        service.attach_upload(
+            resume.id,
+            original_filename=str(upload["filename"]),
+            content_type=str(upload["content_type"]),
+            content=bytes(upload["content"]),
+            app_data_root=get_app_data_root(request),
+        )
     return RedirectResponse(f"/resumes/{resume.id}", status_code=303)
+
+
+async def _read_resume_create_payload(
+    request: Request,
+) -> tuple[dict[str, str], dict[str, object] | None]:
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" not in content_type:
+        return await read_form_data(request), None
+
+    body = await request.body()
+    boundary_marker = "boundary="
+    if boundary_marker not in content_type:
+        return {}, None
+    boundary = content_type.split(boundary_marker, 1)[1].strip().strip('"')
+    delimiter = ("--" + boundary).encode()
+    data: dict[str, str] = {}
+    upload: dict[str, object] | None = None
+    for raw_part in body.split(delimiter):
+        part = raw_part.strip(b"\r\n")
+        if not part or part == b"--" or b"\r\n\r\n" not in part:
+            continue
+        raw_headers, content = part.split(b"\r\n\r\n", 1)
+        if content.endswith(b"\r\n"):
+            content = content[:-2]
+        headers = raw_headers.decode("utf-8", errors="ignore")
+        disposition = next(
+            (
+                line
+                for line in headers.split("\r\n")
+                if line.lower().startswith("content-disposition:")
+            ),
+            "",
+        )
+        name = _multipart_disposition_value(disposition, "name")
+        filename = _multipart_disposition_value(disposition, "filename")
+        if not name:
+            continue
+        if filename:
+            content_type_line = next(
+                (
+                    line
+                    for line in headers.split("\r\n")
+                    if line.lower().startswith("content-type:")
+                ),
+                "",
+            )
+            upload = {
+                "filename": filename,
+                "content_type": content_type_line.split(":", 1)[1].strip()
+                if ":" in content_type_line
+                else "",
+                "content": content,
+            }
+        else:
+            data[name] = content.decode("utf-8", errors="ignore")
+    return data, upload
+
+
+def _multipart_disposition_value(disposition: str, key: str) -> str:
+    prefix = f'{key}="'
+    if prefix not in disposition:
+        return ""
+    return disposition.split(prefix, 1)[1].split('"', 1)[0]
+
+
+@router.get("/resumes/{resume_id}/edit")
+def edit_resume_metadata(resume_id: int, request: Request, session: SessionDep):
+    return templates.TemplateResponse(
+        "resume_form.html",
+        {
+            "request": request,
+            "profile_id": None,
+            "resume": ResumeService(session).get_resume(resume_id),
+        },
+    )
+
+
+@router.post("/resumes/{resume_id}/edit")
+async def update_resume_metadata(resume_id: int, request: Request, session: SessionDep):
+    data = await read_form_data(request)
+    ResumeService(session).update_resume(
+        resume_id,
+        name=data["name"],
+        target_role=data.get("target_role", ""),
+        language=data.get("language", "en"),
+    )
+    return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
 
 
 @router.get("/resumes/{resume_id}")

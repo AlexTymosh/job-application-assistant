@@ -53,7 +53,7 @@ class CoverLetterService:
             resume_markdown=markdown_without_contact,
             job_requirements=[{"id": req.id, "text": req.text} for req in requirements],
             user_instruction=SettingsService(self.session).get_prompt_instruction(
-                "cover_letter"
+                "cover_letter", profile_id=app.profile_id, resume_id=app.resume_id
             ),
         )
         letter = CoverLetter(
