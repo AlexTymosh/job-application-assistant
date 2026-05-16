@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app.api.dependencies import SessionDep, form_bool, read_form_data
+from app.people.service import PeopleService
 from app.settings.service import SettingsService
 from app.web.templating import templates
 
@@ -76,6 +77,24 @@ async def set_active_profile(request: Request, session: SessionDep):
     return RedirectResponse(data.get("next") or "/", status_code=303)
 
 
+@router.get("/facts")
+def active_profile_facts(request: Request, session: SessionDep):
+    service = SettingsService(session)
+    active_profile = service.get_active_profile()
+    facts = []
+    if active_profile is not None:
+        facts = PeopleService(session).list_facts(active_profile.id)
+    return templates.TemplateResponse(
+        "facts.html",
+        {
+            "request": request,
+            "profile_id": active_profile.id if active_profile else None,
+            "active_profile": active_profile,
+            "facts": facts,
+        },
+    )
+
+
 @router.get("/prompts")
 def prompt_templates(request: Request, session: SessionDep):
     return templates.TemplateResponse(
@@ -85,6 +104,25 @@ def prompt_templates(request: Request, session: SessionDep):
             "prompt_templates": SettingsService(session).list_prompt_templates(),
         },
     )
+
+
+@router.post("/prompts-scoped")
+async def create_scoped_prompt_template(request: Request, session: SessionDep):
+    data = await read_form_data(request)
+
+    def optional_int(key: str) -> int | None:
+        value = data.get(key, "").strip()
+        return int(value) if value else None
+
+    SettingsService(session).upsert_scoped_prompt_template(
+        scope=data.get("scope", "global"),
+        block_type=data.get("block_type", "summary"),
+        user_prompt_template=data.get("user_prompt_template", ""),
+        profile_id=optional_int("profile_id"),
+        resume_id=optional_int("resume_id"),
+        section_id=optional_int("section_id"),
+    )
+    return RedirectResponse("/settings/prompts", status_code=303)
 
 
 @router.post("/prompts/{template_id}")

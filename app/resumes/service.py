@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import re
+from pathlib import Path
+from uuid import uuid4
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -9,8 +13,12 @@ from app.db.models import (
     ResumeBullet,
     ResumeBulletFactLink,
     ResumeSection,
+    ResumeUpload,
 )
 from app.resumes.policies import AiEditPolicy
+
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".doc", ".docx"}
+SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 class ResumeService:
@@ -121,6 +129,56 @@ class ResumeService:
         if commit:
             self.session.commit()
         return sections
+
+    def attach_upload(
+        self,
+        resume_id: int,
+        *,
+        original_filename: str,
+        content_type: str,
+        content: bytes,
+        app_data_root: Path,
+    ) -> ResumeUpload:
+        from app.core.errors import ResumeBuilderError
+
+        resume = self.get_resume(resume_id)
+        source_name = Path(original_filename or "resume-upload").name
+        suffix = Path(source_name).suffix.lower()
+        if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
+            raise ResumeBuilderError("Upload a PDF, DOC, or DOCX resume file.")
+        stem = (
+            SAFE_FILENAME_RE.sub("-", Path(source_name).stem).strip(".-_") or "resume"
+        )
+        stored_filename = f"{uuid4().hex}-{stem}{suffix}"
+        relative_dir = (
+            Path("artifacts")
+            / "uploads"
+            / f"profile-{resume.profile_id}"
+            / f"resume-{resume.id}"
+        )
+        absolute_dir = (app_data_root / relative_dir).resolve()
+        root = app_data_root.resolve()
+        if root not in absolute_dir.parents and absolute_dir != root:
+            raise ResumeBuilderError("Unsafe upload path.")
+        absolute_dir.mkdir(parents=True, exist_ok=True)
+        absolute_path = (absolute_dir / stored_filename).resolve()
+        if root not in absolute_path.parents:
+            raise ResumeBuilderError("Unsafe upload path.")
+        absolute_path.write_bytes(content)
+        upload = ResumeUpload(
+            resume_id=resume.id,
+            original_filename=source_name,
+            stored_filename=stored_filename,
+            relative_path=(relative_dir / stored_filename).as_posix(),
+            content_type=content_type or "application/octet-stream",
+            extraction_status=(
+                "Stored. Manual extraction/import is not implemented yet."
+            ),
+            extracted_preview="",
+        )
+        self.session.add(upload)
+        self.session.commit()
+        return upload
 
     def update_resume(self, resume_id: int, **values: str) -> Resume:
         resume = self.get_resume(resume_id)

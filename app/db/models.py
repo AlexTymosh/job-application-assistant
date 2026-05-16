@@ -324,6 +324,29 @@ class PromptTemplate(Base, TimestampMixin):
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     user_prompt_template: Mapped[str] = mapped_column(Text, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    profile_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    resume_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    section_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+
+
+class ResumeUpload(Base):
+    __tablename__ = "resume_uploads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    resume_id: Mapped[int] = mapped_column(
+        ForeignKey("resumes.id", ondelete="CASCADE"), index=True
+    )
+    original_filename: Mapped[str] = mapped_column(String(240), nullable=False)
+    stored_filename: Mapped[str] = mapped_column(String(240), nullable=False)
+    relative_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(160), default="", nullable=False)
+    extraction_status: Mapped[str] = mapped_column(
+        String(160), default="manual import required", nullable=False
+    )
+    extracted_preview: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
 
 
 class Application(Base, TimestampMixin):

@@ -1,6 +1,19 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h1>Error</h1>
-  <p>{{ message }}</p>
+<section class="hero">
+  <p class="badge bad">{{ status_code }}</p>
+  <h1>{{ title or "Something went wrong" }}</h1>
+  <p class="muted">{{ message or "The requested action could not be completed safely." }}</p>
+</section>
+<section class="card">
+  <h2>Safe navigation</h2>
+  <p class="muted">Use these links to return to a stable workspace page.</p>
+  <div class="toolbar">
+    <a class="button compact" href="/">Dashboard</a>
+    <a class="button compact secondary" href="/applications">Application</a>
+    <a class="button compact secondary" href="/settings">Settings</a>
+    <button class="compact secondary" type="button" onclick="if (history.length > 1) { history.back(); } else { location.href = '/settings'; }">Back</button>
+  </div>
+</section>
 {% endblock %}

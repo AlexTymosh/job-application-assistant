@@ -1,16 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero"><p class="badge">CV Builder</p><h1>{{ "Edit block" if block else "Add block" }}</h1></section>
+<section class="hero"><p class="badge">CV Builder</p><h1>{{ "Edit block" if block else "Add section content" }}</h1><p class="muted">The form adapts to common CV section types while keeping the server-rendered workflow simple.</p></section>
 <form method="post">
-  {% if not block %}<label>Section <select name="section_id">{% for section in resume.sections %}<option value="{{ section.id }}">{{ section.title }}</option>{% endfor %}</select></label>{% endif %}
-  <label>Block type <select name="block_type">{% for type in block_types %}<option value="{{ type }}" {% if block and block.block_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}</select></label>
-  <div class="two-column"><label>Title <input name="title" value="{{ block.title if block else '' }}"></label><label>Subtitle / degree / level <input name="subtitle" value="{{ block.subtitle if block else '' }}"></label></div>
-  <div class="two-column"><label>Role title <input name="role_title" value="{{ block.role_title if block else '' }}"></label><label>Company / organisation / issuer <input name="organisation" value="{{ block.organisation if block else '' }}"></label></div>
-  <div class="two-column"><label>Location <input name="location" value="{{ block.location if block else '' }}"></label><label>Start date <input name="start_date" value="{{ block.start_date if block else '' }}"></label></div>
-  <div class="two-column"><label>End date <input name="end_date" value="{{ block.end_date if block else '' }}"></label><label><input type="checkbox" name="is_current" {% if block and block.is_current %}checked{% endif %}> Current / present</label></div>
-  <label>Content / achievements / details <textarea name="content">{{ block.content if block else '' }}</textarea></label>
+  {% if not block %}<label>Section <select name="section_id" id="section-select">{% for section in resume.sections %}<option value="{{ section.id }}" data-type="{{ section.section_type }}">{{ section.title }}</option>{% endfor %}</select></label>{% endif %}
+  <label>Content type <select name="block_type">{% for type in block_types %}<option value="{{ type }}" {% if block and block.block_type == type %}selected{% endif %}>{{ type.replace('_', ' ')|title }}</option>{% endfor %}</select></label>
+  <section class="card">
+    <h2>Header / personal details or custom title</h2>
+    <div class="two-column"><label>Title / certificate / language / reference name<input name="title" value="{{ block.title if block else '' }}"></label><label>Subtitle / degree / level / reference role<input name="subtitle" value="{{ block.subtitle if block else '' }}"></label></div>
+  </section>
+  <section class="card">
+    <h2>Work Experience</h2>
+    <div class="two-column"><label>Role title<input name="role_title" value="{{ block.role_title if block else '' }}"></label><label>Company / organisation<input name="organisation" value="{{ block.organisation if block else '' }}"></label></div>
+    <div class="two-column"><label>Start date<input name="start_date" value="{{ block.start_date if block else '' }}"></label><label>End date<input name="end_date" value="{{ block.end_date if block else '' }}"></label></div>
+    <label><input type="checkbox" name="is_current" {% if block and block.is_current %}checked{% endif %}> Present / current</label>
+    <label>Optional location<input name="location" value="{{ block.location if block else '' }}"></label>
+  </section>
+  <section class="card">
+    <h2>Summary, skills, education, certificates, references, or custom details</h2>
+    <label>Description / hard skills / soft skills / achievements / notes<textarea name="content" placeholder="For Work Experience, add key bullets after saving this block.">{{ block.content if block else '' }}</textarea></label>
+  </section>
   <label><input type="checkbox" name="is_visible" {% if not block or block.is_visible %}checked{% endif %}> Visible</label>
   <label><input type="checkbox" name="ai_edit_enabled" {% if block and block.ai_edit_enabled %}checked{% endif %}> AI may edit this block</label>
-  <button>Save block</button>
+  <button class="compact">Save block</button>
 </form>
 {% endblock %}

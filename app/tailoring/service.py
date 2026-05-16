@@ -109,7 +109,15 @@ class TailoringService:
 
         for section in resume.sections:
             for block in section.blocks:
-                self._propose_for_block(run, block, requirement_payload, fact_payload)
+                self._propose_for_block(
+                    run,
+                    block,
+                    requirement_payload,
+                    fact_payload,
+                    app.profile_id,
+                    resume.id,
+                    section.id,
+                )
                 for bullet in block.bullets:
                     self._propose_for_bullet(
                         run,
@@ -128,6 +136,9 @@ class TailoringService:
         block: ResumeBlock,
         requirements: list[dict[str, object]],
         facts: list[dict[str, object]],
+        profile_id: int,
+        resume_id: int,
+        section_id: int,
     ) -> None:
         if not block.ai_edit_enabled:
             return
@@ -147,7 +158,12 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
-                user_instruction=settings.get_prompt_instruction("summary"),
+                user_instruction=settings.get_prompt_instruction(
+                    "summary",
+                    profile_id=profile_id,
+                    resume_id=resume_id,
+                    section_id=section_id,
+                ),
             )
         elif block.block_type == "skills":
             target["target_type"] = "skills_set"
@@ -156,7 +172,12 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
-                user_instruction=settings.get_prompt_instruction("skills"),
+                user_instruction=settings.get_prompt_instruction(
+                    "skills",
+                    profile_id=profile_id,
+                    resume_id=resume_id,
+                    section_id=section_id,
+                ),
             )
         elif block.block_type == "title":
             if not policy.get("ai_can_edit_title"):
@@ -168,7 +189,12 @@ class TailoringService:
                 requirements=requirements,
                 facts=facts,
                 policy=policy,
-                user_instruction=settings.get_prompt_instruction("job_title"),
+                user_instruction=settings.get_prompt_instruction(
+                    "job_title",
+                    profile_id=profile_id,
+                    resume_id=resume_id,
+                    section_id=section_id,
+                ),
             )
         else:
             payload = build_description_prompt(
@@ -177,7 +203,10 @@ class TailoringService:
                 facts=facts,
                 policy=policy,
                 user_instruction=settings.get_prompt_instruction(
-                    "description_custom_block"
+                    "description_custom_block",
+                    profile_id=profile_id,
+                    resume_id=resume_id,
+                    section_id=section_id,
                 ),
             )
 

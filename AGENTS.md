@@ -62,3 +62,10 @@ Use emoji plus conventional commit style:
 
 - optional detail
 ```
+
+## First-release implementation notes
+
+- Use `app/core/errors.py` domain errors for expected user-facing workflow failures instead of bare `ValueError` in new code.
+- Keep prompt safety guardrails internal to prompt builders; do not expose protected rules as editable UI fields.
+- Resume uploads are local artifacts only and must not be sent to AI automatically.
+- Empty builder sections should guide the user, but empty final render/export sections should be hidden.

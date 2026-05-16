@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import models  # noqa: F401
@@ -32,6 +32,29 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 def initialise_database(engine: Engine) -> None:
     Base.metadata.create_all(engine)
+    _apply_idempotent_sqlite_updates(engine)
+
+
+def _apply_idempotent_sqlite_updates(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "prompt_templates" not in inspector.get_table_names():
+        return
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("prompt_templates")
+    }
+    desired_columns = {
+        "profile_id": "INTEGER",
+        "resume_id": "INTEGER",
+        "section_id": "INTEGER",
+    }
+    with engine.begin() as connection:
+        for name, column_type in desired_columns.items():
+            if name not in existing_columns:
+                connection.execute(
+                    text(
+                        f"ALTER TABLE prompt_templates ADD COLUMN {name} {column_type}"
+                    )
+                )
 
 
 def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:

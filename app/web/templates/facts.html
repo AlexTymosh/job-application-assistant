@@ -1,1 +1,14 @@
-{% extends "base.html" %}{% block content %}<div class="actions"><h1>Facts</h1><a class="button" href="/profiles/{{ profile_id }}/facts/new">Add fact</a></div><table><thead><tr><th>Key</th><th>Claim</th><th>Level</th><th>Evidence</th></tr></thead><tbody>{% for fact in facts %}<tr><td>{{ fact.fact_key }}</td><td>{{ fact.claim }}</td><td><span class="badge">{{ fact.allowed_claim_level }}</span></td><td>{{ fact.evidence }}</td></tr>{% endfor %}</tbody></table>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="badge">Facts</p>
+  <h1>Active profile facts</h1>
+  <p class="muted">Facts are profile-scoped evidence that can support AI-editable resume bullets.</p>
+</section>
+{% if not profile_id %}
+  <div class="empty-state"><h2>No active profile</h2><p>Create or select a profile before managing facts.</p><div class="toolbar"><a class="button compact" href="/profiles/new">Create profile</a><a class="button compact secondary" href="/settings">Select profile</a></div></div>
+{% else %}
+  <div class="toolbar"><a class="button compact" href="/profiles/{{ profile_id }}/facts/new">Add fact</a><a class="button compact secondary" href="/settings">Back to Settings</a></div>
+  {% if facts %}<table><thead><tr><th>Key</th><th>Claim</th><th>Level</th><th>Evidence</th></tr></thead><tbody>{% for fact in facts %}<tr><td>{{ fact.fact_key }}</td><td>{{ fact.claim }}</td><td><span class="badge">{{ fact.allowed_claim_level }}</span></td><td>{{ fact.evidence }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty-state"><p>No facts yet. Add a fact to support stronger AI tailoring claims.</p></div>{% endif %}
+{% endif %}
+{% endblock %}

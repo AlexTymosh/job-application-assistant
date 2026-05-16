@@ -31,7 +31,7 @@ def new_profile(request: Request):
 async def create_profile(request: Request, session: SessionDep):
     data = await read_form_data(request)
     profile = PeopleService(session).create_profile(
-        data["display_name"], data.get("full_name", ""), data.get("location", "")
+        data["display_name"], data.get("full_name", ""), ""
     )
     if SettingsService(session).get_active_profile() is None:
         SettingsService(session).set_active_profile(profile.id)
@@ -62,7 +62,7 @@ async def update_profile(profile_id: int, request: Request, session: SessionDep)
         display_name=data["display_name"],
         full_name=data.get("full_name", ""),
         preferred_name=data.get("preferred_name", ""),
-        location=data.get("location", ""),
+        location="",
         email=data.get("email", ""),
         phone=data.get("phone", ""),
         address_line=data.get("address_line", ""),

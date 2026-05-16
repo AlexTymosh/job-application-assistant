@@ -116,9 +116,13 @@ class SettingsService:
         return self.session.get(PersonProfile, profile_id)
 
     def require_active_profile(self) -> PersonProfile:
+        from app.core.errors import ActiveProfileRequiredError
+
         profile = self.get_active_profile()
         if profile is None:
-            raise ValueError("Select an active profile before using this workspace.")
+            raise ActiveProfileRequiredError(
+                "Select an active profile before using this workspace."
+            )
         return profile
 
     def set_active_profile(self, profile_id: int | None) -> None:
@@ -177,14 +181,99 @@ class SettingsService:
         template.user_prompt_template = user_prompt_template.strip()
         self.session.commit()
 
-    def get_prompt_instruction(self, block_type: str) -> str:
-        self.ensure_prompt_templates()
-        template = self.session.scalar(
-            select(PromptTemplate).where(
-                PromptTemplate.block_type == block_type,
-                PromptTemplate.is_active.is_(True),
-            )
+    def get_prompt_instruction(
+        self,
+        block_type: str,
+        *,
+        profile_id: int | None = None,
+        resume_id: int | None = None,
+        section_id: int | None = None,
+    ) -> str:
+        template = self.resolve_prompt_template(
+            block_type,
+            profile_id=profile_id,
+            resume_id=resume_id,
+            section_id=section_id,
         )
         if template is None:
             return DEFAULT_USER_PROMPTS.get(block_type, "")
         return template.user_prompt_template
+
+    def resolve_prompt_template(
+        self,
+        block_type: str,
+        *,
+        profile_id: int | None = None,
+        resume_id: int | None = None,
+        section_id: int | None = None,
+    ) -> PromptTemplate | None:
+        self.ensure_prompt_templates()
+        filters = [
+            ("section", None, None, section_id),
+            ("resume", None, resume_id, None),
+            ("profile", profile_id, None, None),
+            ("global", None, None, None),
+        ]
+        for scope, scoped_profile_id, scoped_resume_id, scoped_section_id in filters:
+            if scope == "section" and section_id is None:
+                continue
+            if scope == "resume" and resume_id is None:
+                continue
+            if scope == "profile" and profile_id is None:
+                continue
+            template = self.session.scalar(
+                select(PromptTemplate).where(
+                    PromptTemplate.block_type == block_type,
+                    PromptTemplate.scope == scope,
+                    PromptTemplate.profile_id == scoped_profile_id,
+                    PromptTemplate.resume_id == scoped_resume_id,
+                    PromptTemplate.section_id == scoped_section_id,
+                    PromptTemplate.is_active.is_(True),
+                )
+            )
+            if template is not None:
+                return template
+        return None
+
+    def upsert_scoped_prompt_template(
+        self,
+        *,
+        scope: str,
+        block_type: str,
+        user_prompt_template: str,
+        profile_id: int | None = None,
+        resume_id: int | None = None,
+        section_id: int | None = None,
+        name: str | None = None,
+    ) -> PromptTemplate:
+        if scope not in {"global", "profile", "resume", "section"}:
+            raise ValueError("Unsupported prompt scope.")
+        template = self.session.scalar(
+            select(PromptTemplate).where(
+                PromptTemplate.scope == scope,
+                PromptTemplate.block_type == block_type,
+                PromptTemplate.profile_id == profile_id,
+                PromptTemplate.resume_id == resume_id,
+                PromptTemplate.section_id == section_id,
+            )
+        )
+        if template is None:
+            template = PromptTemplate(
+                scope=scope,
+                block_type=block_type,
+                section_type="",
+                name=name or f"{scope.title()} {block_type.replace('_', ' ').title()}",
+                system_prompt=PROTECTED_SAFETY_PROMPT,
+                user_prompt_template=user_prompt_template.strip(),
+                profile_id=profile_id,
+                resume_id=resume_id,
+                section_id=section_id,
+                is_active=True,
+            )
+            self.session.add(template)
+        else:
+            template.system_prompt = PROTECTED_SAFETY_PROMPT
+            template.user_prompt_template = user_prompt_template.strip()
+            template.is_active = True
+        self.session.commit()
+        return template
