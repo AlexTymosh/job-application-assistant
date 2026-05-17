@@ -50,3 +50,18 @@
 - Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
 - Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
 - Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
+
+## Additional first-release polish smoke tests
+
+1. Start from an older local SQLite database where `applications` exists without `created_at`, launch the app, create a new application, and confirm the created date is current rather than `1970-01-01`.
+2. Open `/?days=10`, `/?days=20`, and `/?days=30`; confirm the chart shows the new application, date labels on the X axis, count labels on the Y axis, and date/count hover text.
+3. Open Dashboard and confirm the “Likely applied” and “Manually marked applied” metric cards are absent.
+4. Open Settings -> Export formats, uncheck every format, save, and confirm all export flags remain off.
+5. Open Settings -> AI policy defaults, uncheck every checkbox, save, and confirm all policy flags remain off.
+6. Open Settings -> Data folder, enter a valid local folder path, save it, and confirm the status updates. Submit an empty path and confirm a friendly validation error. Open `/data-folder` and confirm it redirects to Settings -> Data folder.
+7. Open Settings -> OpenAI and confirm “OpenAI API keys” and “OpenAI Models documentation” open in a new tab.
+8. Create an application, open its detail page, confirm the delete form is visible, tick the confirmation checkbox, delete it, and confirm Dashboard counts decrease while the resume/profile remain.
+9. Create an old application, use profile Application cleanup to delete applications older than N days, and confirm only matching profile applications are removed.
+10. Create a disposable profile with a resume, fact, application, and scoped prompt. Delete the profile by typing its display name and confirm dependent data is removed, the active profile is cleared if applicable, and other profiles remain.
+11. Open CV Builder and the full resume builder, click Download PDF and Download DOCX for a base resume, and confirm files download without creating an application or calling AI.
+12. Confirm resume builder sections and blocks are visually compact while edit block, add block, add bullet, move controls, prompts, and export buttons remain available.

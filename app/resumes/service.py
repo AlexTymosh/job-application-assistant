@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import (
+    PersonProfile,
     Resume,
     ResumeBlock,
     ResumeBullet,
@@ -48,7 +49,7 @@ class ResumeService:
             select(Resume)
             .where(Resume.id == resume_id)
             .options(
-                selectinload(Resume.profile),
+                selectinload(Resume.profile).selectinload(PersonProfile.contact),
                 selectinload(Resume.sections)
                 .selectinload(ResumeSection.blocks)
                 .selectinload(ResumeBlock.bullets),
@@ -189,6 +190,57 @@ class ResumeService:
         self.session.add(upload)
         self.session.commit()
         return upload
+
+    def export_base_resume(
+        self, resume_id: int, export_format: str, app_data_root: Path
+    ) -> Path:
+        from app.core.errors import ExportWorkflowError
+        from app.exporters.docx_exporter import DocxExporter
+        from app.exporters.pdf_exporter import PdfExporter
+        from app.resumes.renderer import render_resume_markdown
+
+        if export_format not in {"pdf", "docx"}:
+            raise ExportWorkflowError("Unsupported base resume export format.")
+        resume = self.get_resume(resume_id)
+        markdown = render_resume_markdown(resume, contact=resume.profile.contact)
+        export_dir = Path("artifacts") / "resumes" / f"resume-{resume.id}"
+        absolute_dir = (app_data_root / export_dir).resolve()
+        root = app_data_root.resolve()
+        if root not in absolute_dir.parents and absolute_dir != root:
+            raise ExportWorkflowError("Unsafe resume export path.")
+        absolute_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"base-resume.{export_format}"
+        absolute_path = (absolute_dir / filename).resolve()
+        if root not in absolute_path.parents:
+            raise ExportWorkflowError("Unsafe resume export path.")
+        if export_format == "pdf":
+            content = PdfExporter().export(markdown, title=resume.name or "Base resume")
+        else:
+            content = DocxExporter().export(
+                markdown, title=resume.name or "Base resume"
+            )
+        absolute_path.write_bytes(content)
+        return absolute_path
+
+    def base_resume_export_path(
+        self, resume_id: int, export_format: str, app_data_root: Path
+    ) -> Path:
+        from app.core.errors import ExportWorkflowError
+
+        if export_format not in {"pdf", "docx"}:
+            raise ExportWorkflowError("Unsupported base resume export format.")
+        resume = self.get_resume(resume_id)
+        root = app_data_root.resolve()
+        path = (
+            root
+            / "artifacts"
+            / "resumes"
+            / f"resume-{resume.id}"
+            / f"base-resume.{export_format}"
+        ).resolve()
+        if root not in path.parents:
+            raise ExportWorkflowError("Unsafe resume export path.")
+        return path
 
     def update_resume(self, resume_id: int, **values: str) -> Resume:
         resume = self.get_resume(resume_id)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -83,12 +83,20 @@ class ApplicationStatus(StrEnum):
     QA_WARNING = "qa_warning"
 
 
+def utc_now_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime,
+        default=utc_now_naive,
+        onupdate=utc_now_naive,
+        server_default=func.now(),
+        nullable=False,
     )
 
 
@@ -345,7 +353,7 @@ class ResumeUpload(Base):
     )
     extracted_preview: Mapped[str] = mapped_column(Text, default="", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )
 
 
@@ -393,7 +401,7 @@ class ApplicationEvent(Base):
     message: Mapped[str] = mapped_column(Text, default="", nullable=False)
     metadata_json: Mapped[Any] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )
 
     application: Mapped[Application] = relationship(back_populates="events")
@@ -411,7 +419,7 @@ class ExtractedJobRequirement(Base):
     keywords_json: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
     priority: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )
 
     application: Mapped[Application] = relationship(back_populates="requirements")
@@ -433,7 +441,7 @@ class TailoringRun(Base):
     )
     warnings_json: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
 
@@ -465,7 +473,7 @@ class AiChangeProposal(Base):
         String(40), default=ProposalStatus.PROPOSED.value, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime)
 
@@ -488,7 +496,7 @@ class TailoredResumeSnapshot(Base):
     content_json: Mapped[Any] = mapped_column(JSON, nullable=False)
     rendered_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )
 
 
@@ -522,5 +530,5 @@ class Artifact(Base):
     artifact_type: Mapped[str] = mapped_column(String(40), nullable=False)
     relative_path: Mapped[str] = mapped_column(String(500), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )

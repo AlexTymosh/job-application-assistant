@@ -59,6 +59,7 @@ class DashboardStats:
     manually_marked_applied_count: int
     recent_applications: list[Application]
     activity_days: list[dict[str, object]]
+    y_axis_labels: list[int]
 
 
 class ApplicationService:
@@ -523,15 +524,23 @@ class ApplicationService:
             if key in counts_by_day:
                 counts_by_day[key] += 1
         max_count = max(counts_by_day.values(), default=0) or 1
+        label_interval = 1 if days == 10 else 5
         activity_days = [
             {
                 "date": date,
                 "count": count,
                 "height": 0 if count == 0 else max(12, int(count / max_count * 88)),
                 "label": f"{date}: {count} application{'s' if count != 1 else ''}",
+                "show_x_label": index % label_interval == 0 or index == days - 1,
+                "x_label": date[5:],
             }
-            for date, count in counts_by_day.items()
+            for index, (date, count) in enumerate(counts_by_day.items())
         ]
+        if max_count <= 1:
+            y_axis_labels = [1, 0]
+        else:
+            midpoint = max_count // 2
+            y_axis_labels = [max_count, midpoint, 0] if midpoint else [max_count, 0]
         return DashboardStats(
             profile_id=profile.id,
             profile_name=profile.display_name,
@@ -543,7 +552,58 @@ class ApplicationService:
             manually_marked_applied_count=len(manual),
             recent_applications=applications[:8],
             activity_days=activity_days,
+            y_axis_labels=y_axis_labels,
         )
+
+    def delete_application(
+        self, application_id: int, profile_id: int, app_data_root: Path | None = None
+    ) -> None:
+        application = self.session.get(Application, application_id)
+        if application is None:
+            raise NotFoundError("Application not found.")
+        if application.profile_id != profile_id:
+            raise ProfileScopeError("Application does not belong to this profile.")
+        if app_data_root is not None:
+            self._delete_application_artifact_files(application.id, app_data_root)
+        self.session.delete(application)
+        self.session.commit()
+
+    def delete_profile_applications(
+        self,
+        profile_id: int,
+        older_than_days: int | None = None,
+        app_data_root: Path | None = None,
+    ) -> int:
+        profile = self.session.get(PersonProfile, profile_id)
+        if profile is None:
+            raise NotFoundError("Profile not found.")
+        stmt = select(Application).where(Application.profile_id == profile_id)
+        if older_than_days is not None:
+            cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(
+                days=max(0, older_than_days)
+            )
+            stmt = stmt.where(Application.created_at < cutoff)
+        applications = list(self.session.scalars(stmt))
+        for application in applications:
+            if app_data_root is not None:
+                self._delete_application_artifact_files(application.id, app_data_root)
+            self.session.delete(application)
+        self.session.commit()
+        return len(applications)
+
+    def _delete_application_artifact_files(
+        self, application_id: int, app_data_root: Path
+    ) -> None:
+        root = app_data_root.resolve()
+        artifacts = list(
+            self.session.scalars(
+                select(Artifact).where(Artifact.application_id == application_id)
+            )
+        )
+        for artifact in artifacts:
+            path = (root / artifact.relative_path).resolve()
+            if root in path.parents and path.exists():
+                path.unlink()
 
     def tailoring_service(self) -> TailoringService:
         return TailoringService(self.session)

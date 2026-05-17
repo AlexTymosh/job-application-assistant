@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -8,6 +10,11 @@ from app.api.dependencies import SessionDep, form_bool, read_form_data
 from app.db.models import Resume, ResumeSection
 from app.people.service import PeopleService
 from app.settings.service import SettingsService
+from app.storage.location import (
+    clear_user_selected_app_data_root,
+    get_app_data_location_status,
+    set_user_selected_app_data_root,
+)
 from app.web.templating import templates
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -33,6 +40,8 @@ def settings_page(request: Request, session: SessionDep):
             "profiles": service.list_profiles(),
             "active_profile": service.get_active_profile(),
             "prompt_templates": service.list_prompt_templates(),
+            "data_folder_status": get_app_data_location_status(),
+            "data_folder_error": request.query_params.get("data_folder_error", ""),
         },
     )
 
@@ -55,7 +64,15 @@ async def update_settings(request: Request, session: SessionDep):
         "openai_model_tailor",
     }
 
-    if export_fields & data.keys():
+    if "locale" in data:
+        locale = data.get("locale") or "en"
+        service.set("locale", locale if locale in {"en", "ru"} else "en")
+    if "active_profile_id" in data:
+        service.set_active_profile(
+            int(data["active_profile_id"]) if data.get("active_profile_id") else None
+        )
+    section = data.get("settings_section") or "profiles"
+    if section == "exports":
         service.set(
             "exports",
             {
@@ -65,7 +82,7 @@ async def update_settings(request: Request, session: SessionDep):
                 "docx": form_bool(data, "export_docx"),
             },
         )
-    if policy_fields & data.keys():
+    elif section == "ai-policy":
         service.set(
             "ai_policy_defaults",
             {
@@ -75,12 +92,25 @@ async def update_settings(request: Request, session: SessionDep):
                 "allow_title_edits": form_bool(data, "allow_title_edits"),
             },
         )
-    if "locale" in data:
-        locale = data.get("locale") or "en"
-        service.set("locale", locale if locale in {"en", "ru"} else "en")
-    if "active_profile_id" in data:
-        service.set_active_profile(
-            int(data["active_profile_id"]) if data.get("active_profile_id") else None
+    elif export_fields & data.keys():
+        service.set(
+            "exports",
+            {
+                "markdown": form_bool(data, "export_markdown"),
+                "html": form_bool(data, "export_html"),
+                "pdf": form_bool(data, "export_pdf"),
+                "docx": form_bool(data, "export_docx"),
+            },
+        )
+    elif policy_fields & data.keys():
+        service.set(
+            "ai_policy_defaults",
+            {
+                "fact_links_required": form_bool(data, "fact_links_required"),
+                "allow_new_bullets": form_bool(data, "allow_new_bullets"),
+                "allow_hide_bullets": form_bool(data, "allow_hide_bullets"),
+                "allow_title_edits": form_bool(data, "allow_title_edits"),
+            },
         )
     if model_fields & data.keys():
         service.set_model_settings({key: data.get(key, "") for key in model_fields})
@@ -88,7 +118,27 @@ async def update_settings(request: Request, session: SessionDep):
         request.app.state.openai_secret_service.set_api_key(
             data["openai_api_key"].strip()
         )
-    next_section = data.get("settings_section") or "profiles"
+    if section == "data-folder":
+        action = data.get("data_folder_action", "save")
+        if action == "reset":
+            clear_user_selected_app_data_root()
+        else:
+            raw_root = data.get("root", "").strip()
+            if not raw_root:
+                return RedirectResponse(
+                    "/settings?section=data-folder&data_folder_error=Enter%20a%20folder%20path.",
+                    status_code=303,
+                )
+            root = Path(raw_root).expanduser()
+            try:
+                root.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                return RedirectResponse(
+                    "/settings?section=data-folder&data_folder_error=The%20folder%20could%20not%20be%20created%20or%20used.",
+                    status_code=303,
+                )
+            set_user_selected_app_data_root(root)
+    next_section = section
     return RedirectResponse(f"/settings?section={next_section}", status_code=303)
 
 

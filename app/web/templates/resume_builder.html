@@ -4,7 +4,7 @@
   <p class="badge">CV Builder</p>
   <h1>{{ resume.name }}</h1>
   <p class="muted">Build structured sections, blocks, bullets, visibility controls, and AI edit policy for {{ resume.profile.display_name }}.</p>
-  <div class="toolbar"><a class="button compact" href="/resumes/{{ resume.id }}/sections/new">Add section</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/blocks/new">Add work experience / education / custom block</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/edit">Edit resume name</a></div>
+  <div class="toolbar"><a class="button compact" href="/resumes/{{ resume.id }}/sections/new">Add section</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/blocks/new">Add work experience / education / custom block</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/edit">Edit resume name</a><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/exports"><input type="hidden" name="format" value="pdf"><button class="compact secondary">Download PDF</button></form><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/exports"><input type="hidden" name="format" value="docx"><button class="compact secondary">Download DOCX</button></form></div>
 </section>
 {% for section in resume.sections %}
   <section class="section-card" data-section-type="{{ section.section_type }}">

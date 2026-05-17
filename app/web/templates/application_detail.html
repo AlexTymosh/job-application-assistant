@@ -56,4 +56,12 @@
   {% endif %}
   {% if artifacts %}<h3>Downloads</h3><ul>{% for artifact in artifacts %}<li><a href="/applications/{{ application.id }}/download/{{ artifact.id }}">Download {{ artifact.artifact_type|upper }}</a></li>{% endfor %}</ul>{% endif %}
 </section>
+<section class="card" style="margin-top:1rem">
+  <h2>Delete application</h2>
+  <p class="muted">This permanently deletes this application and its related requirements, tailoring runs, proposals, snapshots, cover letters, events, artifact records, and generated artifact files where possible. It does not delete the profile or resume.</p>
+  <form method="post" action="/applications/{{ application.id }}/delete" class="compact-form">
+    <label><input type="checkbox" name="confirm_delete_application"> I understand this permanently deletes this application.</label>
+    <button class="compact danger">Delete application</button>
+  </form>
+</section>
 {% endblock %}

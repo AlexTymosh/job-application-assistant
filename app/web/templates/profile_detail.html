@@ -1,1 +1,33 @@
-{% extends "base.html" %}{% block content %}<h1>{{ profile.display_name }}</h1><section class="card"><p>{{ profile.full_name }}</p><p>{{ profile.location }}</p><p class="muted">Private contact details are stored locally and excluded from AI prompts.</p><div class="actions"><a class="button" href="/profiles/{{ profile.id }}/edit">Edit</a><a class="button secondary" href="/profiles/{{ profile.id }}/resumes">Resumes</a><a class="button secondary" href="/profiles/{{ profile.id }}/facts">Facts</a></div></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+{% if not profile %}
+  <div class="empty-state"><h1>Profile not found</h1><p>The selected profile does not exist.</p><a class="button compact" href="/profiles">Back to profiles</a></div>
+{% else %}
+<h1>{{ profile.display_name }}</h1>
+<section class="card"><p>{{ profile.full_name }}</p><p>{{ profile.location }}</p><p class="muted">Private contact details are stored locally and excluded from AI prompts.</p><div class="actions"><a class="button" href="/profiles/{{ profile.id }}/edit">Edit</a><a class="button secondary" href="/profiles/{{ profile.id }}/resumes">Resumes</a><a class="button secondary" href="/profiles/{{ profile.id }}/facts">Facts</a></div></section>
+<section class="card" style="margin-top:1rem">
+  <h2>Application cleanup</h2>
+  <p class="muted">Application deletion is profile-scoped and removes related requirements, tailoring runs, proposals, snapshots, cover letters, events, artifact records, and generated artifact files where possible. Resumes and the profile are not deleted by this cleanup.</p>
+  <form method="post" action="/profiles/{{ profile.id }}/applications/delete" class="compact-form">
+    <input type="hidden" name="delete_mode" value="older-than">
+    <label>Delete applications older than N days<input type="number" name="older_than_days" min="0" value="30"></label>
+    <label><input type="checkbox" name="confirm_delete_applications"> I understand this permanently deletes matching applications for this profile.</label>
+    <button class="compact danger">Delete old applications</button>
+  </form>
+  <form method="post" action="/profiles/{{ profile.id }}/applications/delete" class="compact-form">
+    <input type="hidden" name="delete_mode" value="all">
+    <label><input type="checkbox" name="confirm_delete_applications"> I understand this permanently deletes all applications for this profile.</label>
+    <button class="compact danger">Delete all applications for this profile</button>
+  </form>
+</section>
+<section class="card" style="margin-top:1rem">
+  <h2>Delete profile</h2>
+  <p class="badge bad">Danger zone</p>
+  <p class="muted">Deleting this profile also deletes its contact details, facts, resumes, sections, blocks, bullets, uploads, applications, tailoring data, cover letters, artifacts, and scoped prompt templates. Other profiles are not affected.</p>
+  <form method="post" action="/profiles/{{ profile.id }}/delete" class="compact-form">
+    <label>Type {{ profile.display_name }} to confirm<input name="confirm_profile_name" autocomplete="off"></label>
+    <button class="compact danger">Delete profile permanently</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

@@ -95,3 +95,13 @@ Prompt instruction resolution is section override, resume override, profile over
 - Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
 - Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
 - Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
+
+## Post-PR #91 first-release polish
+
+- Dashboard charts show application counts by created date with an X axis for dates and a Y axis for counts. The 10, 20, and 30 day selectors remain available, bars keep date/count hover titles, and the likely-applied/manual-applied metric cards are no longer shown.
+- Settings -> Data folder is the only Data Folder UI. It shows the current root, source, database path, pointer file, path input, save action, validation errors, and reset-to-default action. `/data-folder` redirects to this section.
+- Settings split forms are section-scoped. Saving Export formats with no checked boxes disables all export formats; saving AI policy defaults with no checked boxes disables all policy flags. App and OpenAI settings preserve those values.
+- Profile management includes links to manage profiles, create profiles, delete profiles, and clean up old applications. Destructive actions require explicit confirmation.
+- Application detail pages can delete one application. Profile detail pages can delete applications older than N days or all applications for that profile. Application deletion does not delete resumes or profiles.
+- Profile deletion requires typing the profile display name. It deletes dependent profile data, resumes, facts, applications, scoped prompts, and app-owned artifacts where safe, and clears the active profile if the deleted profile was active.
+- CV Builder and full resume builder pages can export the current base resume as PDF or DOCX. This base export does not require an application and does not call AI.
