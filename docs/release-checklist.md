@@ -58,3 +58,17 @@
 - Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
 - Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
 - Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
+
+## Post-PR #91 first-release polish checklist
+
+- [ ] Repaired legacy databases create new applications/events with current timestamps, and Dashboard includes them in 10/20/30 day charts and recent ordering.
+- [ ] Dashboard chart shows date X-axis labels, count Y-axis labels, hover date/count titles, and no likely/manual applied metric cards.
+- [ ] Header profile selector remains accessible but does not visibly render “Active profile”.
+- [ ] Settings Export formats can be saved with all formats off.
+- [ ] Settings AI policy defaults can be saved with all flags off.
+- [ ] OpenAI Settings links use a new tab with `noopener noreferrer`.
+- [ ] Data folder is managed from Settings -> Data folder, and `/data-folder` redirects there.
+- [ ] Individual and bulk application deletion are profile-scoped and do not delete resumes/profiles.
+- [ ] Profile deletion requires typed confirmation, removes dependent records/files where safe, clears active profile when necessary, and preserves other profiles.
+- [ ] CV Builder/base resume PDF and DOCX exports work without an application and without AI calls.
+- [ ] Resume builder compact styling preserves edit/add/bullet/move/prompt/export controls.

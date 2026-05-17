@@ -71,3 +71,11 @@ Domain errors live in `app/core/errors.py` and provide stable, user-safe failure
 - Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
 - Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
 - Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
+
+## Timestamp repair and destructive cleanup polish
+
+- The SQLite compatibility bridge remains explicit and idempotent for local MVP databases. Missing timestamp columns are still repaired with safe legacy backfill defaults, but timestamped SQLAlchemy models now set Python-side UTC-naive `created_at`/`updated_at` values on application-created rows. New applications, events, resumes, sections, blocks, bullets, facts, prompt templates, snapshots, cover letters, artifacts, and resume uploads therefore receive current timestamps even when inserted into a repaired database.
+- Settings form updates are scoped by `settings_section`, so absent checkbox fields are interpreted as false only for the submitted checkbox section. This preserves unrelated SQLite settings.
+- Data folder location remains outside product data and is stored through the app data pointer file. The Settings UI writes or clears that pointer; normal product data remains in the selected app-level SQLite database.
+- Base resume PDF/DOCX exports are generated under `artifacts/resumes/resume-{id}/` inside the app data root and are path-checked before download. Application snapshot artifacts continue to use application artifact records.
+- Application and profile deletion use profile-scoped service methods and database cascades for dependent SQL rows. App-owned upload/export files are deleted only after resolving paths under the app data root.

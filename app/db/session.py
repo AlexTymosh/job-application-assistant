@@ -134,6 +134,24 @@ _SQLITE_COLUMN_REPAIRS: dict[str, dict[str, str]] = {
         "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
         "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
     },
+    "application_events": {
+        "message": "TEXT NOT NULL DEFAULT ''",
+        "metadata_json": "JSON NOT NULL DEFAULT '{}'",
+        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    },
+    "tailored_resume_snapshots": {
+        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    },
+    "cover_letters": {
+        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    },
+    "artifacts": {
+        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    },
+    "resume_uploads": {
+        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+    },
 }
 
 

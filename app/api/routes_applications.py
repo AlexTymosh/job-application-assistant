@@ -242,6 +242,22 @@ def mark_applied(application_id: int, session: SessionDep):
     return RedirectResponse(f"/applications/{application_id}", status_code=303)
 
 
+@router.post("/{application_id}/delete")
+async def delete_application(
+    application_id: int, request: Request, session: SessionDep
+):
+    data = await read_form_data(request)
+    profile = SettingsService(session).require_active_profile()
+    if data.get("confirm_delete_application") != "on":
+        raise HTTPException(
+            status_code=400, detail="Confirm application deletion first."
+        )
+    ApplicationService(session).delete_application(
+        application_id, profile.id, get_app_data_root(request)
+    )
+    return RedirectResponse("/", status_code=303)
+
+
 @router.get("/{application_id}/download/{artifact_id}")
 def download(
     application_id: int, artifact_id: int, request: Request, session: SessionDep

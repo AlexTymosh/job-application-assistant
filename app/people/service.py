@@ -1,9 +1,22 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from pathlib import Path
+
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Fact, PersonProfile, ProfileContact
+from app.core.errors import NotFoundError, ValidationAppError
+from app.db.models import (
+    Application,
+    Artifact,
+    Fact,
+    PersonProfile,
+    ProfileContact,
+    PromptTemplate,
+    Resume,
+    ResumeSection,
+    ResumeUpload,
+)
 
 
 class PeopleService:
@@ -91,3 +104,60 @@ class PeopleService:
                 .order_by(Fact.fact_key)
             )
         )
+
+    def delete_profile(
+        self, profile_id: int, app_data_root: Path | None = None
+    ) -> None:
+        profile = self.session.get(PersonProfile, profile_id)
+        if profile is None:
+            raise NotFoundError("Profile not found.")
+        if app_data_root is not None:
+            self._delete_profile_files(profile_id, app_data_root)
+        resume_ids = [resume.id for resume in profile.resumes]
+        section_ids = list(
+            self.session.scalars(
+                select(ResumeSection.id).where(ResumeSection.resume_id.in_(resume_ids))
+            )
+        )
+        prompt_conditions = [PromptTemplate.profile_id == profile_id]
+        if resume_ids:
+            prompt_conditions.append(PromptTemplate.resume_id.in_(resume_ids))
+        if section_ids:
+            prompt_conditions.append(PromptTemplate.section_id.in_(section_ids))
+        self.session.execute(delete(PromptTemplate).where(or_(*prompt_conditions)))
+        self.session.delete(profile)
+        self.session.commit()
+
+    def require_delete_confirmation(self, profile_id: int, confirmation: str) -> None:
+        profile = self.session.get(PersonProfile, profile_id)
+        if profile is None:
+            raise NotFoundError("Profile not found.")
+        if confirmation.strip() != profile.display_name:
+            raise ValidationAppError(
+                "Type the profile display name to confirm deletion."
+            )
+
+    def _delete_profile_files(self, profile_id: int, app_data_root: Path) -> None:
+        root = app_data_root.resolve()
+        resume_ids = select(Resume.id).where(Resume.profile_id == profile_id)
+        application_ids = select(Application.id).where(
+            Application.profile_id == profile_id
+        )
+        uploads = list(
+            self.session.scalars(
+                select(ResumeUpload).where(ResumeUpload.resume_id.in_(resume_ids))
+            )
+        )
+        artifacts = list(
+            self.session.scalars(
+                select(Artifact).where(Artifact.application_id.in_(application_ids))
+            )
+        )
+        relative_paths = [
+            *(item.relative_path for item in uploads),
+            *(item.relative_path for item in artifacts),
+        ]
+        for relative_path in relative_paths:
+            path = (root / relative_path).resolve()
+            if root in path.parents and path.exists():
+                path.unlink()

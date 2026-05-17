@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
-from app.api.dependencies import SessionDep, read_form_data
+from app.api.dependencies import SessionDep, get_app_data_root, read_form_data
 from app.db.models import ClaimLevel, PersonProfile
 from app.people.service import PeopleService
 from app.settings.service import SettingsService
@@ -118,3 +118,37 @@ async def create_fact(profile_id: int, request: Request, session: SessionDep):
 def set_active_profile(profile_id: int, session: SessionDep):
     SettingsService(session).set_active_profile(profile_id)
     return RedirectResponse("/", status_code=303)
+
+
+@router.post("/{profile_id}/applications/delete")
+async def delete_profile_applications(
+    profile_id: int, request: Request, session: SessionDep
+):
+    from app.applications.service import ApplicationService
+
+    data = await read_form_data(request)
+    if data.get("confirm_delete_applications") != "on":
+        return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
+    older_than_days = None
+    if data.get("delete_mode") == "older-than":
+        older_than_days = int(data.get("older_than_days") or "0")
+    ApplicationService(session).delete_profile_applications(
+        profile_id,
+        older_than_days=older_than_days,
+        app_data_root=get_app_data_root(request),
+    )
+    return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
+
+
+@router.post("/{profile_id}/delete")
+async def delete_profile(profile_id: int, request: Request, session: SessionDep):
+    data = await read_form_data(request)
+    service = PeopleService(session)
+    service.require_delete_confirmation(
+        profile_id, data.get("confirm_profile_name", "")
+    )
+    active_profile = SettingsService(session).get_active_profile()
+    service.delete_profile(profile_id, get_app_data_root(request))
+    if active_profile is not None and active_profile.id == profile_id:
+        SettingsService(session).set_active_profile(None)
+    return RedirectResponse("/profiles", status_code=303)

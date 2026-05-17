@@ -161,3 +161,14 @@ The local data folder is managed through path input and validation. A server-ren
 Prompt instructions can be scoped globally or to a selected profile, resume, or section using named selectors. Internal privacy, anti-fabrication, untrusted-job-posting, and structured-output guardrails are applied in prompt builders and are not editable in the UI.
 
 CV Builder is a top-level workspace. Resume upload stores `.pdf`, `.doc`, and `.docx` files locally as reference artifacts, but full parsing of uploaded documents is not implemented yet. Resume block edit forms are type-specific for summary, skills, work experience, education, languages, certifications, references, and custom content.
+
+## First-release defect polish after PR #91
+
+- Legacy SQLite repair remains idempotent, but timestamped models now provide Python-side UTC-naive create/update defaults so new rows in repaired databases use current timestamps rather than frozen `1970-01-01` values. This keeps Dashboard filtering, chart buckets, and recent ordering accurate after upgrade.
+- Dashboard activity has explicit date and count axes, readable 10/20/30 day labels, hover titles, and a darker-bottom/lighter-top bar gradient. The Dashboard no longer shows separate “Likely applied” or “Manually marked applied” metric cards.
+- Settings split forms can save all export-format checkboxes off and all AI policy checkboxes off. Other Settings sections preserve export and policy values.
+- Data folder selection is managed directly from Settings -> Data folder with a path input, validation/creation, current status, and reset-to-default. `/data-folder` redirects to that Settings section.
+- OpenAI documentation/key links open in a new tab. Raw API keys continue to be stored only through the OS keyring boundary.
+- Applications can be deleted individually or cleaned up in bulk by profile/age from profile management. Profile deletion requires typed confirmation, clears the active profile when needed, and removes dependent local data plus app-owned artifact files where safe.
+- CV Builder and the full resume builder can export/download the current base resume as PDF or DOCX without an application and without sending anything to AI. Private contact details are included only at final export/render time.
+- Resume builder visuals are more compact while retaining accessible controls for editing, adding blocks/bullets, moving content, prompts, and exports.

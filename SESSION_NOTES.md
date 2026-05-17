@@ -68,3 +68,16 @@ The first usable local release stage is completed for the SQL-first AI JOB APPLI
 - Prompt-template scoping uses named profile/resume/section selectors instead of raw ID-only text fields. Internal safety guardrails remain hidden and non-editable.
 - `/cv-builder` is available as a top-level active-profile workspace with profile/resume empty states and resume selection.
 - Resume builder controls are more compact, duplicate section-type markers were removed, summary and skills blocks avoid irrelevant internal controls, and block edit forms are type-specific.
+
+## First-release defect polish after PR #91
+
+- Repaired SQLite timestamp handling now uses Python-side UTC-naive defaults on timestamped models so service-created rows inserted into repaired legacy tables receive current timestamps instead of inheriting frozen `1970-01-01` compatibility defaults. The repair bridge also covers application events, snapshots, cover letters, artifacts, and resume uploads when older tables are missing timestamp columns.
+- Settings split forms use `settings_section` as the update boundary. Export formats and AI policy defaults can now be saved with every checkbox unchecked, while App and OpenAI forms preserve those settings.
+- Dashboard activity now renders a server-side chart with date X-axis labels, count Y-axis labels, 10/20/30 day switching, hover titles, and a darker-bottom/lighter-top bar gradient. The likely-applied and manually-marked-applied metric cards were removed from the Dashboard UI.
+- The header keeps the active-profile selector but removes the visible “Active profile” label; accessibility is preserved with ARIA labels.
+- Settings -> OpenAI external links open in a new tab with `target="_blank"` and `rel="noopener noreferrer"`.
+- Data folder management moved into Settings -> Data folder with current status, path validation/creation, a save action, and a reset-to-default action. `/data-folder` is now a compatibility redirect to `/settings?section=data-folder`.
+- Profile detail pages include application cleanup controls for old or all profile applications. Individual application detail pages include an explicit confirmed delete action. Deletion removes related DB records through cascades and deletes generated artifact files when they are under the app data root.
+- Profile deletion is available from profile pages with typed display-name confirmation. It deletes dependent contacts, facts, resumes, uploads, applications, tailoring data, cover letters, artifact records/files, and profile/resume/section-scoped prompt templates, and clears the active profile if it was deleted.
+- CV Builder and full resume builder pages now provide base resume PDF and DOCX export/download actions that render the current base resume with the private contact layer at final export time without requiring an application or AI call.
+- Resume builder cards were made more compact with lighter section/block styling while preserving edit, add, bullet, move, prompt, and export controls.

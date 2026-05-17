@@ -80,3 +80,12 @@ Use emoji plus conventional commit style:
 - Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
 - Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
 - Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
+
+## Current first-release polish notes
+
+- Dashboard chart UI now includes date/count axes and no likely/manual applied metric cards; keep future Dashboard changes aligned with active-profile scoping.
+- Data folder management lives in Settings -> Data folder; `/data-folder` should remain a compatibility redirect unless a deliberate migration plan changes it.
+- Settings split checkbox forms must treat the submitted `settings_section` as the source of truth so users can save all checkboxes off.
+- Repaired SQLite databases rely on Python-side timestamp defaults for new app-created rows; do not reintroduce permanent frozen timestamp behaviour for future inserts.
+- Base resume PDF/DOCX exports are generated from CV Builder/resume builder without requiring an application and must not call AI.
+- Application/profile deletion must stay explicit, confirmed, profile-scoped, and local-first; never delete resumes/profiles as a side effect of application cleanup.
