@@ -1,340 +1,184 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
-from app.core.errors import NotFoundError, TailoringWorkflowError
-from app.db.models import (
-    AiChangeProposal,
-    Application,
-    ApplicationStatus,
-    ExtractedJobRequirement,
-    Fact,
-    Resume,
-    ResumeBlock,
-    ResumeBullet,
-    ResumeBulletFactLink,
-    ResumeSection,
-    TailoringRun,
-)
-from app.llm.fake_client import FakeTailoringClient
-from app.llm.prompts.tailoring import (
-    build_description_prompt,
-    build_job_title_prompt,
-    build_skills_prompt,
-    build_summary_prompt,
-    build_work_experience_bullet_prompt,
-)
-from app.resumes.policies import AiEditPolicy
-from app.settings.service import SettingsService
-from app.tailoring.schema import AiChangeProposalSchema
+from app.db.models import MasterCVEntry, Resume, TailoredResume
+from app.resumes.renderer import render_resume_markdown_from_content, resume_to_content
+
+AI_EDITABLE_SECTIONS = {"summary", "skills", "work_experience", "education"}
+PRIVATE_SECTIONS = {"header", "references"}
 
 
-class TailoringValidationError(ValueError):
-    pass
+@dataclass
+class TailoringPayload:
+    base_resume: dict[str, Any]
+    master_cv_items: list[dict[str, Any]]
+    job_description: str
+
+
+class DeterministicTailoringClient:
+    """Deterministic fake AI used for local development and tests."""
+
+    def __init__(self) -> None:
+        self.last_payload: TailoringPayload | None = None
+
+    def adapt(self, payload: TailoringPayload) -> dict[str, Any]:
+        self.last_payload = payload
+        content = _deepcopy_content(payload.base_resume)
+        allowed_terms = _allowed_terms(payload.master_cv_items)
+        forbidden_terms = _forbidden_terms(payload.master_cv_items)
+        sections = content.setdefault("sections", {})
+        if sections.get("summary", {}).get("text"):
+            sections["summary"]["text"] = _append_once(
+                sections["summary"]["text"],
+                (
+                    " Tailored for this role using the selected resume variant "
+                    "and Master CV source material."
+                ),
+            )
+        if sections.get("skills") and allowed_terms:
+            relevant = allowed_terms
+            if relevant:
+                additions = ", ".join(
+                    term
+                    for term in relevant
+                    if term not in sections["skills"].get("hard", "")
+                )
+                if additions:
+                    sections["skills"]["hard"] = _join_text(
+                        sections["skills"].get("hard", ""), additions
+                    )
+        for item in sections.get("work_experience", []):
+            if item.get("content"):
+                item["content"] = _remove_forbidden(
+                    _append_once(
+                        item["content"],
+                        (
+                            "\n- Emphasised relevant experience for the pasted "
+                            "job description."
+                        ),
+                    ),
+                    forbidden_terms,
+                )
+        for item in sections.get("education", []):
+            if item.get("content"):
+                item["content"] = _remove_forbidden(item["content"], forbidden_terms)
+        content["tailoring_sources"] = [item["id"] for item in payload.master_cv_items]
+        return content
 
 
 class TailoringService:
     def __init__(
-        self, session: Session, client: FakeTailoringClient | None = None
+        self, session: Session, client: DeterministicTailoringClient | None = None
     ) -> None:
         self.session = session
-        self.client = client or FakeTailoringClient()
+        self.client = client or DeterministicTailoringClient()
 
-    def run_tailoring(self, application_id: int) -> TailoringRun:
-        app = self.session.get(Application, application_id)
-        if app is None:
-            raise NotFoundError("Application not found.")
-
-        requirements = list(
-            self.session.scalars(
-                select(ExtractedJobRequirement).where(
-                    ExtractedJobRequirement.application_id == app.id
-                )
-            )
-        )
-        if not requirements:
-            raise TailoringWorkflowError("Extract job requirements before tailoring.")
-
-        resume = self.session.scalar(
-            select(Resume)
-            .where(Resume.id == app.resume_id)
-            .options(
-                selectinload(Resume.sections)
-                .selectinload(ResumeSection.blocks)
-                .selectinload(ResumeBlock.bullets)
-            )
-        )
-        if resume is None:
-            raise NotFoundError("Resume not found.")
-
-        facts = list(
-            self.session.scalars(
-                select(Fact).where(
-                    Fact.profile_id == app.profile_id,
-                    Fact.is_active.is_(True),
-                )
-            )
+    def build_payload(
+        self, resume: Resume, master_items: list[MasterCVEntry], job_description: str
+    ) -> TailoringPayload:
+        base_content = resume_to_content(resume)
+        safe_sections = {
+            key: value
+            for key, value in base_content.get("sections", {}).items()
+            if key not in PRIVATE_SECTIONS
+        }
+        base_content["sections"] = safe_sections
+        return TailoringPayload(
+            base_resume=base_content,
+            master_cv_items=[
+                {
+                    "id": item.id,
+                    "category": item.category,
+                    "title": item.title,
+                    "content": item.content,
+                    "keywords": item.keywords_json or [],
+                    "allowed_wording": item.allowed_wording,
+                    "forbidden_wording": item.forbidden_wording,
+                    "inference_notes": item.inference_notes,
+                    "claim_strength": item.claim_strength,
+                }
+                for item in master_items
+                if item.is_active
+            ],
+            job_description=job_description,
         )
 
-        run = TailoringRun(
-            application_id=app.id,
-            resume_id=resume.id,
-            status="proposed",
-            warnings_json={
-                "match_level": "possible match",
-                "matched_requirements": [req.text for req in requirements[:3]],
-                "missing_or_weak_requirements": [],
-                "risk_warnings": [],
-                "recommendation": "possible match",
-            },
-            completed_at=datetime.now(UTC),
-        )
-        self.session.add(run)
-        self.session.flush()
-
-        requirement_payload = [
-            {"id": req.id, "text": req.text, "priority": req.priority}
-            for req in requirements
-        ]
-        fact_payload = [
-            {
-                "id": fact.id,
-                "claim": fact.claim,
-                "allowed_claim_level": fact.allowed_claim_level,
-            }
-            for fact in facts
-        ]
-
-        for section in resume.sections:
-            for block in section.blocks:
-                self._propose_for_block(
-                    run,
-                    block,
-                    requirement_payload,
-                    fact_payload,
-                    app.profile_id,
-                    resume.id,
-                    section.id,
-                )
-                for bullet in block.bullets:
-                    self._propose_for_bullet(
-                        run,
-                        bullet,
-                        requirement_payload,
-                        fact_payload,
-                    )
-
-        app.status = ApplicationStatus.TAILORING_PROPOSED.value
-        self.session.commit()
-        return run
-
-    def _propose_for_block(
+    def tailor(
         self,
-        run: TailoringRun,
-        block: ResumeBlock,
-        requirements: list[dict[str, object]],
-        facts: list[dict[str, object]],
+        *,
+        application_id: int,
         profile_id: int,
-        resume_id: int,
-        section_id: int,
-    ) -> None:
-        if not block.ai_edit_enabled:
-            return
-
-        policy = AiEditPolicy.from_json(block.policy_json).to_json()
-        target = {
-            "id": block.id,
-            "target_type": "resume_block",
-            "text": block.content or block.title,
-            "block_type": block.block_type,
-        }
-        settings = SettingsService(self.session)
-
-        if block.block_type == "summary":
-            payload = build_summary_prompt(
-                block=target,
-                requirements=requirements,
-                facts=facts,
-                policy=policy,
-                user_instruction=settings.get_prompt_instruction(
-                    "summary",
-                    profile_id=profile_id,
-                    resume_id=resume_id,
-                    section_id=section_id,
-                ),
-            )
-        elif block.block_type == "skills":
-            target["target_type"] = "skills_set"
-            payload = build_skills_prompt(
-                block=target,
-                requirements=requirements,
-                facts=facts,
-                policy=policy,
-                user_instruction=settings.get_prompt_instruction(
-                    "skills",
-                    profile_id=profile_id,
-                    resume_id=resume_id,
-                    section_id=section_id,
-                ),
-            )
-        elif block.block_type == "title":
-            if not policy.get("ai_can_edit_title"):
-                return
-            target["target_type"] = "resume_block_title"
-            target["text"] = block.title
-            payload = build_job_title_prompt(
-                block=target,
-                requirements=requirements,
-                facts=facts,
-                policy=policy,
-                user_instruction=settings.get_prompt_instruction(
-                    "job_title",
-                    profile_id=profile_id,
-                    resume_id=resume_id,
-                    section_id=section_id,
-                ),
-            )
-        else:
-            payload = build_description_prompt(
-                block=target,
-                requirements=requirements,
-                facts=facts,
-                policy=policy,
-                user_instruction=settings.get_prompt_instruction(
-                    "description_custom_block",
-                    profile_id=profile_id,
-                    resume_id=resume_id,
-                    section_id=section_id,
-                ),
-            )
-
-        proposal = self.client.propose(payload)
-        if proposal is not None:
-            self._store_validated(run, proposal)
-
-    def _propose_for_bullet(
-        self,
-        run: TailoringRun,
-        bullet: ResumeBullet,
-        requirements: list[dict[str, object]],
-        facts: list[dict[str, object]],
-    ) -> None:
-        if not bullet.ai_edit_enabled:
-            return
-
-        linked_fact_ids = {
-            link.fact_id
-            for link in self.session.scalars(
-                select(ResumeBulletFactLink).where(
-                    ResumeBulletFactLink.bullet_id == bullet.id
-                )
-            )
-        }
-        allowed_facts = [
-            fact
-            for fact in facts
-            if not linked_fact_ids or int(fact["id"]) in linked_fact_ids
-        ]
-        policy = {
-            "ai_editable": True,
-            "ai_can_rewrite": True,
-            "fact_link_required": bullet.fact_link_required,
-        }
-
-        payload = build_work_experience_bullet_prompt(
-            bullet={
-                "id": bullet.id,
-                "target_type": "resume_bullet",
-                "text": bullet.text,
-            },
-            requirements=requirements,
-            facts=allowed_facts,
-            policy=policy,
-            user_instruction=SettingsService(self.session).get_prompt_instruction(
-                "work_experience_bullet"
-            ),
+        resume: Resume,
+        master_items: list[MasterCVEntry],
+        job_description: str,
+    ) -> TailoredResume:
+        payload = self.build_payload(resume, master_items, job_description)
+        tailored_content = self.client.adapt(payload)
+        # Render/export needs private header/reference sections.
+        # Those sections are never sent to the AI payload.
+        full_base = resume_to_content(resume)
+        for private_key in PRIVATE_SECTIONS:
+            if private_key in full_base.get("sections", {}):
+                tailored_content.setdefault("sections", {})[private_key] = full_base[
+                    "sections"
+                ][private_key]
+        rendered = render_resume_markdown_from_content(tailored_content)
+        tailored = TailoredResume(
+            application_id=application_id,
+            profile_id=profile_id,
+            base_resume_id=resume.id,
+            content_json=tailored_content,
+            rendered_markdown=rendered,
         )
+        self.session.add(tailored)
+        self.session.flush()
+        return tailored
 
-        proposal = self.client.propose(payload)
-        if proposal is not None:
-            self._store_validated(run, proposal)
 
-    def _store_validated(
-        self,
-        run: TailoringRun,
-        proposal: AiChangeProposalSchema,
-    ) -> None:
-        self.validate_proposal(run.resume_id, proposal)
-        self.session.add(
-            AiChangeProposal(
-                tailoring_run_id=run.id,
-                target_type=proposal.target_type,
-                target_id=proposal.target_id,
-                operation=proposal.operation,
-                before_text=proposal.before_text,
-                after_text=proposal.after_text,
-                reason=proposal.reason,
-                risk_level=proposal.risk_level,
-                requirement_ids_json=proposal.requirement_ids,
-                fact_ids_json=proposal.fact_ids,
-                warning_codes_json=proposal.warnings,
-            )
-        )
+def _deepcopy_content(content: dict[str, Any]) -> dict[str, Any]:
+    import copy
 
-    def validate_proposal(
-        self,
-        resume_id: int,
-        proposal: AiChangeProposalSchema,
-    ) -> None:
-        if proposal.target_type == "resume_bullet":
-            bullet = self.session.get(ResumeBullet, proposal.target_id)
-            if bullet is None or not bullet.ai_edit_enabled:
-                raise TailoringValidationError(
-                    "Target bullet does not exist or is not AI-editable."
-                )
-            if not self._bullet_belongs_to_resume(bullet, resume_id):
-                raise TailoringValidationError(
-                    "Target bullet does not belong to the selected resume."
-                )
-            if (
-                bullet.fact_link_required
-                and proposal.risk_level != "high"
-                and not proposal.fact_ids
-            ):
-                raise TailoringValidationError(
-                    "Fact IDs are required for supported bullet rewrites."
-                )
-        elif proposal.target_type in {
-            "resume_block",
-            "resume_block_title",
-            "skills_set",
-        }:
-            block = self.session.get(ResumeBlock, proposal.target_id)
-            if block is None or not block.ai_edit_enabled:
-                raise TailoringValidationError(
-                    "Target block does not exist or is not AI-editable."
-                )
-            if not self._block_belongs_to_resume(block, resume_id):
-                raise TailoringValidationError(
-                    "Target block does not belong to the selected resume."
-                )
-            if (
-                proposal.target_type == "resume_block_title"
-                and not AiEditPolicy.from_json(block.policy_json).ai_can_edit_title
-            ):
-                raise TailoringValidationError("Title edits are forbidden by policy.")
-        else:
-            raise TailoringValidationError("Unsupported target type.")
+    return copy.deepcopy(content)
 
-    def _bullet_belongs_to_resume(self, bullet: ResumeBullet, resume_id: int) -> bool:
-        block = self.session.get(ResumeBlock, bullet.block_id)
-        if block is None:
-            return False
-        return self._block_belongs_to_resume(block, resume_id)
 
-    def _block_belongs_to_resume(self, block: ResumeBlock, resume_id: int) -> bool:
-        section = self.session.get(ResumeSection, block.section_id)
-        return section is not None and section.resume_id == resume_id
+def _allowed_terms(items: list[dict[str, Any]]) -> list[str]:
+    terms: list[str] = []
+    for item in items:
+        for source in [
+            item.get("allowed_wording", ""),
+            " ".join(item.get("keywords", [])),
+        ]:
+            for raw in source.replace("\n", ",").split(","):
+                term = raw.strip()
+                if term and term not in terms:
+                    terms.append(term)
+    return terms
+
+
+def _forbidden_terms(items: list[dict[str, Any]]) -> list[str]:
+    terms: list[str] = []
+    for item in items:
+        for raw in item.get("forbidden_wording", "").replace("\n", ",").split(","):
+            term = raw.strip()
+            if term:
+                terms.append(term)
+    return terms
+
+
+def _append_once(text: str, suffix: str) -> str:
+    return text if suffix.strip() in text else text.rstrip() + suffix
+
+
+def _join_text(text: str, additions: str) -> str:
+    return additions if not text.strip() else f"{text.rstrip()}, {additions}"
+
+
+def _remove_forbidden(text: str, forbidden_terms: list[str]) -> str:
+    result = text
+    for term in forbidden_terms:
+        result = result.replace(term, "").replace("  ", " ")
+    return result.strip()

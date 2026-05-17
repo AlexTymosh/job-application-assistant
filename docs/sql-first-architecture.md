@@ -1,81 +1,13 @@
 # SQL-first Architecture
 
-## Source of truth
+SQLite is the source of truth for runtime user-managed data. The clean pre-release schema is initialised by SQLAlchemy metadata at startup.
 
-SQLite is the source of truth for user-managed data. YAML and Markdown are not runtime sources of truth. Markdown is allowed only as an optional export artifact.
+Core tables:
 
-## Layers
+- `person_profiles` and `profile_contacts`
+- `master_cvs` and `master_cv_entries`
+- `resumes`, `resume_sections`, and `resume_blocks`
+- `applications`, `tailored_resumes`, and `application_events`
+- `prompt_templates`, `app_settings`, uploads, cover letters, and artifacts
 
-```text
-FastAPI routes -> services -> SQLAlchemy models / LLM clients / exporters / artifact boundary
-```
-
-Routes stay thin and delegate business logic to services. Services own active-profile resolution, dashboard statistics, resume building, application events, AI tailoring, cover-letter generation, snapshots, and exports.
-
-## Core data model
-
-The app-level SQLite database stores:
-
-- app settings, including `active_profile_id`;
-- person profiles and private contact details;
-- resumes, sections, blocks, bullets, skills, facts, and fact links;
-- prompt templates;
-- applications and extracted requirements;
-- application events;
-- tailoring runs and AI change proposals;
-- tailored resume snapshots;
-- cover letters;
-- artifact metadata.
-
-## Active profile
-
-There is one active profile for the local app. `SettingsService` validates that `active_profile_id` points to an existing profile. If the profile is missing, the setting is cleared and the UI shows no active profile.
-
-Dashboard, Application, CV Builder links, facts, and resume selection are profile-scoped. Settings is global and available without an active profile.
-
-## Application events
-
-Application events record significant workflow actions such as application creation, requirement extraction, proposal decisions, snapshot creation, artifact export, copy events, download events, likely-applied transitions, and manual applied marking.
-
-Copy and download events update likely-applied state only. Manual marking is the user-confirmed applied state.
-
-## Prompt templates
-
-Prompt templates are DB-backed. User-editable prompt text is stored separately from protected safety prompt text. Protected safety rules are always preserved and include no fabrication, untrusted job posting, private contact exclusion, and structured output.
-
-## Snapshots and exports
-
-Approved snapshots are created from accepted AI proposals and intentionally exclude private contact data. Final export rendering adds private contact data only at the final render/export boundary.
-
-## Schema changes
-
-Current initialisation is deterministic through SQLAlchemy metadata creation. Any future persistent-user release should add explicit versioned migrations before relying on existing user data upgrades.
-
-## First-release schema and persistence notes
-
-The SQLite database remains the source of truth for profiles, resumes, resume sections/blocks/bullets, facts, applications, tailoring runs, proposals, snapshots, cover letters, prompt templates, uploads, artifacts, and events.
-
-Prompt templates now include optional `profile_id`, `resume_id`, and `section_id` columns for scoped prompt resolution. Initialisation applies these columns idempotently for existing local databases.
-
-Resume uploads are represented by `ResumeUpload` records and stored under app-owned artifact paths. Stored filenames are generated from safe filename components and a UUID. Uploads are never sent to AI automatically.
-
-Domain errors live in `app/core/errors.py` and provide stable, user-safe failure categories for validation, missing active profile, profile scoping, resume builder, application workflow, tailoring workflow, and export workflow problems.
-
-## First-release fix-up notes
-
-- Startup includes an explicit idempotent SQLite schema repair bridge for older local MVP databases. It creates missing model tables via metadata and repairs safe missing columns, including fact claim/evidence metadata and prompt-template scope columns.
-- The active profile remains the workflow boundary for Dashboard, Application, CV Builder, resumes, and facts. Settings remains accessible without an active profile.
-- Header navigation is Dashboard / Application / CV Builder, with Settings and the active-profile selector on the right. The project link points to `https://github.com/AlexTymosh/job-application-assistant`.
-- Dashboard activity supports 10, 20, and 30 day ranges with hoverable server-rendered count bars.
-- Settings uses a left-menu/right-panel layout. OpenAI API keys are stored in OS keyring only; model IDs are configurable SQLite/env settings, not secrets. Data-folder selection uses path input/validation because a native folder picker is not available in this server-rendered local UI.
-- Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
-- Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
-- Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
-
-## Timestamp repair and destructive cleanup polish
-
-- The SQLite compatibility bridge remains explicit and idempotent for local MVP databases. Missing timestamp columns are still repaired with safe legacy backfill defaults, but timestamped SQLAlchemy models now set Python-side UTC-naive `created_at`/`updated_at` values on application-created rows. New applications, events, resumes, sections, blocks, bullets, facts, prompt templates, snapshots, cover letters, artifacts, and resume uploads therefore receive current timestamps even when inserted into a repaired database.
-- Settings form updates are scoped by `settings_section`, so absent checkbox fields are interpreted as false only for the submitted checkbox section. This preserves unrelated SQLite settings.
-- Data folder location remains outside product data and is stored through the app data pointer file. The Settings UI writes or clears that pointer; normal product data remains in the selected app-level SQLite database.
-- Base resume PDF/DOCX exports are generated under `artifacts/resumes/resume-{id}/` inside the app data root and are path-checked before download. Application snapshot artifacts continue to use application artifact records.
-- Application and profile deletion use profile-scoped service methods and database cascades for dependent SQL rows. App-owned upload/export files are deleted only after resolving paths under the app data root.
+The previous development schema repair bridge has been removed. Existing pre-release development databases can be deleted and recreated when schema changes.

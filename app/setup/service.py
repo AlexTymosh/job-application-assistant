@@ -6,7 +6,14 @@ from pathlib import Path
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AppSetting, PersonProfile, Resume, ResumeBlock, ResumeSection
+from app.db.models import (
+    AppSetting,
+    MasterCV,
+    PersonProfile,
+    Resume,
+    ResumeBlock,
+    ResumeSection,
+)
 from app.settings.service import SettingsService
 
 
@@ -49,8 +56,9 @@ class SetupStatusService:
             SetupCheck(
                 "database",
                 "SQLite database",
-                inspector.has_table("person_profiles"),
-                "SQL-first schema is initialised.",
+                inspector.has_table("person_profiles")
+                and inspector.has_table("master_cvs"),
+                "Clean SQL-first schema is initialised.",
             ),
             SetupCheck(
                 "settings",
@@ -72,25 +80,26 @@ class SetupStatusService:
                 "Open Profiles.",
             ),
             SetupCheck(
-                "resume",
-                "Resume",
+                "master_cv",
+                "Master CV",
+                self.session.scalar(select(MasterCV.id).limit(1)) is not None,
+                "Create or open the Master CV.",
+                "Open Master CV.",
+            ),
+            SetupCheck(
+                "resume_variant",
+                "Resume Variant",
                 self.session.scalar(select(Resume.id).limit(1)) is not None,
-                "Create at least one resume.",
-                "Open Resume Builder.",
+                "Create at least one resume variant.",
+                "Open CV Builder.",
             ),
             SetupCheck(
                 "resume_content",
                 "Resume content",
                 self.session.scalar(select(ResumeSection.id).limit(1)) is not None
                 and self.session.scalar(select(ResumeBlock.id).limit(1)) is not None,
-                "Add at least one section and block.",
-                "Open a resume and add structured content.",
-            ),
-            SetupCheck(
-                "fact_policy",
-                "Fact policy",
-                self.session.get(AppSetting, "ai_policy_defaults") is not None,
-                "Default fact-link policy is configured.",
+                "Add structured resume sections.",
+                "Open a resume variant.",
             ),
         ]
         return SetupStatus(checks)

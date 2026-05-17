@@ -8,11 +8,9 @@ from sqlalchemy import select
 
 from app.api.dependencies import SessionDep, form_bool, read_form_data
 from app.db.models import Resume, ResumeSection
-from app.people.service import PeopleService
 from app.settings.service import SettingsService
 from app.storage.location import (
     clear_user_selected_app_data_root,
-    get_app_data_location_status,
     set_user_selected_app_data_root,
 )
 from app.web.templating import templates
@@ -21,27 +19,26 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 
 
 @router.get("")
-def settings_page(request: Request, session: SessionDep):
+def settings(
+    request: Request,
+    session: SessionDep,
+    section: str = "profiles",
+    data_folder_error: str = "",
+):
     service = SettingsService(session)
-    settings = service.effective()
-    secret_service = request.app.state.openai_secret_service
-    try:
-        key_status = "configured" if secret_service.get_api_key() else "not configured"
-    except Exception:
-        key_status = "unavailable"
-    section = request.query_params.get("section", "profiles")
+    effective = service.effective()
     return templates.TemplateResponse(
         "settings.html",
         {
             "request": request,
-            "settings": settings,
-            "settings_section": section,
-            "key_status": key_status,
+            "settings": effective,
+            "section": section,
             "profiles": service.list_profiles(),
-            "active_profile": service.get_active_profile(),
-            "prompt_templates": service.list_prompt_templates(),
-            "data_folder_status": get_app_data_location_status(),
-            "data_folder_error": request.query_params.get("data_folder_error", ""),
+            "model_settings": service.model_settings(),
+            "openai_key_available": (
+                request.app.state.openai_secret_service.get_api_key() is not None
+            ),
+            "data_folder_error": data_folder_error,
         },
     )
 
@@ -50,20 +47,7 @@ def settings_page(request: Request, session: SessionDep):
 async def update_settings(request: Request, session: SessionDep):
     data = await read_form_data(request)
     service = SettingsService(session)
-    export_fields = {"export_markdown", "export_html", "export_pdf", "export_docx"}
-    policy_fields = {
-        "fact_links_required",
-        "allow_new_bullets",
-        "allow_hide_bullets",
-        "allow_title_edits",
-    }
-    model_fields = {
-        "openai_model_default",
-        "openai_model_qa",
-        "openai_model_extract",
-        "openai_model_tailor",
-    }
-
+    section = data.get("settings_section") or "profiles"
     if "locale" in data:
         locale = data.get("locale") or "en"
         service.set("locale", locale if locale in {"en", "ru"} else "en")
@@ -71,7 +55,6 @@ async def update_settings(request: Request, session: SessionDep):
         service.set_active_profile(
             int(data["active_profile_id"]) if data.get("active_profile_id") else None
         )
-    section = data.get("settings_section") or "profiles"
     if section == "exports":
         service.set(
             "exports",
@@ -82,36 +65,22 @@ async def update_settings(request: Request, session: SessionDep):
                 "docx": form_bool(data, "export_docx"),
             },
         )
-    elif section == "ai-policy":
+    if section == "ai-policy":
         service.set(
             "ai_policy_defaults",
             {
-                "fact_links_required": form_bool(data, "fact_links_required"),
+                "use_master_cv": form_bool(data, "use_master_cv"),
                 "allow_new_bullets": form_bool(data, "allow_new_bullets"),
                 "allow_hide_bullets": form_bool(data, "allow_hide_bullets"),
                 "allow_title_edits": form_bool(data, "allow_title_edits"),
             },
         )
-    elif export_fields & data.keys():
-        service.set(
-            "exports",
-            {
-                "markdown": form_bool(data, "export_markdown"),
-                "html": form_bool(data, "export_html"),
-                "pdf": form_bool(data, "export_pdf"),
-                "docx": form_bool(data, "export_docx"),
-            },
-        )
-    elif policy_fields & data.keys():
-        service.set(
-            "ai_policy_defaults",
-            {
-                "fact_links_required": form_bool(data, "fact_links_required"),
-                "allow_new_bullets": form_bool(data, "allow_new_bullets"),
-                "allow_hide_bullets": form_bool(data, "allow_hide_bullets"),
-                "allow_title_edits": form_bool(data, "allow_title_edits"),
-            },
-        )
+    model_fields = {
+        "openai_model_default",
+        "openai_model_qa",
+        "openai_model_extract",
+        "openai_model_tailor",
+    }
     if model_fields & data.keys():
         service.set_model_settings({key: data.get(key, "") for key in model_fields})
     if data.get("openai_api_key", "").strip():
@@ -138,56 +107,34 @@ async def update_settings(request: Request, session: SessionDep):
                     status_code=303,
                 )
             set_user_selected_app_data_root(root)
-    next_section = section
-    return RedirectResponse(f"/settings?section={next_section}", status_code=303)
+    return RedirectResponse(f"/settings?section={section}", status_code=303)
 
 
 @router.post("/active-profile")
 async def set_active_profile(request: Request, session: SessionDep):
     data = await read_form_data(request)
-    service = SettingsService(session)
-    raw_profile_id = data.get("active_profile_id")
     try:
-        service.set_active_profile(int(raw_profile_id) if raw_profile_id else None)
+        SettingsService(session).set_active_profile(
+            int(data["active_profile_id"]) if data.get("active_profile_id") else None
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return RedirectResponse(data.get("next") or "/", status_code=303)
 
 
-@router.get("/facts")
-def active_profile_facts(request: Request, session: SessionDep):
-    service = SettingsService(session)
-    active_profile = service.get_active_profile()
-    facts = []
-    if active_profile is not None:
-        facts = PeopleService(session).list_facts(active_profile.id)
-    return templates.TemplateResponse(
-        "facts.html",
-        {
-            "request": request,
-            "profile_id": active_profile.id if active_profile else None,
-            "active_profile": active_profile,
-            "facts": facts,
-        },
-    )
-
-
 @router.get("/prompts")
 def prompt_templates(request: Request, session: SessionDep):
     service = SettingsService(session)
-    profiles = service.list_profiles()
-    resumes = list(session.scalars(select(Resume).order_by(Resume.name)))
-    sections = list(
-        session.scalars(select(ResumeSection).order_by(ResumeSection.title))
-    )
     return templates.TemplateResponse(
         "prompt_templates.html",
         {
             "request": request,
             "prompt_templates": service.list_prompt_templates(),
-            "profiles": profiles,
-            "resumes": resumes,
-            "sections": sections,
+            "profiles": service.list_profiles(),
+            "resumes": list(session.scalars(select(Resume).order_by(Resume.name))),
+            "sections": list(
+                session.scalars(select(ResumeSection).order_by(ResumeSection.title))
+            ),
         },
     )
 

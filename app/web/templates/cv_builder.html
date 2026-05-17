@@ -1,12 +1,39 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero"><p class="badge">🧩 CV Builder</p><h1>CV Builder</h1><p class="muted">Edit active-profile resumes from a focused builder workspace.</p></section>
+<section class="hero-card">
+  <h1>CV Builder</h1>
+  <p>Manage Master CV source material and role-specific Resume Variants for the active profile.</p>
+</section>
 {% if not active_profile %}
-  <div class="empty-state"><h2>No active profile</h2><p>Create or select a profile before building a CV.</p><a class="button compact" href="/profiles/new">Create profile</a><a class="button compact secondary" href="/settings?section=profiles">Select profile</a></div>
+  <div class="empty-state"><p>Select or create a profile before building resumes.</p><a class="button" href="/profiles/new">Create profile</a></div>
 {% else %}
-  <div class="workspace-layout">
-    <aside class="sidebar"><h2>{{ active_profile.display_name }}</h2><p class="muted">Active profile resumes</p><div class="side-menu">{% for item in resumes %}<a class="{% if resume and item.id == resume.id %}active{% endif %}" href="/cv-builder?resume_id={{ item.id }}">{{ item.name }}</a>{% else %}<p class="muted">No resumes yet.</p>{% endfor %}</div><p class="toolbar"><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a><a class="button compact secondary" href="/settings/facts">Facts</a></p></aside>
-    <div>{% if not resumes %}<section class="card"><h2>Create resume first</h2><p>Create a structured resume before editing CV content.</p><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a></section>{% elif resume %}{% include "resume_builder_inner.html" ignore missing %}<section class="card"><div class="section-header-row"><div><h2>{{ resume.name }}</h2><p class="muted">{{ resume.target_role }}</p></div><div class="toolbar"><a class="button compact secondary" href="/resumes/{{ resume.id }}">Open full builder</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/edit">Edit metadata</a><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/exports"><input type="hidden" name="format" value="pdf"><button class="compact secondary">Download PDF</button></form><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/exports"><input type="hidden" name="format" value="docx"><button class="compact secondary">Download DOCX</button></form></div></div></section>{% for section in resume.sections %}<section class="section-card"><h2>{{ section.title }}</h2>{% for block in section.blocks %}<article class="block-card"><h3>{{ block.title or block.role_title or block.block_type }}</h3>{% if block.content %}<p>{{ block.content }}</p>{% endif %}<a href="/resumes/{{ resume.id }}/blocks/{{ block.id }}/edit" title="Edit block" aria-label="Edit block">⋯</a></article>{% else %}<p class="muted">No content yet.</p>{% endfor %}</section>{% endfor %}{% endif %}</div>
-  </div>
+  <section class="grid-two">
+    <article class="card">
+      <h2>Resume Variants</h2>
+      <p class="muted">Create a focused CV version for each target role.</p>
+      <div class="actions"><a class="button" href="/profiles/{{ active_profile.id }}/resumes/new">New Resume Variant</a><a class="button secondary" href="/profiles/{{ active_profile.id }}/master-cv">Open Master CV</a></div>
+      {% if resumes %}
+        <table>
+          <thead><tr><th>Name</th><th>Target role</th><th></th></tr></thead>
+          <tbody>
+          {% for item in resumes %}
+            <tr><td>{{ item.name }}{% if item.is_default %} <span class="badge good">Default</span>{% endif %}</td><td>{{ item.target_role }}</td><td><a class="button compact" href="/resumes/{{ item.id }}/builder">Edit</a></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="empty">No resume variants yet.</p>
+      {% endif %}
+    </article>
+    <article class="card">
+      <h2>Workflow</h2>
+      <ol>
+        <li>Capture broad source material in the Master CV.</li>
+        <li>Create Resume Variants for target roles.</li>
+        <li>Paste a job description in Application.</li>
+        <li>Adapt, review, save, and export a Tailored Resume.</li>
+      </ol>
+    </article>
+  </section>
 {% endif %}
 {% endblock %}

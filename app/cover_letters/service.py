@@ -1,85 +1,36 @@
 from __future__ import annotations
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
-from app.db.models import (
-    Application,
-    ApplicationStatus,
-    CoverLetter,
-    ExtractedJobRequirement,
-    Resume,
-    ResumeBlock,
-    ResumeSection,
-)
+from app.applications.service import ApplicationService
+from app.db.models import CoverLetter
 from app.llm.fake_client import FakeCoverLetterClient
-from app.resumes.renderer import render_resume_markdown
-from app.settings.service import SettingsService
+from app.llm.prompts.cover_letter import build_cover_letter_payload
 
 
 class CoverLetterService:
-    def __init__(
-        self, session: Session, client: FakeCoverLetterClient | None = None
-    ) -> None:
+    def __init__(self, session: Session) -> None:
         self.session = session
-        self.client = client or FakeCoverLetterClient()
 
-    def generate(self, application_id: int) -> CoverLetter:
-        app = self.session.get(Application, application_id)
-        if app is None:
-            raise ValueError("Application not found.")
-        resume = self.session.scalar(
-            select(Resume)
-            .where(Resume.id == app.resume_id)
-            .options(
-                selectinload(Resume.profile),
-                selectinload(Resume.sections)
-                .selectinload(ResumeSection.blocks)
-                .selectinload(ResumeBlock.bullets),
-            )
+    def generate_cover_letter(
+        self,
+        application_id: int,
+        client: FakeCoverLetterClient | None = None,
+    ) -> CoverLetter:
+        application = ApplicationService(self.session).get_application(application_id)
+        tailored = ApplicationService(self.session).get_tailored_resume(application_id)
+        payload = build_cover_letter_payload(
+            tailored_resume=tailored.rendered_markdown,
+            job_description=application.raw_job_text,
         )
-        if resume is None:
-            raise ValueError("Resume not found.")
-        requirements = list(
-            self.session.scalars(
-                select(ExtractedJobRequirement).where(
-                    ExtractedJobRequirement.application_id == app.id
-                )
-            )
-        )
-        markdown_without_contact = render_resume_markdown(resume, contact=None)
-        content = self.client.generate(
-            profile_name=resume.profile.display_name,
-            resume_markdown=markdown_without_contact,
-            job_requirements=[{"id": req.id, "text": req.text} for req in requirements],
-            user_instruction=SettingsService(self.session).get_prompt_instruction(
-                "cover_letter", profile_id=app.profile_id, resume_id=app.resume_id
-            ),
-        )
+        content = (client or FakeCoverLetterClient()).draft(payload)
         letter = CoverLetter(
-            application_id=app.id,
-            profile_id=app.profile_id,
-            resume_id=app.resume_id,
+            application_id=application.id,
+            profile_id=application.profile_id,
+            resume_id=application.base_resume_id,
             content=content,
             status="draft",
         )
-        app.status = ApplicationStatus.COVER_LETTER_GENERATED.value
         self.session.add(letter)
         self.session.commit()
         return letter
-
-    def update_content(self, cover_letter_id: int, content: str) -> CoverLetter:
-        letter = self.session.get(CoverLetter, cover_letter_id)
-        if letter is None:
-            raise ValueError("Cover letter not found.")
-        letter.content = content
-        letter.status = "edited"
-        self.session.commit()
-        return letter
-
-    def latest(self, application_id: int) -> CoverLetter | None:
-        return self.session.scalar(
-            select(CoverLetter)
-            .where(CoverLetter.application_id == application_id)
-            .order_by(CoverLetter.created_at.desc())
-        )

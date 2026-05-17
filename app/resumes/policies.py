@@ -1,41 +1,33 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
 class AiEditPolicy:
-    ai_editable: bool = False
-    ai_can_rewrite: bool = False
-    ai_can_add: bool = False
-    ai_can_hide: bool = False
-    fact_link_required: bool = True
-    prompt_key: str = ""
-    review_required: bool = True
-    ai_can_edit_title: bool = False
+    ai_edit_enabled: bool = False
+    use_master_cv: bool = True
+    allow_new_bullets: bool = True
+    allow_hide_bullets: bool = False
+    allow_title_edits: bool = False
 
     @classmethod
-    def from_json(cls, value: dict[str, object] | None) -> AiEditPolicy:
-        data = value or {}
+    def from_json(cls, data: dict[str, Any] | None) -> AiEditPolicy:
+        data = data or {}
         return cls(
-            ai_editable=bool(data.get("ai_editable", False)),
-            ai_can_rewrite=bool(data.get("ai_can_rewrite", False)),
-            ai_can_add=bool(data.get("ai_can_add", False)),
-            ai_can_hide=bool(data.get("ai_can_hide", False)),
-            fact_link_required=bool(data.get("fact_link_required", True)),
-            prompt_key=str(data.get("prompt_key", "")),
-            review_required=bool(data.get("review_required", True)),
-            ai_can_edit_title=bool(data.get("ai_can_edit_title", False)),
+            ai_edit_enabled=bool(data.get("ai_edit_enabled", False)),
+            use_master_cv=bool(data.get("use_master_cv", True)),
+            allow_new_bullets=bool(data.get("allow_new_bullets", True)),
+            allow_hide_bullets=bool(data.get("allow_hide_bullets", False)),
+            allow_title_edits=bool(data.get("allow_title_edits", False)),
         )
 
-    def to_json(self) -> dict[str, object]:
+    def to_json(self) -> dict[str, bool]:
         return {
-            "ai_editable": self.ai_editable,
-            "ai_can_rewrite": self.ai_can_rewrite,
-            "ai_can_add": self.ai_can_add,
-            "ai_can_hide": self.ai_can_hide,
-            "fact_link_required": self.fact_link_required,
-            "prompt_key": self.prompt_key,
-            "review_required": self.review_required,
-            "ai_can_edit_title": self.ai_can_edit_title,
+            "ai_edit_enabled": self.ai_edit_enabled,
+            "use_master_cv": self.use_master_cv,
+            "allow_new_bullets": self.allow_new_bullets,
+            "allow_hide_bullets": self.allow_hide_bullets,
+            "allow_title_edits": self.allow_title_edits,
         }
