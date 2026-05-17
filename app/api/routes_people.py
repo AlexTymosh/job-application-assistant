@@ -79,6 +79,7 @@ def facts(profile_id: int, request: Request, session: SessionDep):
         {
             "request": request,
             "profile_id": profile_id,
+            "active_profile": session.get(PersonProfile, profile_id),
             "facts": PeopleService(session).list_facts(profile_id),
         },
     )

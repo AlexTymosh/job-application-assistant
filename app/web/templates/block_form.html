@@ -1,24 +1,34 @@
 {% extends "base.html" %}
+{% set section_type = block.section.section_type if block else '' %}
+{% set block_kind = block.block_type if block else '' %}
 {% block content %}
-<section class="hero"><p class="badge">CV Builder</p><h1>{{ "Edit block" if block else "Add section content" }}</h1><p class="muted">The form adapts to common CV section types while keeping the server-rendered workflow simple.</p></section>
+<section class="hero"><p class="badge">CV Builder</p><h1>{{ "Edit block" if block else "Add section content" }}</h1><p class="muted">This form shows fields that match the selected CV content type.</p></section>
 <form method="post">
-  {% if not block %}<label>Section <select name="section_id" id="section-select">{% for section in resume.sections %}<option value="{{ section.id }}" data-type="{{ section.section_type }}">{{ section.title }}</option>{% endfor %}</select></label>{% endif %}
-  <label>Content type <select name="block_type">{% for type in block_types %}<option value="{{ type }}" {% if block and block.block_type == type %}selected{% endif %}>{{ type.replace('_', ' ')|title }}</option>{% endfor %}</select></label>
-  <section class="card">
-    <h2>Header / personal details or custom title</h2>
-    <div class="two-column"><label>Title / certificate / language / reference name<input name="title" value="{{ block.title if block else '' }}"></label><label>Subtitle / degree / level / reference role<input name="subtitle" value="{{ block.subtitle if block else '' }}"></label></div>
-  </section>
-  <section class="card">
-    <h2>Work Experience</h2>
-    <div class="two-column"><label>Role title<input name="role_title" value="{{ block.role_title if block else '' }}"></label><label>Company / organisation<input name="organisation" value="{{ block.organisation if block else '' }}"></label></div>
-    <div class="two-column"><label>Start date<input name="start_date" value="{{ block.start_date if block else '' }}"></label><label>End date<input name="end_date" value="{{ block.end_date if block else '' }}"></label></div>
-    <label><input type="checkbox" name="is_current" {% if block and block.is_current %}checked{% endif %}> Present / current</label>
-    <label>Optional location<input name="location" value="{{ block.location if block else '' }}"></label>
-  </section>
-  <section class="card">
-    <h2>Summary, skills, education, certificates, references, or custom details</h2>
-    <label>Description / hard skills / soft skills / achievements / notes<textarea name="content" placeholder="For Work Experience, add key bullets after saving this block.">{{ block.content if block else '' }}</textarea></label>
-  </section>
+  {% if not block %}
+    <label>Section <select name="section_id" id="section-select">{% for section in resume.sections %}<option value="{{ section.id }}" data-type="{{ section.section_type }}">{{ section.title }}</option>{% endfor %}</select></label>
+    <label>Content type <select name="block_type">{% for type in block_types %}<option value="{{ type }}">{{ type.replace('_', ' ')|title }}</option>{% endfor %}</select></label>
+    <section class="card"><h2>Content</h2><label>Title<input name="title"></label><label>Description<textarea name="content"></textarea></label></section>
+  {% elif section_type == 'summary' or block_kind == 'summary' %}
+    <input type="hidden" name="block_type" value="summary">
+    <section class="card"><h2>Summary</h2><label>Description<textarea name="content">{{ block.content }}</textarea></label></section>
+  {% elif section_type == 'skills' or block_kind == 'skills' %}
+    <input type="hidden" name="block_type" value="skills">
+    <section class="card"><h2>{{ block.title }}</h2><label>Skills<textarea name="content">{{ block.content }}</textarea></label></section>
+  {% elif section_type == 'work_experience' or block_kind == 'work_experience' %}
+    <input type="hidden" name="block_type" value="work_experience">
+    <section class="card"><h2>Work Experience</h2><div class="two-column"><label>Role title<input name="role_title" value="{{ block.role_title }}"></label><label>Company / organisation<input name="organisation" value="{{ block.organisation }}"></label></div><div class="two-column"><label>Start date<input type="month" name="start_date" value="{{ block.start_date }}"></label><label>End date<input type="month" name="end_date" value="{{ block.end_date }}"></label></div><label><input type="checkbox" name="is_current" {% if block.is_current %}checked{% endif %}> Present / current</label><p class="muted">Key bullets are managed separately after saving the block.</p></section>
+  {% elif section_type == 'education' or block_kind == 'education' %}
+    <input type="hidden" name="block_type" value="education">
+    <section class="card"><h2>Education</h2><div class="two-column"><label>Institution<input name="organisation" value="{{ block.organisation }}"></label><label>Specialisation / degree<input name="subtitle" value="{{ block.subtitle }}"></label></div><div class="two-column"><label>Start date<input type="month" name="start_date" value="{{ block.start_date }}"></label><label>End date<input type="month" name="end_date" value="{{ block.end_date }}"></label></div><label><input type="checkbox" name="is_current" {% if block.is_current %}checked{% endif %}> Current</label><label>Achievements/details<textarea name="content">{{ block.content }}</textarea></label></section>
+  {% elif section_type == 'languages' %}
+    <section class="card"><h2>Language</h2><div class="two-column"><label>Language<input name="title" value="{{ block.title }}"></label><label>Level<input name="subtitle" value="{{ block.subtitle }}"></label></div><label>Notes<textarea name="content">{{ block.content }}</textarea></label></section>
+  {% elif section_type == 'certifications' %}
+    <section class="card"><h2>Certification</h2><div class="two-column"><label>Certificate name<input name="title" value="{{ block.title }}"></label><label>Issuer<input name="organisation" value="{{ block.organisation }}"></label></div><label>Date<input type="month" name="start_date" value="{{ block.start_date }}"></label><label>URL/details<textarea name="content">{{ block.content }}</textarea></label></section>
+  {% elif section_type == 'references' %}
+    <section class="card"><h2>Reference</h2><div class="two-column"><label>Name<input name="title" value="{{ block.title }}"></label><label>Role/title<input name="subtitle" value="{{ block.subtitle }}"></label><label>Company<input name="organisation" value="{{ block.organisation }}"></label><label>Phone<input name="location" value="{{ block.location }}"></label></div><label>Email or notes<textarea name="content">{{ block.content }}</textarea></label></section>
+  {% else %}
+    <section class="card"><h2>Custom block</h2><label>Title<input name="title" value="{{ block.title }}"></label><label>Description/content<textarea name="content">{{ block.content }}</textarea></label></section>
+  {% endif %}
   <label><input type="checkbox" name="is_visible" {% if not block or block.is_visible %}checked{% endif %}> Visible</label>
   <label><input type="checkbox" name="ai_edit_enabled" {% if block and block.ai_edit_enabled %}checked{% endif %}> AI may edit this block</label>
   <button class="compact">Save block</button>

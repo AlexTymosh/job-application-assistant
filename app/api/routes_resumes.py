@@ -16,7 +16,7 @@ from app.db.models import (
     ResumeSection,
     SectionType,
 )
-from app.resumes.service import ResumeService
+from app.resumes.service import ResumeService, validate_resume_upload_filename
 from app.web.templating import templates
 
 router = APIRouter(tags=["resumes"])
@@ -44,6 +44,8 @@ def new_resume(profile_id: int, request: Request):
 @router.post("/profiles/{profile_id}/resumes/new")
 async def create_resume(profile_id: int, request: Request, session: SessionDep):
     data, upload = await _read_resume_create_payload(request)
+    if upload is not None:
+        validate_resume_upload_filename(str(upload["filename"]))
     service = ResumeService(session)
     resume = service.create_resume(
         profile_id,
@@ -259,21 +261,25 @@ async def update_block(
     session: SessionDep,
 ):
     data = await read_form_data(request)
-    ResumeService(session).update_block(
-        block_id,
-        block_type=data.get("block_type", "custom"),
-        title=data.get("title", ""),
-        subtitle=data.get("subtitle", ""),
-        role_title=data.get("role_title", ""),
-        organisation=data.get("organisation", ""),
-        location=data.get("location", ""),
-        start_date=data.get("start_date", ""),
-        end_date=data.get("end_date", ""),
-        content=data.get("content", ""),
-        is_current=form_bool(data, "is_current"),
-        is_visible=form_bool(data, "is_visible"),
-        ai_edit_enabled=form_bool(data, "ai_edit_enabled"),
-    )
+    values = {
+        key: data[key]
+        for key in [
+            "block_type",
+            "title",
+            "subtitle",
+            "role_title",
+            "organisation",
+            "location",
+            "start_date",
+            "end_date",
+            "content",
+        ]
+        if key in data
+    }
+    values["is_current"] = form_bool(data, "is_current")
+    values["is_visible"] = form_bool(data, "is_visible")
+    values["ai_edit_enabled"] = form_bool(data, "ai_edit_enabled")
+    ResumeService(session).update_block(block_id, **values)
     return RedirectResponse(f"/resumes/{resume_id}", status_code=303)
 
 

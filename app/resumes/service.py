@@ -18,6 +18,18 @@ from app.db.models import (
 from app.resumes.policies import AiEditPolicy
 
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".doc", ".docx"}
+
+
+def validate_resume_upload_filename(original_filename: str) -> str:
+    source_name = Path(original_filename or "resume-upload").name
+    suffix = Path(source_name).suffix.lower()
+    if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
+        from app.core.errors import ResumeBuilderError
+
+        raise ResumeBuilderError("Upload a PDF, DOC, or DOCX resume file.")
+    return source_name
+
+
 SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 
@@ -142,10 +154,8 @@ class ResumeService:
         from app.core.errors import ResumeBuilderError
 
         resume = self.get_resume(resume_id)
-        source_name = Path(original_filename or "resume-upload").name
+        source_name = validate_resume_upload_filename(original_filename)
         suffix = Path(source_name).suffix.lower()
-        if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
-            raise ResumeBuilderError("Upload a PDF, DOC, or DOCX resume file.")
         stem = (
             SAFE_FILENAME_RE.sub("-", Path(source_name).stem).strip(".-_") or "resume"
         )

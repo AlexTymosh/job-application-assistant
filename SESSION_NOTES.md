@@ -56,3 +56,15 @@ The first usable local release stage is completed for the SQL-first AI JOB APPLI
 - Improved CV Builder controls with compact arrow move buttons and section-aware fields, including Work Experience role/company/date/current fields.
 - Updated rendering to hide empty final sections and uppercase rendered section headings.
 - Expanded regression coverage for facts, Adapt, snapshots, active-profile access, uploads, prompt resolution, error pages, work experience, metadata edits, and render behaviour.
+
+## First-release fix-up polish
+
+- Added an explicit idempotent SQLite schema drift repair bridge for older local databases. Startup now creates missing first-release tables through SQLAlchemy metadata and repairs safe missing columns such as `facts.claim`, fact metadata columns, prompt-template scope columns, timestamps, and other SQL-first fields that `create_all()` cannot add to existing SQLite tables.
+- Settings forms now preserve unrelated settings. Locale, OpenAI key/model settings, export formats, and AI policy defaults update only their own submitted section.
+- Resume uploads are validated before resume creation so invalid files do not leave ghost resumes, sections, upload rows, or files. Upload storage remains local reference-only for `.pdf`, `.doc`, and `.docx` files; parsing is not implemented yet.
+- The header now uses Dashboard / Application / CV Builder on the main side, with Settings and the active-profile selector on the right. The GitHub link points to the project repository.
+- Dashboard activity supports 10, 20, and 30 day ranges with server-rendered bars and hover titles containing date/count values.
+- Settings is now a left-menu/right-panel workspace with app configuration, OpenAI/keyring and model settings, exports, AI policy, data-folder guidance, prompt templates, CV Builder, profiles, and privacy notes.
+- Prompt-template scoping uses named profile/resume/section selectors instead of raw ID-only text fields. Internal safety guardrails remain hidden and non-editable.
+- `/cv-builder` is available as a top-level active-profile workspace with profile/resume empty states and resume selection.
+- Resume builder controls are more compact, duplicate section-type markers were removed, summary and skills blocks avoid irrelevant internal controls, and block edit forms are type-specific.

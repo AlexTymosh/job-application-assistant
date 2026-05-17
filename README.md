@@ -135,3 +135,29 @@ Prompt instructions are scoped in SQLite with this resolution order: section, re
 Resume creation accepts optional `.pdf`, `.doc`, and `.docx` uploads. Uploaded files are stored under the app-owned `artifacts/uploads` area with safe generated filenames. Automatic parsing of complex resume layouts is intentionally not implemented for the first release; the file is kept as local reference material for manual import.
 
 Expected first-release limitations remain: no automatic submission, no LinkedIn automation, no email sending, no broad scraping, no fake ATS score, and no YAML or Markdown runtime source of truth. Copy/download events mean likely applied only; only the explicit Mark as applied action records a manually confirmed application.
+
+## First-release local compatibility and UX notes
+
+### SQLite schema repair
+
+This local-first MVP uses SQLite as the runtime source of truth. At startup the app still creates missing tables, and it also runs an explicit idempotent schema drift repair for older local databases that were created before the current SQL-first model. The repair bridge adds safe missing columns such as fact claim/evidence metadata and prompt-template scope columns because SQLite `CREATE TABLE IF NOT EXISTS` cannot alter existing tables.
+
+### Navigation and active profile workflow
+
+The main navigation is Dashboard, Application, and CV Builder. Settings is placed on the right near the active-profile selector. Dashboard, Application, CV Builder, resumes, and facts are scoped to the selected active profile; Settings remains available without one.
+
+### Dashboard activity chart
+
+The Dashboard activity chart supports `/?days=10`, `/?days=20`, and `/?days=30`. Unsupported values fall back to 30 days. Bars are server-rendered and expose date/count hover text.
+
+### Settings, OpenAI, and data folder
+
+Settings uses a left menu with focused panels. The OpenAI API key is stored through the OS keyring boundary, never in SQLite. Model IDs are normal configurable settings (`openai_model_default`, `openai_model_qa`, `openai_model_extract`, and `openai_model_tailor`) and may be supplied from environment variables or SQLite settings. Useful links: [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys) and [OpenAI Models documentation](https://platform.openai.com/docs/models).
+
+The local data folder is managed through path input and validation. A server-rendered local web UI cannot reliably open an OS-native PyCharm-style folder picker through standard browser APIs, so native folder picking is not claimed for the MVP.
+
+### Prompt instructions and CV Builder
+
+Prompt instructions can be scoped globally or to a selected profile, resume, or section using named selectors. Internal privacy, anti-fabrication, untrusted-job-posting, and structured-output guardrails are applied in prompt builders and are not editable in the UI.
+
+CV Builder is a top-level workspace. Resume upload stores `.pdf`, `.doc`, and `.docx` files locally as reference artifacts, but full parsing of uploaded documents is not implemented yet. Resume block edit forms are type-specific for summary, skills, work experience, education, languages, certifications, references, and custom content.

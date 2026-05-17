@@ -36,7 +36,12 @@ def test_navigation_header_active_profile_and_settings_hub(app_client):
     assert "AI JOB APPLICATION ASSISTANT" in dashboard.text
     assert "🏠 Dashboard" in dashboard.text
     assert "📄 Application" in dashboard.text
+    assert "🧩 CV Builder" in dashboard.text
     assert "⚙ Settings" in dashboard.text
+    assert (
+        'href="https://github.com/AlexTymosh/job-application-assistant"'
+        in dashboard.text
+    )
     assert "No active profile" in dashboard.text
 
     profile_id = _create_profile(app_client)
@@ -53,7 +58,8 @@ def test_navigation_header_active_profile_and_settings_hub(app_client):
 def test_prompt_template_route_can_edit_user_instruction(app_client):
     page = app_client.get("/settings/prompts")
     assert page.status_code == 200
-    assert "Protected AI instructions" in page.text
+    assert "AI prompt instructions" in page.text
+    assert "Protected AI instructions" not in page.text
     marker = 'action="/settings/prompts/'
     template_id = int(page.text.split(marker, 1)[1].split('"', 1)[0])
     response = app_client.post(
@@ -63,7 +69,10 @@ def test_prompt_template_route_can_edit_user_instruction(app_client):
     )
     assert response.status_code == 303
     assert "Prefer concise bullets." in app_client.get("/settings/prompts").text
-    assert "Do not fabricate" in app_client.get("/settings/prompts").text
+    assert (
+        "Internal privacy and anti-fabrication guardrails"
+        in app_client.get("/settings/prompts").text
+    )
 
 
 def test_application_workspace_active_profile_scope_and_events(app_client):
