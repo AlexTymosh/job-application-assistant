@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from app.api.dependencies import SessionDep, form_bool, read_form_data
 from app.db.models import Resume, ResumeSection
-from app.settings.service import SettingsService
+from app.settings.service import PROMPT_TEMPLATE_TYPES, SettingsService
 from app.storage.location import (
     clear_user_selected_app_data_root,
     set_user_selected_app_data_root,
@@ -123,13 +123,25 @@ async def set_active_profile(request: Request, session: SessionDep):
 
 
 @router.get("/prompts")
-def prompt_templates(request: Request, session: SessionDep):
+def prompt_templates(
+    request: Request, session: SessionDep, block_type: str = "summary"
+):
     service = SettingsService(session)
+    prompt_types = PROMPT_TEMPLATE_TYPES
+    current_block_type = block_type if block_type in prompt_types else "summary"
+    templates_for_type = [
+        template
+        for template in service.list_prompt_templates()
+        if template.block_type == current_block_type
+    ]
     return templates.TemplateResponse(
         "prompt_templates.html",
         {
             "request": request,
-            "prompt_templates": service.list_prompt_templates(),
+            "prompt_templates": templates_for_type,
+            "all_prompt_templates": service.list_prompt_templates(),
+            "prompt_types": prompt_types,
+            "current_block_type": current_block_type,
             "profiles": service.list_profiles(),
             "resumes": list(session.scalars(select(Resume).order_by(Resume.name))),
             "sections": list(
@@ -147,15 +159,18 @@ async def create_scoped_prompt_template(request: Request, session: SessionDep):
         value = data.get(key, "").strip()
         return int(value) if value else None
 
+    block_type = data.get("block_type", "summary")
     SettingsService(session).upsert_scoped_prompt_template(
         scope=data.get("scope", "global"),
-        block_type=data.get("block_type", "summary"),
+        block_type=block_type,
         user_prompt_template=data.get("user_prompt_template", ""),
         profile_id=optional_int("profile_id"),
         resume_id=optional_int("resume_id"),
         section_id=optional_int("section_id"),
     )
-    return RedirectResponse("/settings/prompts", status_code=303)
+    return RedirectResponse(
+        f"/settings/prompts?block_type={block_type}", status_code=303
+    )
 
 
 @router.post("/prompts/{template_id}")
@@ -163,7 +178,10 @@ async def update_prompt_template(
     template_id: int, request: Request, session: SessionDep
 ):
     data = await read_form_data(request)
+    block_type = data.get("block_type", "summary")
     SettingsService(session).update_prompt_template(
         template_id, data.get("user_prompt_template", "")
     )
-    return RedirectResponse("/settings/prompts", status_code=303)
+    return RedirectResponse(
+        f"/settings/prompts?block_type={block_type}", status_code=303
+    )

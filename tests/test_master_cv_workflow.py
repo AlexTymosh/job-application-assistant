@@ -8,6 +8,7 @@ from app.applications.service import ApplicationService
 from app.people.service import PeopleService
 from app.resumes.renderer import render_resume_markdown
 from app.resumes.service import ResumeService
+from app.settings.service import SettingsService
 from app.tailoring.service import DeterministicTailoringClient, TailoringService
 
 
@@ -513,6 +514,8 @@ def test_cover_letter_generated_and_displayed(app_client, session):
 
 def test_master_cv_uses_builder_style(app_client, session):
     profile = PeopleService(session).create_profile("Master", "Master Example")
+    SettingsService(session).set_active_profile(profile.id)
+
     response = app_client.get(f"/profiles/{profile.id}/master-cv/work_experience")
     assert response.status_code == 200
     assert "builder-shell" in response.text
@@ -520,17 +523,32 @@ def test_master_cv_uses_builder_style(app_client, session):
     assert "Extended Experience Preview" in response.text
     assert "Fact checking" not in response.text
     assert "Evidence matrix" not in response.text
+    assert "Keywords (comma-separated)" not in response.text
+    assert "Allowed wording" not in response.text
+    assert "Forbidden wording" not in response.text
+    assert "Inference notes" not in response.text
+    assert "Claim strength" not in response.text
+
     app_client.post(
         f"/profiles/{profile.id}/master-cv",
         data={
-            "category": "tool",
-            "title": "Poetry",
-            "content": "Used Poetry for dependency management.",
+            "category": "work_experience",
+            "job_title": "Python Developer",
+            "employer": "Hydro UK",
+            "start_date": "2024-09",
+            "end_date": "",
+            "is_current": "on",
+            "optional_extra_enabled": "on",
+            "optional_extra_text": "Internal automation and backend tooling.",
+            "key_bullets": "Built Python automation tools for internal workflows.",
         },
     )
-    tool_page = app_client.get(f"/profiles/{profile.id}/master-cv/tool")
-    assert "Poetry" in tool_page.text
-    assert "Used Poetry" in tool_page.text
+
+    work_page = app_client.get(f"/profiles/{profile.id}/master-cv/work_experience")
+    assert work_page.status_code == 200
+    assert "Python Developer" in work_page.text
+    assert "Hydro UK" in work_page.text
+    assert "Built Python automation tools" in work_page.text
 
 
 def test_docx_export_is_styled_without_markdown_markers(session, tmp_path: Path):

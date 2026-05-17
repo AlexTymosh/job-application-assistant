@@ -21,7 +21,7 @@
   </div>
   <section class="card" style="margin-top:1rem">
     <div class="section-header-row">
-      <div><h2>Application activity over the last {{ stats.activity_range_days }} days</h2><p class="muted">X axis shows dates. Y axis shows application count. Hover over a bar to see the date and count.</p></div>
+      <div><h2>Application activity over the last {{ stats.activity_range_days }} days</h2></div>
       <div class="tabs" aria-label="Activity range">
         {% for option in [10, 20, 30] %}<a class="tab {% if stats.activity_range_days == option %}active{% endif %}" href="/?days={{ option }}">{{ option }} days</a>{% endfor %}
       </div>

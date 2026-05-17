@@ -8,6 +8,8 @@ from app.api.dependencies import (
     get_app_data_root,
     read_form_data,
     read_form_multi_data,
+    require_active_profile_resume,
+    require_active_profile_workspace,
 )
 from app.resumes.renderer import render_resume_html
 from app.resumes.service import (
@@ -21,6 +23,7 @@ router = APIRouter(tags=["resumes"])
 
 @router.get("/profiles/{profile_id}/resumes")
 def profile_resumes(profile_id: int, request: Request, session: SessionDep):
+    require_active_profile_workspace(profile_id, session)
     return templates.TemplateResponse(
         "resumes.html",
         {
@@ -32,7 +35,8 @@ def profile_resumes(profile_id: int, request: Request, session: SessionDep):
 
 
 @router.get("/profiles/{profile_id}/resumes/new")
-def new_resume(profile_id: int, request: Request):
+def new_resume(profile_id: int, request: Request, session: SessionDep):
+    require_active_profile_workspace(profile_id, session)
     return templates.TemplateResponse(
         "resume_form.html", {"request": request, "profile_id": profile_id}
     )
@@ -40,6 +44,7 @@ def new_resume(profile_id: int, request: Request):
 
 @router.post("/profiles/{profile_id}/resumes/new")
 async def create_resume(profile_id: int, request: Request, session: SessionDep):
+    require_active_profile_workspace(profile_id, session)
     data = await read_form_data(request)
     resume = ResumeService(session).create_resume(
         profile_id,
@@ -53,24 +58,27 @@ async def create_resume(profile_id: int, request: Request, session: SessionDep):
 
 
 @router.get("/resumes/{resume_id}")
-def resume_detail_redirect(resume_id: int):
+def resume_detail_redirect(resume_id: int, session: SessionDep):
+    require_active_profile_resume(resume_id, session)
     return RedirectResponse(f"/resumes/{resume_id}/builder", status_code=303)
 
 
 @router.get("/resumes/{resume_id}/edit")
 def edit_resume_metadata(resume_id: int, request: Request, session: SessionDep):
+    resume = require_active_profile_resume(resume_id, session)
     return templates.TemplateResponse(
         "resume_form.html",
         {
             "request": request,
             "profile_id": None,
-            "resume": ResumeService(session).get_resume(resume_id),
+            "resume": resume,
         },
     )
 
 
 @router.post("/resumes/{resume_id}/edit")
 async def update_resume_metadata(resume_id: int, request: Request, session: SessionDep):
+    require_active_profile_resume(resume_id, session)
     data = await read_form_data(request)
     ResumeService(session).update_resume(
         resume_id,
@@ -82,7 +90,8 @@ async def update_resume_metadata(resume_id: int, request: Request, session: Sess
 
 
 @router.get("/resumes/{resume_id}/builder")
-def builder_default(resume_id: int):
+def builder_default(resume_id: int, session: SessionDep):
+    require_active_profile_resume(resume_id, session)
     return RedirectResponse(f"/resumes/{resume_id}/builder/header", status_code=303)
 
 
@@ -91,9 +100,9 @@ def resume_builder_section(
     resume_id: int, section_type: str, request: Request, session: SessionDep
 ):
     service = ResumeService(session)
-    resume = service.get_resume(resume_id)
+    resume = require_active_profile_resume(resume_id, session)
     service.create_standard_skeleton(resume_id)
-    resume = service.get_resume(resume_id)
+    resume = require_active_profile_resume(resume_id, session)
     section = next(
         (item for item in resume.sections if item.section_type == section_type), None
     )
@@ -116,6 +125,7 @@ def resume_builder_section(
 async def save_resume_builder_section(
     resume_id: int, section_type: str, request: Request, session: SessionDep
 ):
+    require_active_profile_resume(resume_id, session)
     data = await read_form_multi_data(request)
     ResumeService(session).save_section(resume_id, section_type, data)
     return RedirectResponse(
@@ -125,6 +135,7 @@ async def save_resume_builder_section(
 
 @router.post("/resumes/{resume_id}/export/pdf")
 def export_base_resume_pdf(resume_id: int, request: Request, session: SessionDep):
+    require_active_profile_resume(resume_id, session)
     ResumeService(session).export_base_resume(
         resume_id, "pdf", get_app_data_root(request)
     )
@@ -135,6 +146,7 @@ def export_base_resume_pdf(resume_id: int, request: Request, session: SessionDep
 
 @router.post("/resumes/{resume_id}/export/docx")
 def export_base_resume_docx(resume_id: int, request: Request, session: SessionDep):
+    require_active_profile_resume(resume_id, session)
     ResumeService(session).export_base_resume(
         resume_id, "docx", get_app_data_root(request)
     )
@@ -147,6 +159,7 @@ def export_base_resume_docx(resume_id: int, request: Request, session: SessionDe
 async def export_base_resume_legacy(
     resume_id: int, request: Request, session: SessionDep
 ):
+    require_active_profile_resume(resume_id, session)
     data = await read_form_data(request)
     export_format = data.get("format", "pdf")
     ResumeService(session).export_base_resume(
@@ -162,6 +175,7 @@ def download_base_resume(
     resume_id: int, export_format: str, request: Request, session: SessionDep
 ):
     service = ResumeService(session)
+    require_active_profile_resume(resume_id, session)
     path = service.base_resume_export_path(
         resume_id, export_format, get_app_data_root(request)
     )

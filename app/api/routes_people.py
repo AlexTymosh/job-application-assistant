@@ -3,8 +3,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
-from app.api.dependencies import SessionDep, get_app_data_root, read_form_data
-from app.db.models import ClaimStrength
+from app.api.dependencies import (
+    SessionDep,
+    get_app_data_root,
+    read_form_data,
+    require_active_profile_workspace,
+)
 from app.people.service import PeopleService
 from app.settings.service import SettingsService
 from app.web.templating import templates
@@ -12,18 +16,111 @@ from app.web.templating import templates
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 MASTER_CV_CATEGORIES = [
-    ("header", "Header / Contact"),
-    ("summary", "Summary source"),
-    ("skill", "Skills source"),
+    ("header", "Header"),
+    ("summary", "Summary"),
+    ("skills", "Skills"),
     ("work_experience", "Work Experience"),
     ("education", "Education"),
-    ("project", "Projects"),
-    ("tool", "Tools"),
-    ("certificate", "Certificates"),
-    ("language", "Languages"),
-    ("reference", "Private references"),
-    ("instruction", "Instructions"),
+    ("languages", "Languages"),
+    ("certificates", "Certificates"),
+    ("references", "References"),
 ]
+
+
+def _line(label: str, value: str | None) -> str:
+    value = (value or "").strip()
+    return f"{label}: {value}" if value else ""
+
+
+def _content_from_master_form(category: str, data: dict[str, str]) -> tuple[str, str]:
+    if category == "header":
+        title = "Header"
+        parts = [
+            _line("First Name", data.get("first_name")),
+            _line("Surname", data.get("surname")),
+            _line("Location", data.get("location")),
+            _line("Phone", data.get("phone")),
+            _line("Email", data.get("email")),
+            _line("LinkedIn", data.get("linkedin_url")),
+            _line("GitHub", data.get("github_url")),
+            _line("Extra", data.get("extra_text")),
+        ]
+        return title, "\n".join(part for part in parts if part)
+    if category == "summary":
+        return "Summary", data.get("summary", "").strip()
+    if category == "skills":
+        hard = data.get("hard_skills", "").strip()
+        soft = data.get("soft_skills", "").strip()
+        return "Skills", f"Hard Skills:\n{hard}\n\nSoft Skills:\n{soft}".strip()
+    if category == "work_experience":
+        title = (
+            " - ".join(
+                part
+                for part in [
+                    data.get("job_title", "").strip(),
+                    data.get("employer", "").strip(),
+                ]
+                if part
+            )
+            or "Work Experience"
+        )
+        current = "I currently work here" if data.get("is_current") == "on" else ""
+        parts = [
+            _line("Job title", data.get("job_title")),
+            _line("Employer", data.get("employer")),
+            _line("Start Date", data.get("start_date")),
+            current,
+            _line("End Date", data.get("end_date")) if not current else "",
+            _line("Extra", data.get("optional_extra_text"))
+            if data.get("optional_extra_enabled") == "on"
+            else "",
+            _line("Key bullets", data.get("key_bullets")),
+        ]
+        return title, "\n".join(part for part in parts if part)
+    if category == "education":
+        title = data.get("institution_name", "").strip() or "Education"
+        current = "Current" if data.get("is_current") == "on" else ""
+        parts = [
+            _line("Institution", data.get("institution_name")),
+            _line("Specialisation", data.get("specialisation")),
+            _line("Start Date", data.get("start_date")),
+            current,
+            _line("End Date", data.get("end_date")) if not current else "",
+            _line("Achievements", data.get("key_bullets")),
+        ]
+        return title, "\n".join(part for part in parts if part)
+    if category == "languages":
+        title = data.get("language", "").strip() or "Language"
+        return title, "\n".join(
+            part
+            for part in [
+                _line("Language", data.get("language")),
+                _line("Level", data.get("level")),
+            ]
+            if part
+        )
+    if category == "certificates":
+        title = data.get("certificate_name", "").strip() or "Certificate"
+        parts = [
+            _line("Certificate", data.get("certificate_name")),
+            _line("Certificate URL", data.get("certificate_url")),
+            _line("Issue year", data.get("issue_year")),
+        ]
+        return title, "\n".join(part for part in parts if part)
+    if category == "references":
+        title = data.get("name", "").strip() or "Reference"
+        parts = [
+            _line("Name", data.get("name")),
+            _line("Role title", data.get("role_title")),
+            _line("Company", data.get("company")),
+            _line("Phone", data.get("phone")),
+            _line("Email", data.get("email")),
+            _line("LinkedIn", data.get("linkedin_url")),
+        ]
+        return title, "\n".join(part for part in parts if part)
+    return data.get("title", "Extended Experience").strip(), data.get(
+        "content", ""
+    ).strip()
 
 
 @router.get("")
@@ -90,7 +187,8 @@ async def update_profile(profile_id: int, request: Request, session: SessionDep)
 
 
 @router.get("/{profile_id}/master-cv")
-def master_cv_default(profile_id: int):
+def master_cv_default(profile_id: int, session: SessionDep):
+    require_active_profile_workspace(profile_id, session)
     return RedirectResponse(
         f"/profiles/{profile_id}/master-cv/work_experience", status_code=303
     )
@@ -98,6 +196,7 @@ def master_cv_default(profile_id: int):
 
 @router.get("/{profile_id}/master-cv/{category}")
 def master_cv(profile_id: int, category: str, request: Request, session: SessionDep):
+    profile = require_active_profile_workspace(profile_id, session)
     service = PeopleService(session)
     entries = service.list_master_entries(profile_id)
     valid_categories = {key for key, _title in MASTER_CV_CATEGORIES}
@@ -106,7 +205,7 @@ def master_cv(profile_id: int, category: str, request: Request, session: Session
         "master_cv.html",
         {
             "request": request,
-            "profile": service.get_profile(profile_id),
+            "profile": profile,
             "entries": entries,
             "current_entries": [
                 entry for entry in entries if entry.category == current_category
@@ -114,7 +213,6 @@ def master_cv(profile_id: int, category: str, request: Request, session: Session
             "category_nav": MASTER_CV_CATEGORIES,
             "current_category": current_category,
             "current_title": dict(MASTER_CV_CATEGORIES)[current_category],
-            "strengths": [item.value for item in ClaimStrength],
         },
     )
 
@@ -123,20 +221,23 @@ def master_cv(profile_id: int, category: str, request: Request, session: Session
 async def create_master_cv_entry(
     profile_id: int, request: Request, session: SessionDep
 ):
+    require_active_profile_workspace(profile_id, session)
     data = await read_form_data(request)
+    category = data.get("category", "work_experience")
+    title, content = _content_from_master_form(category, data)
     PeopleService(session).create_master_entry(
         profile_id,
-        category=data.get("category", "work_experience"),
-        title=data.get("title", ""),
-        content=data.get("content", ""),
-        keywords=data.get("keywords", ""),
-        allowed_wording=data.get("allowed_wording", ""),
-        forbidden_wording=data.get("forbidden_wording", ""),
-        inference_notes=data.get("inference_notes", ""),
-        claim_strength=data.get("claim_strength", ClaimStrength.NORMAL.value),
+        category=category,
+        title=title,
+        content=content,
+        keywords="",
+        allowed_wording="",
+        forbidden_wording="",
+        inference_notes="",
+        claim_strength="normal",
     )
     return RedirectResponse(
-        f"/profiles/{profile_id}/master-cv/{data.get('category', 'work_experience')}",
+        f"/profiles/{profile_id}/master-cv/{category}",
         status_code=303,
     )
 

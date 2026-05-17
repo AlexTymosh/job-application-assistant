@@ -1,10 +1,91 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>Prompt instructions</h1><p>These user instructions guide tone and focus. Non-editable safety guardrails remain internal to the application code.</p></section>
-<section class="card">
-  {% for template in prompt_templates %}
-    <form class="block-card" method="post" action="/settings/prompts/{{ template.id }}"><h2>{{ template.name }}</h2><p class="muted">Scope: {{ template.scope }}</p><label>User instruction<textarea name="user_prompt_template">{{ template.user_prompt_template }}</textarea></label><button class="compact">Save</button></form>
-  {% endfor %}
-</section>
-<section class="card"><h2>Add scoped instruction</h2><form method="post" action="/settings/prompts-scoped"><label>Scope<select name="scope"><option value="global">Global</option><option value="profile">Profile</option><option value="resume">Resume</option><option value="section">Section</option></select></label><label>Prompt type<input name="block_type" value="summary"></label><label>Profile optional<select name="profile_id"><option value=""></option>{% for profile in profiles %}<option value="{{ profile.id }}">{{ profile.display_name }}</option>{% endfor %}</select></label><label>Resume optional<select name="resume_id"><option value=""></option>{% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}</option>{% endfor %}</select></label><label>Section optional<select name="section_id"><option value=""></option>{% for section in sections %}<option value="{{ section.id }}">{{ section.title }}</option>{% endfor %}</select></label><label>User instruction<textarea name="user_prompt_template"></textarea></label><button>Add instruction</button></form></section>
+<div class="builder-shell prompt-builder-shell">
+  <aside class="builder-nav" aria-label="Prompt instruction sections">
+    <a class="brand-mini" href="/settings">Prompt instructions</a>
+    {% for prompt_type in prompt_types %}
+      <a class="builder-nav-item {% if current_block_type == prompt_type %}active{% endif %}" href="/settings/prompts?block_type={{ prompt_type }}">{{ prompt_type.replace('_',' ')|title }}</a>
+    {% endfor %}
+    <a class="builder-nav-item" href="/settings">← Settings</a>
+  </aside>
+
+  <section class="builder-editor">
+    <div class="section-header-row">
+      <div>
+        <h1>{{ current_block_type.replace('_',' ')|title }}</h1>
+        <p class="muted">Edit user-facing instructions for this resume area. Internal privacy and anti-fabrication guardrails are applied automatically in code.</p>
+      </div>
+    </div>
+
+    <section class="card">
+      <h2>Existing instructions</h2>
+      {% for template in prompt_templates %}
+        <form class="block-card" method="post" action="/settings/prompts/{{ template.id }}">
+          <input type="hidden" name="block_type" value="{{ current_block_type }}">
+          <div class="section-header-row">
+            <div>
+              <h3>{{ template.name }}</h3>
+              <p class="muted">Scope: {{ template.scope|title }}</p>
+            </div>
+            <button class="compact" type="submit">Save</button>
+          </div>
+          <label>User instruction<textarea name="user_prompt_template">{{ template.user_prompt_template }}</textarea></label>
+        </form>
+      {% else %}
+        <p class="empty">No instruction exists for this prompt type yet.</p>
+      {% endfor %}
+    </section>
+
+    <section class="card" style="margin-top:1rem">
+      <h2>Add instruction override</h2>
+      <form method="post" action="/settings/prompts-scoped">
+        <input type="hidden" name="block_type" value="{{ current_block_type }}">
+        <div class="form-grid">
+          <label>Scope
+            <select name="scope">
+              <option value="global">Global</option>
+              <option value="profile">Profile</option>
+              <option value="resume">Resume</option>
+              <option value="section">Section</option>
+            </select>
+          </label>
+          <label>Profile
+            <select name="profile_id">
+              <option value="">No profile scope</option>
+              {% for profile in profiles %}<option value="{{ profile.id }}">{{ profile.display_name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>Resume
+            <select name="resume_id">
+              <option value="">No resume scope</option>
+              {% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>Section
+            <select name="section_id">
+              <option value="">No section scope</option>
+              {% for section in sections %}<option value="{{ section.id }}">{{ section.title }} · Resume {{ section.resume_id }}</option>{% endfor %}
+            </select>
+          </label>
+        </div>
+        <label>User instruction<textarea name="user_prompt_template" placeholder="Write the guidance for this part of the resume."></textarea></label>
+        <button type="submit">Apply instruction</button>
+      </form>
+    </section>
+  </section>
+
+  <aside class="builder-preview">
+    <div class="preview-toolbar"><span>Prompt impact preview</span></div>
+    <article class="resume-preview-paper prompt-impact-preview">
+      <div class="prompt-checkmark" aria-hidden="true">✓</div>
+      <h1>Resume Skeleton</h1>
+      <p class="muted">The highlighted area shows where this instruction is used.</p>
+      <section class="prompt-skeleton-line {% if current_block_type == 'summary' %}highlight{% endif %}">SUMMARY</section>
+      <section class="prompt-skeleton-line {% if current_block_type == 'skills' %}highlight{% endif %}">SKILLS</section>
+      <section class="prompt-skeleton-line {% if current_block_type == 'work_experience_bullets' %}highlight{% endif %}">WORK EXPERIENCE BULLETS</section>
+      <section class="prompt-skeleton-line {% if current_block_type == 'education_achievements' %}highlight{% endif %}">EDUCATION ACHIEVEMENTS</section>
+      <section class="prompt-skeleton-line {% if current_block_type == 'cover_letter' %}highlight{% endif %}">COVER LETTER</section>
+    </article>
+  </aside>
+</div>
 {% endblock %}

@@ -4,11 +4,44 @@
 <div class="settings-layout">
   <aside class="side-menu"><a href="/settings?section=profiles">Profiles</a><a href="/settings?section=exports">Exports</a><a href="/settings?section=ai-policy">AI policy</a><a href="/settings/prompts">Prompt instructions</a><a href="/settings?section=models">Models</a><a href="/settings?section=data-folder">Data folder</a></aside>
   <section class="card">
-    {% if section == 'exports' %}<h2>Export formats</h2><form method="post"><input type="hidden" name="settings_section" value="exports"><label class="checkbox-line"><input type="checkbox" name="export_pdf" {% if settings.exports.pdf %}checked{% endif %}> PDF</label><label class="checkbox-line"><input type="checkbox" name="export_docx" {% if settings.exports.docx %}checked{% endif %}> DOCX</label><button>Save exports</button></form>
-    {% elif section == 'ai-policy' %}<h2>AI policy defaults</h2><form method="post"><input type="hidden" name="settings_section" value="ai-policy"><label class="checkbox-line"><input type="checkbox" name="use_master_cv" {% if settings.ai_policy_defaults.use_master_cv %}checked{% endif %}> Use Master CV source material</label><label class="checkbox-line"><input type="checkbox" name="allow_new_bullets" {% if settings.ai_policy_defaults.allow_new_bullets %}checked{% endif %}> Allow new bullets in editable sections</label><label class="checkbox-line"><input type="checkbox" name="allow_hide_bullets" {% if settings.ai_policy_defaults.allow_hide_bullets %}checked{% endif %}> Allow hiding weak bullets</label><button>Save policy</button></form>
-    {% elif section == 'models' %}<h2>Model identifiers</h2><form method="post"><input type="hidden" name="settings_section" value="models">{% for key, value in model_settings.items() %}<label>{{ key.replace('_',' ')|title }}<input name="{{ key }}" value="{{ value }}"></label>{% endfor %}<label>OpenAI API key<input name="openai_api_key" type="password" placeholder="Stored in OS keyring only"></label><p class="muted">Key available: {{ 'yes' if openai_key_available else 'no' }}</p><button>Save models</button></form>
-    {% elif section == 'data-folder' %}<h2>Data folder</h2><form method="post"><input type="hidden" name="settings_section" value="data-folder"><label>Folder path<input name="root"></label>{% if data_folder_error %}<p class="badge bad">{{ data_folder_error }}</p>{% endif %}<button>Save folder</button><button class="secondary" name="data_folder_action" value="reset">Reset</button></form>
-    {% else %}<h2>Profiles</h2><form method="post"><input type="hidden" name="settings_section" value="profiles"><label>Active profile<select name="active_profile_id"><option value="">No profile</option>{% for profile in profiles %}<option value="{{ profile.id }}" {% if settings.active_profile_id == profile.id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}</select></label><button>Save active profile</button></form>{% endif %}
+    {% if section == 'exports' %}
+      <h2>Export formats</h2>
+      <form method="post"><input type="hidden" name="settings_section" value="exports"><label class="checkbox-line"><input type="checkbox" name="export_pdf" {% if settings.exports.pdf %}checked{% endif %}> PDF</label><label class="checkbox-line"><input type="checkbox" name="export_docx" {% if settings.exports.docx %}checked{% endif %}> DOCX</label><button>Save exports</button></form>
+    {% elif section == 'ai-policy' %}
+      <h2>AI policy defaults</h2>
+      <form method="post"><input type="hidden" name="settings_section" value="ai-policy"><label class="checkbox-line"><input type="checkbox" name="use_master_cv" {% if settings.ai_policy_defaults.use_master_cv %}checked{% endif %}> Use Master CV source material</label><label class="checkbox-line"><input type="checkbox" name="allow_new_bullets" {% if settings.ai_policy_defaults.allow_new_bullets %}checked{% endif %}> Allow new bullets in editable sections</label><label class="checkbox-line"><input type="checkbox" name="allow_hide_bullets" {% if settings.ai_policy_defaults.allow_hide_bullets %}checked{% endif %}> Allow hiding weak bullets</label><button>Save policy</button></form>
+    {% elif section == 'models' %}
+      <h2>Model identifiers</h2>
+      <form method="post"><input type="hidden" name="settings_section" value="models">{% for key, value in model_settings.items() %}<label>{{ key.replace('_',' ')|title }}<input name="{{ key }}" value="{{ value }}"></label>{% endfor %}<label>OpenAI API key<input name="openai_api_key" type="password" placeholder="Stored in OS keyring only"></label><p class="muted">Key available: {{ 'yes' if openai_key_available else 'no' }}</p><button>Save models</button></form>
+    {% elif section == 'data-folder' %}
+      <h2>Data folder</h2>
+      <form method="post"><input type="hidden" name="settings_section" value="data-folder"><label>Folder path<input name="root"></label>{% if data_folder_error %}<p class="badge bad">{{ data_folder_error }}</p>{% endif %}<button>Save folder</button><button class="secondary" name="data_folder_action" value="reset">Reset</button></form>
+    {% else %}
+      <h2>Profiles</h2>
+      <form method="post"><input type="hidden" name="settings_section" value="profiles"><label>Active profile<select name="active_profile_id"><option value="">No profile</option>{% for profile in profiles %}<option value="{{ profile.id }}" {% if settings.active_profile_id == profile.id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}</select></label><button>Save active profile</button></form>
+      <div class="section-header-row" style="margin-top:1rem"><h2>Manage profiles</h2><a class="button compact" href="/profiles/new">Add profile</a></div>
+      {% if profiles %}
+        <table><thead><tr><th>Profile</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        {% for profile in profiles %}
+          <tr>
+            <td><strong>{{ profile.display_name }}</strong></td>
+            <td>{% if settings.active_profile_id == profile.id %}<span class="badge good">Active</span>{% else %}<span class="badge">Inactive</span>{% endif %}</td>
+            <td class="actions">
+              <a class="button compact ghost" href="/profiles/{{ profile.id }}">Open</a>
+              <a class="button compact ghost" href="/profiles/{{ profile.id }}/edit">Edit</a>
+              <form class="inline-form" method="post" action="/profiles/{{ profile.id }}/set-active"><button class="compact secondary" type="submit">Set active</button></form>
+              <form class="inline-form" method="post" action="/profiles/{{ profile.id }}/delete" onsubmit="return confirm('Delete this profile and all related local data?');">
+                <input type="hidden" name="confirm_profile_name" value="{{ profile.display_name }}">
+                <button class="compact danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody></table>
+      {% else %}
+        <p class="empty">No profiles yet. Create a profile to start using the workspace.</p>
+      {% endif %}
+    {% endif %}
   </section>
 </div>
 {% endblock %}
