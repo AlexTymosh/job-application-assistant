@@ -80,3 +80,13 @@ Use emoji plus conventional commit style:
 - Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
 - Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
 - Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
+
+## Current first-release polish notes
+
+- The SQLite compatibility bridge must not add permanent `1970-01-01` timestamp defaults for repaired timestamp columns. ORM-created rows use application-side UTC-naive timestamps so repaired databases create current `created_at`/`updated_at` values.
+- Settings split forms use `settings_section` as the update boundary. Export and AI policy checkbox sections intentionally allow every checkbox to be unchecked; missing checkbox fields mean `false` only for the submitted section.
+- Dashboard activity renders a server-side bar chart with date labels on the X axis, count labels on the Y axis, 10/20/30 day range links, and no likely-applied/manual-applied metric cards.
+- The header keeps the active-profile selector accessible with `aria-label="Active profile"` but does not display the words “Active profile”.
+- Data folder management lives in Settings -> Data folder. `/data-folder` is a compatibility redirect to that Settings section.
+- Profile detail provides explicit destructive controls for deleting individual applications, deleting old/all applications for that profile, and deleting the profile after typed-name confirmation.
+- CV Builder and the full resume builder can export the current base resume as PDF or DOCX under the app-owned artifacts directory without requiring an application.

@@ -71,3 +71,21 @@ Domain errors live in `app/core/errors.py` and provide stable, user-safe failure
 - Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
 - Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
 - Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
+
+## Current first-release polish update
+
+- Dashboard activity uses a server-rendered chart with a date X axis, application-count Y axis, hover titles, and 10/20/30 day range links. The likely-applied and manually marked applied metric cards are no longer displayed.
+- Settings split forms are section-scoped. Export formats and AI policy defaults can be saved with every checkbox unchecked; unrelated Settings forms preserve existing values.
+- Data folder is managed from Settings -> Data folder with path validation/create flow and reset-to-default support. `/data-folder` redirects to `/settings?section=data-folder`.
+- CV Builder and the full resume builder can export the current base resume as PDF or DOCX under the app-owned artifacts directory without creating an application and without calling AI.
+- Profile detail supports deleting one application, applications older than N days, all profile applications, and the profile itself. Destructive profile deletion requires typing the profile display name and clears the active profile when needed.
+- The SQLite repair bridge avoids permanent `1970-01-01` timestamp defaults for repaired timestamp columns; new ORM-created rows use current UTC-naive timestamps so repaired databases still drive Dashboard charts and recent ordering correctly.
+
+### Manual smoke additions
+
+1. Start from an older SQLite database missing `applications.created_at`, run startup, create a new application, and confirm its created date is current and appears in Dashboard 10/20/30 day charts.
+2. In Settings -> Export formats, uncheck every checkbox and save; confirm all formats are off. Repeat for Settings -> AI policy defaults.
+3. In Settings -> Data folder, save a valid local path, confirm it is created/selected, then use the default-folder action.
+4. Create an application, delete it from the profile detail cleanup section, and confirm Dashboard counts update while the resume/profile remain.
+5. Delete a test profile by typing its display name and confirm dependent resumes, facts, applications, and scoped prompt templates are removed and the active profile is cleared if applicable.
+6. Export a base resume from CV Builder as PDF and DOCX and confirm both downloads work without an application.

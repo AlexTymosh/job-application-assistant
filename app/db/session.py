@@ -41,16 +41,16 @@ def initialise_database(engine: Engine) -> None:
 # list explicit and idempotent until a full migration system is adopted.
 _SQLITE_COLUMN_REPAIRS: dict[str, dict[str, str]] = {
     "app_settings": {
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "person_profiles": {
         "full_name": "VARCHAR(200) NOT NULL DEFAULT ''",
         "preferred_name": "VARCHAR(120) NOT NULL DEFAULT ''",
         "location": "VARCHAR(200) NOT NULL DEFAULT ''",
         "is_active": "BOOLEAN NOT NULL DEFAULT 1",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "profile_contacts": {
         "email": "VARCHAR(254) NOT NULL DEFAULT ''",
@@ -60,15 +60,15 @@ _SQLITE_COLUMN_REPAIRS: dict[str, dict[str, str]] = {
         "country": "VARCHAR(120) NOT NULL DEFAULT ''",
         "links_json": "JSON NOT NULL DEFAULT '[]'",
         "visibility_json": "JSON NOT NULL DEFAULT '{}'",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "resumes": {
         "target_role": "VARCHAR(160) NOT NULL DEFAULT ''",
         "language": "VARCHAR(32) NOT NULL DEFAULT 'en'",
         "is_default": "BOOLEAN NOT NULL DEFAULT 0",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "resume_sections": {
         "title": "VARCHAR(160) NOT NULL DEFAULT ''",
@@ -77,8 +77,8 @@ _SQLITE_COLUMN_REPAIRS: dict[str, dict[str, str]] = {
         "ai_edit_enabled": "BOOLEAN NOT NULL DEFAULT 0",
         "ai_prompt_key": "VARCHAR(120) NOT NULL DEFAULT ''",
         "policy_json": "JSON NOT NULL DEFAULT '{}'",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "resume_blocks": {
         "title": "VARCHAR(200) NOT NULL DEFAULT ''",
@@ -96,16 +96,16 @@ _SQLITE_COLUMN_REPAIRS: dict[str, dict[str, str]] = {
         "ai_edit_mode": "VARCHAR(80) NOT NULL DEFAULT 'none'",
         "metadata_json": "JSON NOT NULL DEFAULT '{}'",
         "policy_json": "JSON NOT NULL DEFAULT '{}'",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "resume_bullets": {
         "display_order": "INTEGER NOT NULL DEFAULT 0",
         "is_visible": "BOOLEAN NOT NULL DEFAULT 1",
         "ai_edit_enabled": "BOOLEAN NOT NULL DEFAULT 0",
         "fact_link_required": "BOOLEAN NOT NULL DEFAULT 1",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "facts": {
         "claim": "TEXT NOT NULL DEFAULT ''",
@@ -114,8 +114,8 @@ _SQLITE_COLUMN_REPAIRS: dict[str, dict[str, str]] = {
         "allowed_claim_level": "VARCHAR(40) NOT NULL DEFAULT 'mention_only'",
         "confidence": "VARCHAR(40) NOT NULL DEFAULT 'medium'",
         "is_active": "BOOLEAN NOT NULL DEFAULT 1",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "prompt_templates": {
         "section_type": "VARCHAR(80) NOT NULL DEFAULT ''",
@@ -123,16 +123,34 @@ _SQLITE_COLUMN_REPAIRS: dict[str, dict[str, str]] = {
         "profile_id": "INTEGER",
         "resume_id": "INTEGER",
         "section_id": "INTEGER",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
     },
     "applications": {
         "job_title": "VARCHAR(200) NOT NULL DEFAULT ''",
         "company_name": "VARCHAR(200) NOT NULL DEFAULT ''",
         "source_url": "VARCHAR(500) NOT NULL DEFAULT ''",
         "status": "VARCHAR(60) NOT NULL DEFAULT 'job_saved'",
-        "created_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
-        "updated_at": "DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
+    },
+    "application_events": {
+        "message": "TEXT NOT NULL DEFAULT ''",
+        "metadata_json": "JSON NOT NULL DEFAULT '{}'",
+        "created_at": "DATETIME",
+    },
+    "tailored_resume_snapshots": {
+        "created_at": "DATETIME",
+    },
+    "cover_letters": {
+        "created_at": "DATETIME",
+        "updated_at": "DATETIME",
+    },
+    "artifacts": {
+        "created_at": "DATETIME",
+    },
+    "resume_uploads": {
+        "created_at": "DATETIME",
     },
 }
 

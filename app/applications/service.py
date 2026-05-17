@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.errors import (
@@ -21,6 +21,7 @@ from app.db.models import (
     ApplicationEvent,
     ApplicationStatus,
     Artifact,
+    CoverLetter,
     ExtractedJobRequirement,
     PersonProfile,
     ProposalStatus,
@@ -59,6 +60,7 @@ class DashboardStats:
     manually_marked_applied_count: int
     recent_applications: list[Application]
     activity_days: list[dict[str, object]]
+    y_axis_labels: list[int]
 
 
 class ApplicationService:
@@ -522,16 +524,27 @@ class ApplicationService:
             key = app.created_at.date().isoformat()
             if key in counts_by_day:
                 counts_by_day[key] += 1
-        max_count = max(counts_by_day.values(), default=0) or 1
-        activity_days = [
-            {
-                "date": date,
-                "count": count,
-                "height": 0 if count == 0 else max(12, int(count / max_count * 88)),
-                "label": f"{date}: {count} application{'s' if count != 1 else ''}",
-            }
-            for date, count in counts_by_day.items()
-        ]
+        raw_max_count = max(counts_by_day.values(), default=0)
+        max_count = raw_max_count or 1
+        activity_days = []
+        for index, (date, count) in enumerate(counts_by_day.items()):
+            show_label = days == 10 or index in {0, days - 1} or index % 5 == 0
+            activity_days.append(
+                {
+                    "date": date,
+                    "count": count,
+                    "height": 0 if count == 0 else max(12, int(count / max_count * 88)),
+                    "label": f"{date}: {count} application{'s' if count != 1 else ''}",
+                    "axis_label": date[5:] if show_label else "",
+                }
+            )
+        midpoint = raw_max_count // 2 if raw_max_count > 1 else None
+        y_axis_labels = [raw_max_count]
+        if midpoint and midpoint not in y_axis_labels:
+            y_axis_labels.append(midpoint)
+        if 0 not in y_axis_labels:
+            y_axis_labels.append(0)
+        y_axis_labels = sorted(y_axis_labels, reverse=True)
         return DashboardStats(
             profile_id=profile.id,
             profile_name=profile.display_name,
@@ -543,6 +556,96 @@ class ApplicationService:
             manually_marked_applied_count=len(manual),
             recent_applications=applications[:8],
             activity_days=activity_days,
+            y_axis_labels=y_axis_labels,
+        )
+
+    def delete_application(
+        self, application_id: int, profile_id: int, *, app_data_root: Path | None = None
+    ) -> None:
+        application = self.session.get(Application, application_id)
+        if application is None:
+            raise NotFoundError("Application not found.")
+        if application.profile_id != profile_id:
+            raise ProfileScopeError("Application not found for this profile.")
+        self._delete_application_dependents(application.id, app_data_root=app_data_root)
+        self.session.delete(application)
+        self.session.commit()
+
+    def delete_profile_applications(
+        self,
+        profile_id: int,
+        older_than_days: int | None = None,
+        *,
+        app_data_root: Path | None = None,
+    ) -> int:
+        profile = self.session.get(PersonProfile, profile_id)
+        if profile is None:
+            raise NotFoundError("Profile not found.")
+        stmt = select(Application).where(Application.profile_id == profile_id)
+        if older_than_days is not None:
+            cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(
+                days=older_than_days
+            )
+            stmt = stmt.where(Application.created_at < cutoff)
+        applications = list(self.session.scalars(stmt))
+        for application in applications:
+            self._delete_application_dependents(
+                application.id, app_data_root=app_data_root
+            )
+            self.session.delete(application)
+        self.session.commit()
+        return len(applications)
+
+    def _delete_application_dependents(
+        self, application_id: int, *, app_data_root: Path | None = None
+    ) -> None:
+        artifacts = list(
+            self.session.scalars(
+                select(Artifact).where(Artifact.application_id == application_id)
+            )
+        )
+        if app_data_root is not None:
+            root = app_data_root.resolve()
+            for artifact in artifacts:
+                path = (root / artifact.relative_path).resolve()
+                if (root in path.parents or path == root) and path.exists():
+                    path.unlink()
+        run_ids = list(
+            self.session.scalars(
+                select(TailoringRun.id).where(
+                    TailoringRun.application_id == application_id
+                )
+            )
+        )
+        if run_ids:
+            self.session.execute(
+                delete(AiChangeProposal).where(
+                    AiChangeProposal.tailoring_run_id.in_(run_ids)
+                )
+            )
+        self.session.execute(
+            delete(TailoringRun).where(TailoringRun.application_id == application_id)
+        )
+        self.session.execute(
+            delete(TailoredResumeSnapshot).where(
+                TailoredResumeSnapshot.application_id == application_id
+            )
+        )
+        self.session.execute(
+            delete(CoverLetter).where(CoverLetter.application_id == application_id)
+        )
+        self.session.execute(
+            delete(Artifact).where(Artifact.application_id == application_id)
+        )
+        self.session.execute(
+            delete(ExtractedJobRequirement).where(
+                ExtractedJobRequirement.application_id == application_id
+            )
+        )
+        self.session.execute(
+            delete(ApplicationEvent).where(
+                ApplicationEvent.application_id == application_id
+            )
         )
 
     def tailoring_service(self) -> TailoringService:

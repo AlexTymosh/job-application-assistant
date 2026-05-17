@@ -161,3 +161,14 @@ The local data folder is managed through path input and validation. A server-ren
 Prompt instructions can be scoped globally or to a selected profile, resume, or section using named selectors. Internal privacy, anti-fabrication, untrusted-job-posting, and structured-output guardrails are applied in prompt builders and are not editable in the UI.
 
 CV Builder is a top-level workspace. Resume upload stores `.pdf`, `.doc`, and `.docx` files locally as reference artifacts, but full parsing of uploaded documents is not implemented yet. Resume block edit forms are type-specific for summary, skills, work experience, education, languages, certifications, references, and custom content.
+
+## First-release polish update
+
+- Dashboard activity now has a date X axis, application-count Y axis, hover titles for each server-rendered bar, and 10/20/30 day range switching. The previous likely-applied and manually marked applied metric cards were removed while the underlying events and statuses remain available in application history.
+- Settings split forms are section-scoped. Saving Export formats or AI policy defaults can intentionally turn every checkbox off; unrelated Settings forms preserve those values.
+- Data folder management is now embedded in Settings -> Data folder with current path/status, a validated path input, and a reset-to-default action. The standalone `/data-folder` URL redirects to the Settings section for compatibility.
+- OpenAI documentation links in Settings open in a new tab with `noopener noreferrer`; API keys remain in the OS keyring boundary and are not stored in SQLite.
+- Profile detail includes application cleanup controls for one application, old applications, or all applications for the profile. Application deletion removes dependent requirements, tailoring runs, proposals, snapshots, cover letters, events, artifact records, and generated artifact files when safely under the app data folder.
+- Profile deletion requires typing the profile display name and removes dependent contact data, facts, resumes, uploads, applications, scoped prompt templates, and generated application artifacts. If the deleted profile was active, `active_profile_id` is cleared.
+- CV Builder and the full resume builder provide base resume PDF/DOCX export buttons. These exports render the current structured resume with the private contact layer because the user explicitly requested a final local export, and they do not call AI.
+- The SQLite repair bridge no longer creates permanent `1970-01-01` defaults for repaired timestamp columns. Application-side UTC-naive timestamp defaults ensure new rows in repaired databases appear in Dashboard ranges and recent ordering.

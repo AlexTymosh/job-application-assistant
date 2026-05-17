@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -8,6 +10,11 @@ from app.api.dependencies import SessionDep, form_bool, read_form_data
 from app.db.models import Resume, ResumeSection
 from app.people.service import PeopleService
 from app.settings.service import SettingsService
+from app.storage.location import (
+    clear_user_selected_app_data_root,
+    get_app_data_location_status,
+    set_user_selected_app_data_root,
+)
 from app.web.templating import templates
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -33,6 +40,8 @@ def settings_page(request: Request, session: SessionDep):
             "profiles": service.list_profiles(),
             "active_profile": service.get_active_profile(),
             "prompt_templates": service.list_prompt_templates(),
+            "data_folder_status": get_app_data_location_status(),
+            "data_folder_error": request.query_params.get("data_folder_error", ""),
         },
     )
 
@@ -55,7 +64,8 @@ async def update_settings(request: Request, session: SessionDep):
         "openai_model_tailor",
     }
 
-    if export_fields & data.keys():
+    section = data.get("settings_section", "")
+    if section == "exports" or export_fields & data.keys():
         service.set(
             "exports",
             {
@@ -65,7 +75,7 @@ async def update_settings(request: Request, session: SessionDep):
                 "docx": form_bool(data, "export_docx"),
             },
         )
-    if policy_fields & data.keys():
+    if section == "ai-policy" or policy_fields & data.keys():
         service.set(
             "ai_policy_defaults",
             {
@@ -88,6 +98,26 @@ async def update_settings(request: Request, session: SessionDep):
         request.app.state.openai_secret_service.set_api_key(
             data["openai_api_key"].strip()
         )
+    if section == "data-folder":
+        action = data.get("data_folder_action", "custom")
+        if action == "default":
+            clear_user_selected_app_data_root()
+        else:
+            root = data.get("root", "").strip()
+            if not root:
+                return RedirectResponse(
+                    "/settings?section=data-folder&data_folder_error=Enter%20a%20folder%20path.",
+                    status_code=303,
+                )
+            normalised = Path(root).expanduser().resolve(strict=False)
+            try:
+                normalised.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                return RedirectResponse(
+                    "/settings?section=data-folder&data_folder_error=The%20folder%20could%20not%20be%20created%20or%20used.",
+                    status_code=303,
+                )
+            set_user_selected_app_data_root(normalised)
     next_section = data.get("settings_section") or "profiles"
     return RedirectResponse(f"/settings?section={next_section}", status_code=303)
 

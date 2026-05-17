@@ -18,29 +18,29 @@
     <div class="card"><span class="muted">Resumes</span><h2>{{ stats.resume_count }}</h2></div>
     <div class="card"><span class="muted">Applications</span><h2>{{ stats.application_count }}</h2></div>
     <div class="card"><span class="muted">Last 30 days</span><h2>{{ stats.applications_last_30_days }}</h2></div>
-    <div class="card"><span class="muted">Likely applied</span><h2>{{ stats.likely_applied_count }}</h2></div>
-    <div class="card"><span class="muted">Manually marked applied</span><h2>{{ stats.manually_marked_applied_count }}</h2></div>
   </div>
   <section class="card" style="margin-top:1rem">
     <div class="section-header-row">
-      <div><h2>Application activity over the last {{ stats.activity_range_days }} days</h2><p class="muted">Hover over a bar to see the date and application count.</p></div>
+      <div><h2>Application activity over the last {{ stats.activity_range_days }} days</h2><p class="muted">X axis: date. Y axis: application count. Hover over a bar to see the date and application count.</p></div>
       <div class="tabs" aria-label="Activity range">
         {% for option in [10, 20, 30] %}<a class="tab {% if stats.activity_range_days == option %}active{% endif %}" href="/?days={{ option }}">{{ option }} days</a>{% endfor %}
       </div>
     </div>
-    {% set has_activity = stats.activity_days | selectattr('count') | list | length > 0 %}
-    {% if has_activity %}
-      <div class="chart" role="img" aria-label="Application activity chart for {{ stats.activity_range_days }} days" data-chart-days="{{ stats.activity_range_days }}">
-        {% for day in stats.activity_days %}
-          <span class="bar {% if day.count == 0 %}empty-bar{% endif %}" data-chart-bar="1" title="{{ day.label }}" style="height:{{ day.height }}px"></span>
-        {% endfor %}
+    <div class="chart-frame">
+      <div class="y-axis" aria-hidden="true">
+        {% for label in stats.y_axis_labels %}<span>{{ label }}</span>{% endfor %}
       </div>
-    {% else %}
-      <div class="empty-state"><p>No application activity in the selected period.</p></div>
-      <div class="chart" role="img" aria-label="Empty application activity chart for {{ stats.activity_range_days }} days" data-chart-days="{{ stats.activity_range_days }}">
-        {% for day in stats.activity_days %}<span class="bar empty-bar" data-chart-bar="1" title="{{ day.label }}" style="height:0px"></span>{% endfor %}
+      <div class="chart-area">
+        <div class="chart" role="img" aria-label="Application activity chart for {{ stats.activity_range_days }} days" data-chart-days="{{ stats.activity_range_days }}">
+          {% for day in stats.activity_days %}
+            <span class="bar {% if day.count == 0 %}empty-bar{% endif %}" data-chart-bar="1" title="{{ day.label }}" style="height:{{ day.height }}px"></span>
+          {% endfor %}
+        </div>
+        <div class="x-axis" aria-label="Date axis">
+          {% for day in stats.activity_days %}<span>{% if day.axis_label %}{{ day.axis_label }}{% endif %}</span>{% endfor %}
+        </div>
       </div>
-    {% endif %}
+    </div>
   </section>
   <section class="card" style="margin-top:1rem">
     <h2>Recent applications</h2>

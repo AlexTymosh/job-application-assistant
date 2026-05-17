@@ -173,7 +173,8 @@ def test_dashboard_ranges_header_and_cv_builder(app_client: TestClient):
         'href="https://github.com/AlexTymosh/job-application-assistant"'
         in dashboard.text
     )
-    assert dashboard.text.count("Active profile") == 1
+    assert ">Active profile<" not in dashboard.text
+    assert 'aria-label="Active profile"' in dashboard.text
 
     assert app_client.get("/cv-builder").status_code == 200
     assert "No active profile" in app_client.get("/cv-builder").text
@@ -185,6 +186,11 @@ def test_dashboard_ranges_header_and_cv_builder(app_client: TestClient):
         page = app_client.get(f"/?days={days}")
         assert f'data-chart-days="{days}"' in page.text
         assert page.text.count('data-chart-bar="1"') == days
+        assert "X axis: date" in page.text
+        assert "Y axis: application count" in page.text
+        assert 'class="x-axis"' in page.text
+        assert 'class="y-axis"' in page.text
+        assert "title=" in page.text
     fallback = app_client.get("/?days=999")
     assert 'data-chart-days="30"' in fallback.text
     assert "application" in fallback.text
@@ -256,3 +262,242 @@ def test_prompt_page_uses_named_scope_selectors(app_client: TestClient):
     )
     assert response.status_code == 303
     assert "Prefer concise summaries." in app_client.get("/settings/prompts").text
+
+
+def test_repaired_application_timestamps_and_dashboard_activity(tmp_path: Path):
+    database_file = tmp_path / "legacy.sqlite3"
+    engine = create_engine(f"sqlite:///{database_file}", future=True)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "CREATE TABLE applications ("
+                "id INTEGER PRIMARY KEY, "
+                "profile_id INTEGER NOT NULL, "
+                "resume_id INTEGER NOT NULL, "
+                "application_number INTEGER NOT NULL UNIQUE, "
+                "job_title VARCHAR(200) NOT NULL DEFAULT '', "
+                "company_name VARCHAR(200) NOT NULL DEFAULT '', "
+                "source_url VARCHAR(500) NOT NULL DEFAULT '', "
+                "raw_job_text TEXT NOT NULL, "
+                "status VARCHAR(60) NOT NULL DEFAULT 'job_saved')"
+            )
+        )
+    initialise_database(engine)
+    from datetime import UTC, datetime, timedelta
+
+    from app.applications.service import ApplicationService
+    from app.db.session import create_session_factory
+    from app.people.service import PeopleService
+    from app.resumes.service import ResumeService
+
+    factory = create_session_factory(engine)
+    with factory() as session:
+        profile = PeopleService(session).create_profile("Alex", "Alex Example")
+        resume = ResumeService(session).create_resume(profile.id, "Base", "Engineer")
+        before = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=5)
+        application = ApplicationService(session).create_application(
+            profile_id=profile.id,
+            resume_id=resume.id,
+            job_title="Engineer",
+            company_name="Acme",
+            source_url="",
+            raw_job_text="Python SQL",
+        )
+        after = datetime.now(UTC).replace(tzinfo=None) + timedelta(seconds=5)
+        assert before <= application.created_at <= after
+        assert application.created_at.year != 1970
+        stats = ApplicationService(session).dashboard_stats(profile.id, days=10)
+        assert any(day["count"] == 1 for day in stats.activity_days)
+        assert stats.recent_applications[0].id == application.id
+        assert application.events[0].created_at.year != 1970
+
+
+def test_settings_can_uncheck_all_split_form_flags(app_client: TestClient, session):
+    from app.settings.service import SettingsService
+
+    service = SettingsService(session)
+    service.set("exports", {"markdown": True, "html": True, "pdf": True, "docx": True})
+    service.set(
+        "ai_policy_defaults",
+        {
+            "fact_links_required": True,
+            "allow_new_bullets": True,
+            "allow_hide_bullets": True,
+            "allow_title_edits": True,
+        },
+    )
+    assert (
+        app_client.post("/settings", data={"settings_section": "exports"}).status_code
+        == 200
+    )
+    session.expire_all()
+    assert session.get(AppSetting, "exports").value_json == {
+        "markdown": False,
+        "html": False,
+        "pdf": False,
+        "docx": False,
+    }
+    assert (
+        app_client.post("/settings", data={"settings_section": "ai-policy"}).status_code
+        == 200
+    )
+    session.expire_all()
+    assert session.get(AppSetting, "ai_policy_defaults").value_json == {
+        "fact_links_required": False,
+        "allow_new_bullets": False,
+        "allow_hide_bullets": False,
+        "allow_title_edits": False,
+    }
+
+
+def test_openai_links_and_data_folder_settings(app_client: TestClient, tmp_path: Path):
+    openai = app_client.get("/settings?section=openai")
+    assert "OpenAI API keys" in openai.text
+    assert "OpenAI Models documentation" in openai.text
+    assert openai.text.count('target="_blank"') >= 2
+    assert openai.text.count('rel="noopener noreferrer"') >= 2
+
+    page = app_client.get("/settings?section=data-folder")
+    assert "Current folder" in page.text
+    assert 'name="root"' in page.text
+    assert 'href="/data-folder"' not in page.text
+    assert app_client.get("/data-folder", follow_redirects=False).status_code == 303
+    new_root = tmp_path / "selected-data"
+    response = app_client.post(
+        "/settings",
+        data={"settings_section": "data-folder", "root": str(new_root)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert new_root.exists()
+    invalid = app_client.post(
+        "/settings",
+        data={"settings_section": "data-folder", "root": ""},
+        follow_redirects=False,
+    )
+    assert "data_folder_error" in invalid.headers["location"]
+
+
+def test_application_profile_deletion_and_base_resume_exports(
+    app_client: TestClient, session
+):
+    profile_id = _create_profile(app_client)
+    resume_id = _create_resume(app_client, profile_id)
+    response = app_client.post(
+        "/applications/adapt",
+        data={"resume_id": resume_id, "raw_job_text": "Python SQL"},
+        follow_redirects=False,
+    )
+    application_id = int(response.headers["location"].rsplit("/", 1)[1])
+    assert app_client.get("/").text.count('data-chart-bar="1"') == 30
+    delete_response = app_client.post(
+        f"/profiles/{profile_id}/applications/{application_id}/delete",
+        data={"confirm_delete_application": "on"},
+        follow_redirects=False,
+    )
+    assert delete_response.status_code == 303
+    session.expire_all()
+    from app.db.models import Application, PersonProfile
+
+    assert session.get(Application, application_id) is None
+    assert session.get(Resume, resume_id) is not None
+    assert session.get(PersonProfile, profile_id) is not None
+
+    pdf = app_client.post(
+        f"/resumes/{resume_id}/exports", data={"format": "pdf"}, follow_redirects=False
+    )
+    assert pdf.status_code == 303
+    assert pdf.headers["location"].endswith("/exports/pdf/download")
+    assert app_client.get(pdf.headers["location"]).status_code == 200
+    docx = app_client.post(
+        f"/resumes/{resume_id}/exports", data={"format": "docx"}, follow_redirects=False
+    )
+    assert docx.status_code == 303
+    assert app_client.get(docx.headers["location"]).status_code == 200
+    assert app_client.get(f"/resumes/{resume_id}/exports/../download").status_code in {
+        400,
+        404,
+    }
+
+    delete_profile = app_client.post(
+        f"/profiles/{profile_id}/delete",
+        data={"confirm_profile_name": "Alex"},
+        follow_redirects=False,
+    )
+    assert delete_profile.status_code == 303
+    session.expire_all()
+    assert session.get(PersonProfile, profile_id) is None
+
+
+def test_delete_old_applications_scoped_and_prompt_templates_cleanup(
+    app_client: TestClient, session
+):
+    from datetime import UTC, datetime, timedelta
+
+    from app.applications.service import ApplicationService
+    from app.db.models import Application, PersonProfile, PromptTemplate
+    from app.settings.service import SettingsService
+
+    first_profile_id = _create_profile(app_client, "Alex")
+    first_resume_id = _create_resume(app_client, first_profile_id, "Alex CV")
+    second_profile_id = _create_profile(app_client, "Blake")
+    second_resume_id = _create_resume(app_client, second_profile_id, "Blake CV")
+    service = ApplicationService(session)
+    old_app = service.create_application(
+        profile_id=first_profile_id,
+        resume_id=first_resume_id,
+        job_title="Old role",
+        company_name="Acme",
+        source_url="",
+        raw_job_text="Python",
+    )
+    fresh_app = service.create_application(
+        profile_id=first_profile_id,
+        resume_id=first_resume_id,
+        job_title="Fresh role",
+        company_name="Acme",
+        source_url="",
+        raw_job_text="Python",
+    )
+    other_app = service.create_application(
+        profile_id=second_profile_id,
+        resume_id=second_resume_id,
+        job_title="Other role",
+        company_name="Acme",
+        source_url="",
+        raw_job_text="Python",
+    )
+    old_app.created_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=120)
+    session.commit()
+
+    deleted = service.delete_profile_applications(first_profile_id, older_than_days=90)
+    assert deleted == 1
+    assert session.get(Application, old_app.id) is None
+    assert session.get(Application, fresh_app.id) is not None
+    assert session.get(Application, other_app.id) is not None
+
+    SettingsService(session).upsert_scoped_prompt_template(
+        scope="profile",
+        block_type="summary",
+        profile_id=first_profile_id,
+        user_prompt_template="Profile scoped text.",
+    )
+    assert list(
+        session.scalars(
+            select(PromptTemplate).where(PromptTemplate.profile_id == first_profile_id)
+        )
+    )
+    delete_profile = app_client.post(
+        f"/profiles/{first_profile_id}/delete",
+        data={"confirm_profile_name": "Alex"},
+        follow_redirects=False,
+    )
+    assert delete_profile.status_code == 303
+    session.expire_all()
+    assert session.get(PersonProfile, first_profile_id) is None
+    assert session.get(PersonProfile, second_profile_id) is not None
+    assert not list(
+        session.scalars(
+            select(PromptTemplate).where(PromptTemplate.profile_id == first_profile_id)
+        )
+    )

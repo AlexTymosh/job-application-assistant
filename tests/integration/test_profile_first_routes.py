@@ -109,8 +109,9 @@ def test_application_workspace_active_profile_scope_and_events(app_client):
     )
     assert copy_response.status_code == 303
     dashboard = app_client.get("/")
-    assert "Likely applied" in dashboard.text
-    assert "1" in dashboard.text
+    assert "Likely applied" not in dashboard.text
+    assert "Manually marked applied" not in dashboard.text
+    assert "download activity means likely applied" in dashboard.text.lower()
 
     mark_response = app_client.post(
         f"/applications/{application_id}/mark-applied",

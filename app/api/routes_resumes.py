@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse, RedirectResponse
 
 from app.api.dependencies import (
     SessionDep,
@@ -158,6 +158,35 @@ def resume_builder(resume_id: int, request: Request, session: SessionDep):
         "resume_builder.html",
         {"request": request, "resume": ResumeService(session).get_resume(resume_id)},
     )
+
+
+@router.post("/resumes/{resume_id}/exports")
+async def export_base_resume(resume_id: int, request: Request, session: SessionDep):
+    data = await read_form_data(request)
+    export_format = data.get("format", "")
+    ResumeService(session).export_base_resume(
+        resume_id, export_format, get_app_data_root(request)
+    )
+    return RedirectResponse(
+        f"/resumes/{resume_id}/exports/{export_format}/download", status_code=303
+    )
+
+
+@router.get("/resumes/{resume_id}/exports/{export_format}/download")
+def download_base_resume_export(
+    resume_id: int, export_format: str, request: Request, session: SessionDep
+):
+    path = ResumeService(session).get_base_resume_export_path(
+        resume_id, export_format, get_app_data_root(request)
+    )
+    if not path.exists():
+        path = ResumeService(session).export_base_resume(
+            resume_id, export_format, get_app_data_root(request)
+        )
+    root = get_app_data_root(request).resolve()
+    if root not in path.parents and path != root:
+        raise HTTPException(status_code=400, detail="Unsafe resume export path.")
+    return FileResponse(path, filename=path.name)
 
 
 @router.get("/resumes/{resume_id}/sections/new")

@@ -3,7 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
-from app.api.dependencies import SessionDep, read_form_data
+from app.api.dependencies import SessionDep, get_app_data_root, read_form_data
+from app.applications.service import ApplicationService
 from app.db.models import ClaimLevel, PersonProfile
 from app.people.service import PeopleService
 from app.settings.service import SettingsService
@@ -41,8 +42,12 @@ async def create_profile(request: Request, session: SessionDep):
 @router.get("/{profile_id}")
 def profile_detail(profile_id: int, request: Request, session: SessionDep):
     profile = session.get(PersonProfile, profile_id)
+    applications = []
+    if profile is not None:
+        applications = ApplicationService(session).list_applications(profile.id)
     return templates.TemplateResponse(
-        "profile_detail.html", {"request": request, "profile": profile}
+        "profile_detail.html",
+        {"request": request, "profile": profile, "applications": applications},
     )
 
 
@@ -118,3 +123,44 @@ async def create_fact(profile_id: int, request: Request, session: SessionDep):
 def set_active_profile(profile_id: int, session: SessionDep):
     SettingsService(session).set_active_profile(profile_id)
     return RedirectResponse("/", status_code=303)
+
+
+@router.post("/{profile_id}/applications/{application_id}/delete")
+async def delete_application(
+    profile_id: int, application_id: int, request: Request, session: SessionDep
+):
+    data = await read_form_data(request)
+    if data.get("confirm_delete_application") != "on":
+        return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
+    ApplicationService(session).delete_application(
+        application_id, profile_id, app_data_root=get_app_data_root(request)
+    )
+    return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
+
+
+@router.post("/{profile_id}/applications/delete-old")
+async def delete_old_applications(
+    profile_id: int, request: Request, session: SessionDep
+):
+    data = await read_form_data(request)
+    if data.get("confirm_bulk_delete") != "on":
+        return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
+    older_than_days = int(data.get("older_than_days") or 0)
+    older_than_days = older_than_days if older_than_days > 0 else None
+    ApplicationService(session).delete_profile_applications(
+        profile_id,
+        older_than_days=older_than_days,
+        app_data_root=get_app_data_root(request),
+    )
+    return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
+
+
+@router.post("/{profile_id}/delete")
+async def delete_profile(profile_id: int, request: Request, session: SessionDep):
+    data = await read_form_data(request)
+    PeopleService(session).delete_profile(
+        profile_id,
+        confirmation=data.get("confirm_profile_name", ""),
+        app_data_root=get_app_data_root(request),
+    )
+    return RedirectResponse("/profiles", status_code=303)

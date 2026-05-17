@@ -68,3 +68,14 @@ The first usable local release stage is completed for the SQL-first AI JOB APPLI
 - Prompt-template scoping uses named profile/resume/section selectors instead of raw ID-only text fields. Internal safety guardrails remain hidden and non-editable.
 - `/cv-builder` is available as a top-level active-profile workspace with profile/resume empty states and resume selection.
 - Resume builder controls are more compact, duplicate section-type markers were removed, summary and skills blocks avoid irrelevant internal controls, and block edit forms are type-specific.
+
+## Current session polish update
+
+- Fixed repaired SQLite timestamp behaviour by using application-side UTC-naive defaults on timestamped models and avoiding permanent `1970-01-01` defaults when adding missing timestamp columns.
+- Fixed Settings split-form checkbox handling so submitted Export and AI policy sections can save all checkboxes as off while other sections preserve existing values.
+- Updated Dashboard to remove likely/manual applied metric cards and render axes, hover labels, 10/20/30 day ranges, readable date ticks, and the reversed darker-bottom/lighter-top bar gradient.
+- Removed visible “Active profile” header text while keeping an accessible active-profile selector.
+- Moved Data folder management into Settings and changed `/data-folder` to a compatibility redirect.
+- Added profile-scoped application cleanup and strongly confirmed profile deletion.
+- Added base resume PDF/DOCX export and download from CV Builder and the full resume builder.
+- Compactly reduced resume builder card/block visual weight without removing controls.
