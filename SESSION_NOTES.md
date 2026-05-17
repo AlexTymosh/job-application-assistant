@@ -1,83 +1,36 @@
 # Session Notes
 
-## Current stage
+## Current product direction
 
-The first usable local release stage is completed for the SQL-first AI JOB APPLICATION ASSISTANT flow.
+The app has been rebuilt around:
 
-## Changed
+```text
+Profile → Master CV / Extended Experience → Resume Variants → Job Tailoring → Tailored Resume → Export
+```
 
-- Updated the app shell to use the AI JOB APPLICATION ASSISTANT product name and a three-item main menu: Dashboard, Application, and Settings.
-- Added a global active-profile workflow stored in SQLite app settings.
-- Added active-profile display and selection in the header.
-- Made the Dashboard active-profile scoped with resume/application counts, likely-applied metrics, manual applied metrics, recent applications, and a 30-day server-rendered activity chart.
-- Turned Settings into a workspace hub for configuration, AI policies, profiles, CV Builder, facts, prompt templates, and privacy guidance.
-- Added DB-backed prompt-template defaults and editable user instructions with protected safety rules.
-- Added standard resume skeleton creation with Summary, Skills, Work Experience, Education, Languages, Certifications, and References.
-- Improved the CV Builder page around structured sections, blocks, bullets, visibility badges, AI-edit badges, and move controls.
-- Added a streamlined Application workflow that creates an application, extracts requirements, runs tailoring, and generates a cover letter in one Adapt action.
-- Added application review with fit summary, editable tailored proposal text, accepted-edited status support, and editable cover letter storage.
-- Added application events for creation, extraction, snapshots, exports, copy tracking, download tracking, likely applied, and manually marked applied.
-- Preserved the privacy boundary where private contact details are excluded from prompts and snapshots but included at final export time.
-- Expanded tests for active profile, dashboard metrics, prompt templates, standard skeletons, adaptation, copy/download/manual events, and route rendering.
-- Updated user and architecture documentation for the profile-first release.
+The previous user-facing facts/evidence workflow has been removed from the product language. Master CV is the local extended experience source used by AI tailoring; it is not an external fact-checking system.
 
-## Removed
+## Database strategy
 
-- The old product title as the visible application name.
-- Main navigation entries outside Dashboard, Application, and Settings.
-- Global resume/application selection from the main Application workflow; the MVP now uses the active profile by default.
+The app is pre-release, so the local SQLite schema may be reset. Startup now initialises a clean SQL-first schema with Master CV, Master CV entries, Resume Variants, structured resume sections/blocks, Applications, and Tailored Resumes. Old compatibility repair logic for development databases has been removed.
 
-## Remaining risks
+## Resume Builder
 
-- Existing installations that already have an older SQLite schema still need a versioned migration strategy before real user data is relied on.
-- CV Builder editing is intentionally server-rendered and basic; drag-and-drop and richer field-specific forms can be improved later.
-- The fit summary is deterministic in fake mode and intentionally simple; real model integration should add stricter validation before non-fake use.
-- Prompt-template integration is DB-backed and safety-preserving, but deeper per-template model prompt composition should be expanded in a later pass.
-- Copy tracking depends on browser clipboard support; backend fallback forms remain available, but failed clipboard actions may not record events.
+CV Builder is a section-focused workspace with left navigation, central editor, and right live preview. The preview follows a clean blue-heading layout with compact bullets and hidden empty optional sections. Base Resume Variants can be exported as PDF or DOCX without AI.
 
-## Recommended next steps
+## Tailoring
 
-1. Add versioned database migrations before distributing to users with persistent data.
-2. Expand CV Builder edit forms with richer fact-link selection UI.
-3. Add visual diff highlighting for before/after proposal review.
-4. Add export buttons that create snapshots and artifacts in one guided action.
-5. Harden real OpenAI client integration behind deterministic contract tests.
+Application tailoring selects a Resume Variant, loads active Master CV items, adapts allowed fields, saves a Tailored Resume automatically, and then lets the user edit/export. Header and References are excluded from prompt payloads and added back only for rendering/export.
 
-## Current hardening update
+## Guardrails
 
-- Added domain error classes and friendly error rendering for expected workflow failures, HTTP errors, and unexpected exceptions.
-- Hardened active-profile access for facts and application detail/mutation routes.
-- Fixed first-release runtime failures around active-profile facts, Adapt, and approved snapshot creation.
-- Reworked the Settings hub order and made active-profile facts a safe card action.
-- Compactly polished the header, menu, active-profile selector, cards, buttons, textareas, and empty states.
-- Removed Location from profile forms while leaving the legacy database column in place.
-- Added resume metadata editing and optional safe PDF/DOC/DOCX upload storage under app-owned artifacts.
-- Added scoped prompt instructions for global, profile, resume, and section levels while keeping safety guardrails internal and non-editable.
-- Improved CV Builder controls with compact arrow move buttons and section-aware fields, including Work Experience role/company/date/current fields.
-- Updated rendering to hide empty final sections and uppercase rendered section headings.
-- Expanded regression coverage for facts, Adapt, snapshots, active-profile access, uploads, prompt resolution, error pages, work experience, metadata edits, and render behaviour.
+Internal prompt and fake-client guardrails prohibit invented employers, dates, degrees, certificates, metrics, and private contact changes. Tests must use deterministic fake AI and must not touch real OpenAI or the real OS keyring.
 
-## First-release fix-up polish
+## PR #94 fix-up
 
-- Added an explicit idempotent SQLite schema drift repair bridge for older local databases. Startup now creates missing first-release tables through SQLAlchemy metadata and repairs safe missing columns such as `facts.claim`, fact metadata columns, prompt-template scope columns, timestamps, and other SQL-first fields that `create_all()` cannot add to existing SQLite tables.
-- Settings forms now preserve unrelated settings. Locale, OpenAI key/model settings, export formats, and AI policy defaults update only their own submitted section.
-- Resume uploads are validated before resume creation so invalid files do not leave ghost resumes, sections, upload rows, or files. Upload storage remains local reference-only for `.pdf`, `.doc`, and `.docx` files; parsing is not implemented yet.
-- The header now uses Dashboard / Application / CV Builder on the main side, with Settings and the active-profile selector on the right. The GitHub link points to the project repository.
-- Dashboard activity supports 10, 20, and 30 day ranges with server-rendered bars and hover titles containing date/count values.
-- Settings is now a left-menu/right-panel workspace with app configuration, OpenAI/keyring and model settings, exports, AI policy, data-folder guidance, prompt templates, CV Builder, profiles, and privacy notes.
-- Prompt-template scoping uses named profile/resume/section selectors instead of raw ID-only text fields. Internal safety guardrails remain hidden and non-editable.
-- `/cv-builder` is available as a top-level active-profile workspace with profile/resume empty states and resume selection.
-- Resume builder controls are more compact, duplicate section-type markers were removed, summary and skills blocks avoid irrelevant internal controls, and block edit forms are type-specific.
-
-## First-release defect polish after PR #91
-
-- Repaired SQLite timestamp handling now uses Python-side UTC-naive defaults on timestamped models so service-created rows inserted into repaired legacy tables receive current timestamps instead of inheriting frozen `1970-01-01` compatibility defaults. The repair bridge also covers application events, snapshots, cover letters, artifacts, and resume uploads when older tables are missing timestamp columns.
-- Settings split forms use `settings_section` as the update boundary. Export formats and AI policy defaults can now be saved with every checkbox unchecked, while App and OpenAI forms preserve those settings.
-- Dashboard activity now renders a server-side chart with date X-axis labels, count Y-axis labels, 10/20/30 day switching, hover titles, and a darker-bottom/lighter-top bar gradient. The likely-applied and manually-marked-applied metric cards were removed from the Dashboard UI.
-- The header keeps the active-profile selector but removes the visible “Active profile” label; accessibility is preserved with ARIA labels.
-- Settings -> OpenAI external links open in a new tab with `target="_blank"` and `rel="noopener noreferrer"`.
-- Data folder management moved into Settings -> Data folder with current status, path validation/creation, a save action, and a reset-to-default action. `/data-folder` is now a compatibility redirect to `/settings?section=data-folder`.
-- Profile detail pages include application cleanup controls for old or all profile applications. Individual application detail pages include an explicit confirmed delete action. Deletion removes related DB records through cascades and deletes generated artifact files when they are under the app data root.
-- Profile deletion is available from profile pages with typed display-name confirmation. It deletes dependent contacts, facts, resumes, uploads, applications, tailoring data, cover letters, artifact records/files, and profile/resume/section-scoped prompt templates, and clears the active profile if it was deleted.
-- CV Builder and full resume builder pages now provide base resume PDF and DOCX export/download actions that render the current base resume with the private contact layer at final export time without requiring an application or AI call.
-- Resume builder cards were made more compact with lighter section/block styling while preserving edit, add, bullet, move, prompt, and export controls.
+- Hardened profile isolation for application creation, review, export, and download. Applications are never listed globally when no active profile is selected.
+- Restored the Dashboard stats service contract expected by the existing dashboard template, including 10/20/30-day activity ranges.
+- Updated Master CV to use the same builder shell, left navigation, central editor, and right preview style as CV Builder.
+- Removed the raw tailored Markdown editor and added automatic deterministic cover letter generation during adaptation.
+- Wired scoped prompt instructions into tailoring payloads and fake-client capture.
+- Reworked DOCX/PDF exports to render styled resume content without Markdown artifacts and with runtime Unicode font handling for PDFs.

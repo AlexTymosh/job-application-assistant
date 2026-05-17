@@ -1,28 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero">
-  <p class="badge">CV Builder</p>
-  <h1>{{ resume.name }}</h1>
-  <p class="muted">Build structured sections, blocks, bullets, visibility controls, and AI edit policy for {{ resume.profile.display_name }}.</p>
-  <div class="toolbar"><a class="button compact" href="/resumes/{{ resume.id }}/sections/new">Add section</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/blocks/new">Add work experience / education / custom block</a><a class="button compact secondary" href="/resumes/{{ resume.id }}/edit">Edit resume name</a><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/exports"><input type="hidden" name="format" value="pdf"><button class="compact secondary">Download PDF</button></form><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/exports"><input type="hidden" name="format" value="docx"><button class="compact secondary">Download DOCX</button></form></div>
-</section>
-{% for section in resume.sections %}
-  <section class="section-card" data-section-type="{{ section.section_type }}">
-    <div class="section-header-row">
-      <div class="actions"><h2>{{ section.title }}</h2>{% if section.is_visible %}<span class="badge good">visible</span>{% else %}<span class="badge warn">hidden</span>{% endif %}{% if section.ai_edit_enabled %}<span class="badge">AI editable</span>{% endif %}{% if not section.blocks %}<span class="badge warn">empty</span>{% endif %}</div>
-      <div class="toolbar"><a href="/resumes/{{ resume.id }}/sections/{{ section.id }}" title="Edit section" aria-label="Edit section">⋯</a><a href="/settings/prompts?resume_id={{ resume.id }}&section_id={{ section.id }}">Prompt</a><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/sections/{{ section.id }}/move"><input type="hidden" name="direction" value="up"><button class="icon-button ghost" title="Move section up" aria-label="Move section up">↑</button></form><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/sections/{{ section.id }}/move"><input type="hidden" name="direction" value="down"><button class="icon-button ghost" title="Move section down" aria-label="Move section down">↓</button></form></div>
+<div class="builder-shell">
+  <aside class="builder-nav" aria-label="Resume sections">
+    <a class="brand-mini" href="/cv-builder">CV Builder</a>
+    {% for key, title, ai in sections_nav %}
+      <a class="builder-nav-item {% if section_type == key %}active{% endif %}" href="/resumes/{{ resume.id }}/builder/{{ key }}">{{ title }}</a>
+    {% endfor %}
+    <div class="builder-nav-actions">
+      <form method="post" action="/resumes/{{ resume.id }}/export/pdf"><button class="compact" type="submit">PDF</button></form>
+      <form method="post" action="/resumes/{{ resume.id }}/export/docx"><button class="compact secondary" type="submit">DOCX</button></form>
     </div>
-    {% for block in section.blocks %}
-      {% set fixed_block = section.section_type == 'summary' or (section.section_type == 'skills' and block.title in ['Hard Skills', 'Soft Skills']) %}
-      <article class="block-card" data-block-type="{{ block.block_type }}">
-        <div class="section-header-row"><div class="actions"><h3>{{ block.title or block.role_title or block.block_type }}</h3>{% if not block.is_visible %}<span class="badge warn">hidden</span>{% endif %}{% if block.ai_edit_enabled %}<span class="badge">AI editable block</span>{% endif %}</div>{% if not fixed_block %}<div class="toolbar"><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/blocks/{{ block.id }}/move"><input type="hidden" name="direction" value="up"><button class="icon-button ghost" title="Move block up" aria-label="Move block up">↑</button></form><form class="inline-form" method="post" action="/resumes/{{ resume.id }}/blocks/{{ block.id }}/move"><input type="hidden" name="direction" value="down"><button class="icon-button ghost" title="Move block down" aria-label="Move block down">↓</button></form></div>{% endif %}</div>
-        {% if block.role_title or block.organisation or block.location %}<p><strong>{{ block.role_title }}</strong> {{ block.organisation }} {{ block.location }}</p>{% endif %}
-        {% if block.start_date or block.end_date or block.is_current %}<p class="muted">{{ block.start_date }} – {{ "Present" if block.is_current else block.end_date }}</p>{% endif %}
-        {% if block.content %}<p>{{ block.content }}</p>{% endif %}
-        <div class="toolbar"><a href="/resumes/{{ resume.id }}/blocks/{{ block.id }}/edit" title="Edit block" aria-label="Edit block">⋯</a>{% if section.section_type not in ['summary', 'skills'] %}<a href="/resumes/{{ resume.id }}/blocks/{{ block.id }}/bullets/new">Add bullet</a>{% endif %}</div>
-        {% if section.section_type not in ['summary', 'skills'] and block.bullets %}<ul>{% for bullet in block.bullets %}<li><span>{{ bullet.text }}</span> {% if bullet.ai_edit_enabled %}<span class="badge">AI editable bullet</span>{% endif %} {% if bullet.fact_link_required %}<span class="badge warn">fact required</span>{% endif %} <a href="/resumes/{{ resume.id }}/bullets/{{ bullet.id }}/edit" title="Edit bullet" aria-label="Edit bullet">⋯</a> <form class="inline-form" style="display:inline-flex;padding:0;border:0" method="post" action="/resumes/{{ resume.id }}/bullets/{{ bullet.id }}/move"><input type="hidden" name="direction" value="up"><button class="icon-button ghost" title="Move bullet up" aria-label="Move bullet up">↑</button></form><form class="inline-form" style="display:inline-flex;padding:0;border:0" method="post" action="/resumes/{{ resume.id }}/bullets/{{ bullet.id }}/move"><input type="hidden" name="direction" value="down"><button class="icon-button ghost" title="Move bullet down" aria-label="Move bullet down">↓</button></form></li>{% endfor %}</ul>{% endif %}
-      </article>
-    {% else %}<div class="empty-state"><p>Add {{ section.title|lower }}.</p><a class="button compact secondary" href="/resumes/{{ resume.id }}/blocks/new">Add content</a></div>{% endfor %}
+  </aside>
+  <section class="builder-editor">
+    <div class="section-header-row"><div><h1>{{ section.title }}</h1><p class="muted">Editing {{ resume.name }}{% if resume.target_role %} for {{ resume.target_role }}{% endif %}.</p></div><a class="button ghost" href="/resumes/{{ resume.id }}/edit">Variant settings</a></div>
+    <form class="builder-form card" method="post">
+      {% if section_type == "header" %}
+        {% set block = section.blocks[0] if section.blocks else none %}{% set meta = block.metadata_json if block else {} %}
+        <div class="form-grid"><label>First Name<input name="first_name" value="{{ meta.get('first_name','') }}"></label><label>Surname<input name="surname" value="{{ meta.get('surname','') }}"></label></div>
+        <label>Location<input name="location" value="{{ meta.get('location','') }}"></label>
+        <div class="form-grid"><label>Phone<input name="phone" value="{{ meta.get('phone','') }}"></label><label>Email address<input name="email" value="{{ meta.get('email','') }}"></label></div>
+        <label>LinkedIn URL<input name="linkedin_url" value="{{ meta.get('linkedin_url','') }}"></label><label>GitHub URL optional<input name="github_url" value="{{ meta.get('github_url','') }}"></label><label>Extra text optional<input name="extra_text" value="{{ meta.get('extra_text','') }}"></label>
+      {% elif section_type == "summary" %}
+        {% set block = section.blocks[0] if section.blocks else none %}<label>Summary<textarea name="description">{{ block.content if block else '' }}</textarea></label>
+      {% elif section_type == "skills" %}
+        {% set hard = section.blocks|selectattr('title','equalto','Hard Skills')|list %}{% set soft = section.blocks|selectattr('title','equalto','Soft Skills')|list %}
+        <label>Hard Skills<textarea name="hard_skills_text">{{ hard[0].content if hard else '' }}</textarea></label>
+        <label>Soft Skills<textarea name="soft_skills_text">{{ soft[0].content if soft else '' }}</textarea></label>
+      {% elif section_type == "work_experience" %}
+        <div id="repeaters">
+        {% for block in section.blocks + [none] %}
+          <article class="block-card repeating-card">
+            <div class="form-grid"><label>Job title<input name="rows[{{ loop.index0 }}][job_title]" value="{{ block.role_title if block else '' }}"></label><label>Employer<input name="rows[{{ loop.index0 }}][employer]" value="{{ block.organisation if block else '' }}"></label></div>
+            <div class="form-grid"><label>Start Date<input name="rows[{{ loop.index0 }}][start_date]" value="{{ block.start_date if block else '' }}" placeholder="09/2024"></label><label>End Date<input name="rows[{{ loop.index0 }}][end_date]" value="{{ block.end_date if block else '' }}" placeholder="present if current"></label></div>
+            <label class="checkbox-line"><input type="checkbox" name="rows[{{ loop.index0 }}][is_current]" {% if block and block.is_current %}checked{% endif %}> I currently work here</label>
+            <label class="checkbox-line"><input type="checkbox" name="rows[{{ loop.index0 }}][optional_extra_enabled]" {% if block and block.optional_extra_enabled %}checked{% endif %}> Show optional extra text</label>
+            <label>Optional extra text<textarea name="rows[{{ loop.index0 }}][optional_extra_text]">{{ block.optional_extra_text if block else '' }}</textarea></label>
+            <label>Key bullets <span class="muted">AI may edit only this field.</span><textarea name="rows[{{ loop.index0 }}][key_bullets]">{{ block.content if block else '' }}</textarea></label>
+          </article>
+        {% endfor %}
+        </div><p class="muted">Use the empty card to add another experience.</p>
+      {% elif section_type == "education" %}
+        {% for block in section.blocks + [none] %}<article class="block-card"><div class="form-grid"><label>Institution name<input name="rows[{{ loop.index0 }}][institution_name]" value="{{ block.organisation if block else '' }}"></label><label>Specialisation<input name="rows[{{ loop.index0 }}][specialisation]" value="{{ block.role_title if block else '' }}"></label></div><div class="form-grid"><label>Start Date<input name="rows[{{ loop.index0 }}][start_date]" value="{{ block.start_date if block else '' }}"></label><label>End Date<input name="rows[{{ loop.index0 }}][end_date]" value="{{ block.end_date if block else '' }}"></label></div><label class="checkbox-line"><input type="checkbox" name="rows[{{ loop.index0 }}][is_current]" {% if block and block.is_current %}checked{% endif %}> Current</label><label>Key bullets / achievements <span class="muted">AI may edit only this field.</span><textarea name="rows[{{ loop.index0 }}][key_bullets]">{{ block.content if block else '' }}</textarea></label></article>{% endfor %}
+      {% elif section_type == "languages" %}
+        {% for block in section.blocks + [none] %}{% set meta = block.metadata_json if block else {} %}<article class="block-card"><div class="form-grid"><label>Language<input name="rows[{{ loop.index0 }}][language]" value="{{ meta.get('language', block.title if block else '') }}"></label><label>Level<input name="rows[{{ loop.index0 }}][level]" value="{{ meta.get('level', block.subtitle if block else '') }}"></label></div></article>{% endfor %}
+      {% elif section_type == "certificates" %}
+        {% for block in section.blocks + [none] %}{% set meta = block.metadata_json if block else {} %}<article class="block-card"><label>Certificate name<input name="rows[{{ loop.index0 }}][certificate_name]" value="{{ meta.get('certificate_name', block.title if block else '') }}"></label><label>Certificate URL optional<input name="rows[{{ loop.index0 }}][certificate_url]" value="{{ meta.get('certificate_url','') }}"></label><label>Issue year<input name="rows[{{ loop.index0 }}][issue_year]" value="{{ meta.get('issue_year','') }}"></label></article>{% endfor %}
+      {% elif section_type == "references" %}
+        {% for block in section.blocks + [none] %}{% set meta = block.metadata_json if block else {} %}<article class="block-card"><div class="form-grid"><label>Name<input name="rows[{{ loop.index0 }}][name]" value="{{ meta.get('name', block.title if block else '') }}"></label><label>Role title<input name="rows[{{ loop.index0 }}][role_title]" value="{{ meta.get('role_title','') }}"></label></div><label>Company<input name="rows[{{ loop.index0 }}][company]" value="{{ meta.get('company','') }}"></label><div class="form-grid"><label>Phone<input name="rows[{{ loop.index0 }}][phone]" value="{{ meta.get('phone','') }}"></label><label>Email<input name="rows[{{ loop.index0 }}][email]" value="{{ meta.get('email','') }}"></label></div><label>LinkedIn URL optional<input name="rows[{{ loop.index0 }}][linkedin_url]" value="{{ meta.get('linkedin_url','') }}"></label></article>{% endfor %}
+      {% endif %}
+      <div class="actions"><button type="submit">Save CV</button><a class="button secondary" href="/applications/new">Adapt to job</a></div>
+    </form>
   </section>
-{% else %}<div class="empty-state"><p>No sections yet. Add standard CV sections or create sections manually.</p></div>{% endfor %}
+  <aside class="builder-preview"><div class="preview-toolbar"><span>Live preview</span></div>{{ preview_html|safe }}</aside>
+</div>
 {% endblock %}

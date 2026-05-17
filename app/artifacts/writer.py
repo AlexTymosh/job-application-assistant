@@ -6,14 +6,14 @@ from pathlib import Path
 
 from app.artifacts.paths import (
     build_application_artifact_dir,
-    build_evidence_matrix_path,
-    build_evidence_matrix_relative_path,
     build_extracted_job_path,
     build_extracted_job_relative_path,
     build_match_report_path,
     build_match_report_relative_path,
     build_raw_job_text_path,
     build_raw_job_text_relative_path,
+    build_source_summary_path,
+    build_source_summary_relative_path,
     build_tailored_cv_docx_path,
     build_tailored_cv_docx_relative_path,
     build_tailored_cv_html_path,
@@ -166,25 +166,25 @@ class ArtifactWriter:
             ),
         )
 
-    def write_evidence_matrix(
+    def write_source_summary(
         self,
         *,
         artifact_dir_name: str,
-        evidence_matrix_data: list[dict[str, object]],
+        source_summary_data: list[dict[str, object]],
     ) -> WrittenArtifact:
         self.create_application_dir(artifact_dir_name=artifact_dir_name)
-        absolute_path = build_evidence_matrix_path(
+        absolute_path = build_source_summary_path(
             applications_dir=self._applications_dir,
             artifact_dir_name=artifact_dir_name,
         )
         absolute_path.write_text(
-            json.dumps(evidence_matrix_data, ensure_ascii=False, indent=2) + "\n",
+            json.dumps(source_summary_data, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
 
         return WrittenArtifact(
             absolute_path=absolute_path,
-            relative_path=build_evidence_matrix_relative_path(
+            relative_path=build_source_summary_relative_path(
                 artifact_dir_name=artifact_dir_name,
             ),
         )

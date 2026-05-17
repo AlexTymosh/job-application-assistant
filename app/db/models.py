@@ -4,16 +4,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import (
-    Boolean,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-    func,
-)
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -21,66 +12,42 @@ from app.db.base import Base
 
 
 class SectionType(StrEnum):
+    HEADER = "header"
     SUMMARY = "summary"
     SKILLS = "skills"
     WORK_EXPERIENCE = "work_experience"
     EDUCATION = "education"
-    PROJECTS = "projects"
-    CERTIFICATIONS = "certifications"
     LANGUAGES = "languages"
+    CERTIFICATES = "certificates"
     REFERENCES = "references"
     CUSTOM = "custom"
 
 
 class BlockType(StrEnum):
+    HEADER = "header"
     SUMMARY = "summary"
     SKILLS = "skills"
     WORK_EXPERIENCE = "work_experience"
     EDUCATION = "education"
-    PROJECT = "project"
-    DESCRIPTION = "description"
-    TITLE = "title"
+    LANGUAGE = "language"
+    CERTIFICATE = "certificate"
+    REFERENCE = "reference"
     CUSTOM = "custom"
 
 
-class ClaimLevel(StrEnum):
-    DO_NOT_CLAIM = "do_not_claim"
+class ClaimStrength(StrEnum):
     MENTION_ONLY = "mention_only"
-    PRACTICAL = "practical"
+    NORMAL = "normal"
     STRONG = "strong"
-
-
-class ProposalStatus(StrEnum):
-    PROPOSED = "proposed"
-    ACCEPTED = "accepted"
-    ACCEPTED_EDITED = "accepted_edited"
-    REJECTED = "rejected"
-
-
-class ProposalOperation(StrEnum):
-    REWRITE = "rewrite"
-    CREATE = "create"
-    HIDE = "hide"
-    REORDER = "reorder"
-    UPDATE_TITLE = "update_title"
-    UPDATE_SKILLS_SET = "update_skills_set"
+    DO_NOT_CLAIM = "do_not_claim"
 
 
 class ApplicationStatus(StrEnum):
-    DRAFT = "draft"
     JOB_SAVED = "job_saved"
-    REQUIREMENTS_EXTRACTED = "requirements_extracted"
-    TAILORING_READY = "tailoring_ready"
-    TAILORING_PROPOSED = "tailoring_proposed"
-    REVIEW_IN_PROGRESS = "review_in_progress"
-    CHANGES_APPROVED = "changes_approved"
+    TAILORED = "tailored"
     EXPORTED = "exported"
-    COPIED_LIKELY_APPLIED = "copied_likely_applied"
-    DOWNLOADED_LIKELY_APPLIED = "downloaded_likely_applied"
     LIKELY_APPLIED = "likely_applied"
     MANUALLY_MARKED_APPLIED = "manually_marked_applied"
-    COVER_LETTER_GENERATED = "cover_letter_generated"
-    QA_WARNING = "qa_warning"
 
 
 def utc_now_naive() -> datetime:
@@ -111,6 +78,8 @@ class PersonProfile(Base, TimestampMixin):
     __tablename__ = "person_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    first_name: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    surname: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     display_name: Mapped[str] = mapped_column(String(160), nullable=False)
     full_name: Mapped[str] = mapped_column(String(200), default="", nullable=False)
     preferred_name: Mapped[str] = mapped_column(String(120), default="", nullable=False)
@@ -120,10 +89,13 @@ class PersonProfile(Base, TimestampMixin):
     contact: Mapped[ProfileContact | None] = relationship(
         back_populates="profile", cascade="all, delete-orphan"
     )
+    master_cv: Mapped[MasterCV | None] = relationship(
+        back_populates="profile", cascade="all, delete-orphan"
+    )
     resumes: Mapped[list[Resume]] = relationship(
         back_populates="profile", cascade="all, delete-orphan"
     )
-    facts: Mapped[list[Fact]] = relationship(
+    applications: Mapped[list[Application]] = relationship(
         back_populates="profile", cascade="all, delete-orphan"
     )
 
@@ -135,8 +107,14 @@ class ProfileContact(Base, TimestampMixin):
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("person_profiles.id", ondelete="CASCADE"), unique=True
     )
-    email: Mapped[str] = mapped_column(String(254), default="", nullable=False)
+    first_name: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    surname: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    location: Mapped[str] = mapped_column(String(200), default="", nullable=False)
     phone: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    email: Mapped[str] = mapped_column(String(254), default="", nullable=False)
+    linkedin_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    github_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    extra_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
     address_line: Mapped[str] = mapped_column(String(240), default="", nullable=False)
     city: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     country: Mapped[str] = mapped_column(String(120), default="", nullable=False)
@@ -144,6 +122,48 @@ class ProfileContact(Base, TimestampMixin):
     visibility_json: Mapped[Any] = mapped_column(JSON, default=dict, nullable=False)
 
     profile: Mapped[PersonProfile] = relationship(back_populates="contact")
+
+
+class MasterCV(Base, TimestampMixin):
+    __tablename__ = "master_cvs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("person_profiles.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    title: Mapped[str] = mapped_column(String(160), default="Master CV", nullable=False)
+
+    profile: Mapped[PersonProfile] = relationship(back_populates="master_cv")
+    entries: Mapped[list[MasterCVEntry]] = relationship(
+        back_populates="master_cv",
+        cascade="all, delete-orphan",
+        order_by="MasterCVEntry.display_order",
+    )
+
+
+class MasterCVEntry(Base, TimestampMixin):
+    __tablename__ = "master_cv_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    master_cv_id: Mapped[int] = mapped_column(
+        ForeignKey("master_cvs.id", ondelete="CASCADE"), index=True
+    )
+    category: Mapped[str] = mapped_column(
+        String(80), default="work_experience", nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    keywords_json: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
+    allowed_wording: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    forbidden_wording: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    inference_notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    claim_strength: Mapped[str] = mapped_column(
+        String(40), default=ClaimStrength.NORMAL.value, nullable=False
+    )
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    master_cv: Mapped[MasterCV] = relationship(back_populates="entries")
 
 
 class Resume(Base, TimestampMixin):
@@ -180,8 +200,6 @@ class ResumeSection(Base, TimestampMixin):
     ai_edit_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
-    ai_prompt_key: Mapped[str] = mapped_column(String(120), default="", nullable=False)
-    policy_json: Mapped[Any] = mapped_column(JSON, default=dict, nullable=False)
 
     resume: Mapped[Resume] = relationship(back_populates="sections")
     blocks: Mapped[list[ResumeBlock]] = relationship(
@@ -207,133 +225,34 @@ class ResumeBlock(Base, TimestampMixin):
     start_date: Mapped[str] = mapped_column(String(40), default="", nullable=False)
     end_date: Mapped[str] = mapped_column(String(40), default="", nullable=False)
     is_current: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    optional_extra_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    optional_extra_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
     content: Mapped[str] = mapped_column(Text, default="", nullable=False)
     display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     ai_edit_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
-    ai_edit_mode: Mapped[str] = mapped_column(
-        String(80), default="none", nullable=False
-    )
     metadata_json: Mapped[Any] = mapped_column(JSON, default=dict, nullable=False)
-    policy_json: Mapped[Any] = mapped_column(JSON, default=dict, nullable=False)
 
     section: Mapped[ResumeSection] = relationship(back_populates="blocks")
-    bullets: Mapped[list[ResumeBullet]] = relationship(
-        back_populates="block",
-        cascade="all, delete-orphan",
-        order_by="ResumeBullet.display_order",
-    )
-    fact_links: Mapped[list[ResumeBlockFactLink]] = relationship(
-        back_populates="block", cascade="all, delete-orphan"
-    )
-
-
-class ResumeBullet(Base, TimestampMixin):
-    __tablename__ = "resume_bullets"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    block_id: Mapped[int] = mapped_column(
-        ForeignKey("resume_blocks.id", ondelete="CASCADE"), index=True
-    )
-    text: Mapped[str] = mapped_column(Text, nullable=False)
-    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    is_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    ai_edit_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
-    fact_link_required: Mapped[bool] = mapped_column(
-        Boolean, default=True, nullable=False
-    )
-
-    block: Mapped[ResumeBlock] = relationship(back_populates="bullets")
-    fact_links: Mapped[list[ResumeBulletFactLink]] = relationship(
-        back_populates="bullet", cascade="all, delete-orphan"
-    )
-
-
-class SkillItem(Base, TimestampMixin):
-    __tablename__ = "skill_items"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    block_id: Mapped[int] = mapped_column(
-        ForeignKey("resume_blocks.id", ondelete="CASCADE"), index=True
-    )
-    name: Mapped[str] = mapped_column(String(120), nullable=False)
-    category: Mapped[str] = mapped_column(String(120), default="", nullable=False)
-    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-
-
-class Fact(Base, TimestampMixin):
-    __tablename__ = "facts"
-    __table_args__ = (
-        UniqueConstraint("profile_id", "fact_key", name="uq_profile_fact_key"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    profile_id: Mapped[int] = mapped_column(
-        ForeignKey("person_profiles.id", ondelete="CASCADE"), index=True
-    )
-    fact_key: Mapped[str] = mapped_column(String(120), nullable=False)
-    category: Mapped[str] = mapped_column(String(120), default="", nullable=False)
-    claim: Mapped[str] = mapped_column(Text, nullable=False)
-    evidence: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    source: Mapped[str] = mapped_column(String(240), default="", nullable=False)
-    allowed_claim_level: Mapped[str] = mapped_column(
-        String(40), default=ClaimLevel.MENTION_ONLY.value, nullable=False
-    )
-    confidence: Mapped[str] = mapped_column(
-        String(40), default="medium", nullable=False
-    )
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
-    profile: Mapped[PersonProfile] = relationship(back_populates="facts")
-
-
-class ResumeBulletFactLink(Base):
-    __tablename__ = "resume_bullet_fact_links"
-    __table_args__ = (UniqueConstraint("bullet_id", "fact_id", name="uq_bullet_fact"),)
-
-    bullet_id: Mapped[int] = mapped_column(
-        ForeignKey("resume_bullets.id", ondelete="CASCADE"), primary_key=True
-    )
-    fact_id: Mapped[int] = mapped_column(
-        ForeignKey("facts.id", ondelete="CASCADE"), primary_key=True
-    )
-
-    bullet: Mapped[ResumeBullet] = relationship(back_populates="fact_links")
-    fact: Mapped[Fact] = relationship()
-
-
-class ResumeBlockFactLink(Base):
-    __tablename__ = "resume_block_fact_links"
-    __table_args__ = (UniqueConstraint("block_id", "fact_id", name="uq_block_fact"),)
-
-    block_id: Mapped[int] = mapped_column(
-        ForeignKey("resume_blocks.id", ondelete="CASCADE"), primary_key=True
-    )
-    fact_id: Mapped[int] = mapped_column(
-        ForeignKey("facts.id", ondelete="CASCADE"), primary_key=True
-    )
-
-    block: Mapped[ResumeBlock] = relationship(back_populates="fact_links")
-    fact: Mapped[Fact] = relationship()
 
 
 class PromptTemplate(Base, TimestampMixin):
     __tablename__ = "prompt_templates"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    scope: Mapped[str] = mapped_column(String(80), nullable=False)
-    block_type: Mapped[str] = mapped_column(String(80), default="", nullable=False)
-    section_type: Mapped[str] = mapped_column(String(80), default="", nullable=False)
-    name: Mapped[str] = mapped_column(String(160), nullable=False)
-    system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
-    user_prompt_template: Mapped[str] = mapped_column(Text, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     profile_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     resume_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    section_type: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    block_type: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    user_prompt_template: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    scope: Mapped[str] = mapped_column(String(80), default="global", nullable=False)
+    system_prompt: Mapped[str] = mapped_column(Text, default="", nullable=False)
     section_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
 
@@ -364,8 +283,13 @@ class Application(Base, TimestampMixin):
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("person_profiles.id", ondelete="CASCADE"), index=True
     )
-    resume_id: Mapped[int] = mapped_column(
+    base_resume_id: Mapped[int] = mapped_column(
         ForeignKey("resumes.id", ondelete="CASCADE"), index=True
+    )
+    tailored_resume_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tailored_resumes.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     application_number: Mapped[int] = mapped_column(
         Integer, nullable=False, unique=True
@@ -378,16 +302,35 @@ class Application(Base, TimestampMixin):
         String(60), default=ApplicationStatus.JOB_SAVED.value, nullable=False
     )
 
-    profile: Mapped[PersonProfile] = relationship()
-    resume: Mapped[Resume] = relationship()
-    requirements: Mapped[list[ExtractedJobRequirement]] = relationship(
-        back_populates="application", cascade="all, delete-orphan"
+    profile: Mapped[PersonProfile] = relationship(back_populates="applications")
+    base_resume: Mapped[Resume] = relationship()
+    tailored_resume: Mapped[TailoredResume | None] = relationship(
+        primaryjoin="Application.tailored_resume_id == TailoredResume.id",
+        foreign_keys="Application.tailored_resume_id",
+        post_update=True,
     )
     events: Mapped[list[ApplicationEvent]] = relationship(
         back_populates="application",
         cascade="all, delete-orphan",
         order_by="ApplicationEvent.created_at",
     )
+
+
+class TailoredResume(Base, TimestampMixin):
+    __tablename__ = "tailored_resumes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("person_profiles.id", ondelete="CASCADE"), index=True
+    )
+    base_resume_id: Mapped[int] = mapped_column(
+        ForeignKey("resumes.id", ondelete="CASCADE"), index=True
+    )
+    content_json: Mapped[Any] = mapped_column(JSON, nullable=False)
+    rendered_markdown: Mapped[str] = mapped_column(Text, nullable=False)
 
 
 class ApplicationEvent(Base):
@@ -405,99 +348,6 @@ class ApplicationEvent(Base):
     )
 
     application: Mapped[Application] = relationship(back_populates="events")
-
-
-class ExtractedJobRequirement(Base):
-    __tablename__ = "extracted_job_requirements"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    application_id: Mapped[int] = mapped_column(
-        ForeignKey("applications.id", ondelete="CASCADE"), index=True
-    )
-    requirement_type: Mapped[str] = mapped_column(String(80), nullable=False)
-    text: Mapped[str] = mapped_column(Text, nullable=False)
-    keywords_json: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
-    priority: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
-    )
-
-    application: Mapped[Application] = relationship(back_populates="requirements")
-
-
-class TailoringRun(Base):
-    __tablename__ = "tailoring_runs"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    application_id: Mapped[int] = mapped_column(
-        ForeignKey("applications.id", ondelete="CASCADE"), index=True
-    )
-    resume_id: Mapped[int] = mapped_column(
-        ForeignKey("resumes.id", ondelete="CASCADE"), index=True
-    )
-    status: Mapped[str] = mapped_column(String(60), default="proposed", nullable=False)
-    model: Mapped[str] = mapped_column(
-        String(120), default="fake-deterministic", nullable=False
-    )
-    warnings_json: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
-
-    proposals: Mapped[list[AiChangeProposal]] = relationship(
-        back_populates="tailoring_run", cascade="all, delete-orphan"
-    )
-
-
-class AiChangeProposal(Base):
-    __tablename__ = "ai_change_proposals"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    tailoring_run_id: Mapped[int] = mapped_column(
-        ForeignKey("tailoring_runs.id", ondelete="CASCADE"), index=True
-    )
-    target_type: Mapped[str] = mapped_column(String(80), nullable=False)
-    target_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    operation: Mapped[str] = mapped_column(String(60), nullable=False)
-    before_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    after_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    risk_level: Mapped[str] = mapped_column(String(40), default="low", nullable=False)
-    requirement_ids_json: Mapped[Any] = mapped_column(
-        JSON, default=list, nullable=False
-    )
-    fact_ids_json: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
-    warning_codes_json: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(40), default=ProposalStatus.PROPOSED.value, nullable=False
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
-    )
-    decided_at: Mapped[datetime | None] = mapped_column(DateTime)
-
-    tailoring_run: Mapped[TailoringRun] = relationship(back_populates="proposals")
-
-
-class TailoredResumeSnapshot(Base):
-    __tablename__ = "tailored_resume_snapshots"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    application_id: Mapped[int] = mapped_column(
-        ForeignKey("applications.id", ondelete="CASCADE"), index=True
-    )
-    resume_id: Mapped[int] = mapped_column(
-        ForeignKey("resumes.id", ondelete="CASCADE"), index=True
-    )
-    tailoring_run_id: Mapped[int] = mapped_column(
-        ForeignKey("tailoring_runs.id", ondelete="CASCADE"), index=True
-    )
-    content_json: Mapped[Any] = mapped_column(JSON, nullable=False)
-    rendered_markdown: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
-    )
 
 
 class CoverLetter(Base, TimestampMixin):

@@ -2,21 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import delete, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.errors import NotFoundError, ValidationAppError
-from app.db.models import (
-    Application,
-    Artifact,
-    Fact,
-    PersonProfile,
-    ProfileContact,
-    PromptTemplate,
-    Resume,
-    ResumeSection,
-    ResumeUpload,
-)
+from app.db.models import MasterCV, MasterCVEntry, PersonProfile, ProfileContact
 
 
 class PeopleService:
@@ -30,14 +20,38 @@ class PeopleService:
             )
         )
 
-    def create_profile(
-        self, display_name: str, full_name: str = "", location: str = ""
-    ) -> PersonProfile:
-        profile = PersonProfile(
-            display_name=display_name, full_name=full_name, location=location
+    def get_profile(self, profile_id: int) -> PersonProfile:
+        profile = self.session.scalar(
+            select(PersonProfile)
+            .where(PersonProfile.id == profile_id)
+            .options(
+                selectinload(PersonProfile.contact),
+                selectinload(PersonProfile.master_cv).selectinload(MasterCV.entries),
+            )
         )
-        profile.contact = ProfileContact()
+        if profile is None:
+            raise NotFoundError("Profile not found.")
+        return profile
+
+    def create_profile(
+        self, display_name: str, full_name: str = "", preferred_name: str = ""
+    ) -> PersonProfile:
+        first_name, surname = _split_name(full_name or display_name)
+        profile = PersonProfile(
+            display_name=display_name.strip() or full_name.strip() or "Profile",
+            full_name=full_name.strip(),
+            preferred_name=preferred_name.strip(),
+            first_name=first_name,
+            surname=surname,
+        )
         self.session.add(profile)
+        self.session.flush()
+        self.session.add(
+            ProfileContact(
+                profile_id=profile.id, first_name=first_name, surname=surname
+            )
+        )
+        self.session.add(MasterCV(profile_id=profile.id, title="Master CV"))
         self.session.commit()
         return profile
 
@@ -46,118 +60,137 @@ class PeopleService:
         profile_id: int,
         *,
         display_name: str,
-        full_name: str,
-        preferred_name: str,
-        location: str,
-        email: str,
-        phone: str,
-        address_line: str,
-        city: str,
-        country: str,
+        full_name: str = "",
+        preferred_name: str = "",
+        location: str = "",
+        email: str = "",
+        phone: str = "",
+        address_line: str = "",
+        city: str = "",
+        country: str = "",
+        linkedin_url: str = "",
+        github_url: str = "",
+        extra_text: str = "",
     ) -> PersonProfile:
-        profile = self.session.get(PersonProfile, profile_id)
-        if profile is None:
-            raise ValueError("Profile not found.")
-        profile.display_name = display_name
-        profile.full_name = full_name
-        profile.preferred_name = preferred_name
-        profile.location = location
-        if profile.contact is None:
-            profile.contact = ProfileContact(profile_id=profile.id)
-        profile.contact.email = email
-        profile.contact.phone = phone
-        profile.contact.address_line = address_line
-        profile.contact.city = city
-        profile.contact.country = country
+        profile = self.get_profile(profile_id)
+        first_name, surname = _split_name(full_name or display_name)
+        profile.display_name = display_name.strip() or profile.display_name
+        profile.full_name = full_name.strip()
+        profile.preferred_name = preferred_name.strip()
+        profile.first_name = first_name
+        profile.surname = surname
+        profile.location = location.strip() or profile.location
+        contact = profile.contact or ProfileContact(profile_id=profile.id)
+        contact.first_name = first_name
+        contact.surname = surname
+        contact.location = location.strip() or ", ".join(
+            part for part in [city, country] if part
+        )
+        contact.email = email.strip()
+        contact.phone = phone.strip()
+        contact.address_line = address_line.strip()
+        contact.city = city.strip()
+        contact.country = country.strip()
+        contact.linkedin_url = linkedin_url.strip()
+        contact.github_url = github_url.strip()
+        contact.extra_text = extra_text.strip()
+        self.session.add(contact)
         self.session.commit()
         return profile
 
-    def create_fact(
+    def get_or_create_master_cv(self, profile_id: int) -> MasterCV:
+        profile = self.get_profile(profile_id)
+        if profile.master_cv is not None:
+            return profile.master_cv
+        master_cv = MasterCV(profile_id=profile.id, title="Master CV")
+        self.session.add(master_cv)
+        self.session.commit()
+        return master_cv
+
+    def list_master_entries(self, profile_id: int) -> list[MasterCVEntry]:
+        master_cv = self.get_or_create_master_cv(profile_id)
+        return list(
+            self.session.scalars(
+                select(MasterCVEntry)
+                .where(MasterCVEntry.master_cv_id == master_cv.id)
+                .order_by(MasterCVEntry.display_order, MasterCVEntry.id)
+            )
+        )
+
+    def create_master_entry(
         self,
         profile_id: int,
         *,
-        fact_key: str,
         category: str,
-        claim: str,
-        evidence: str,
-        source: str,
-        allowed_claim_level: str,
-    ) -> Fact:
-        fact = Fact(
-            profile_id=profile_id,
-            fact_key=fact_key,
-            category=category,
-            claim=claim,
-            evidence=evidence,
-            source=source,
-            allowed_claim_level=allowed_claim_level,
+        title: str,
+        content: str,
+        keywords: str = "",
+        allowed_wording: str = "",
+        forbidden_wording: str = "",
+        inference_notes: str = "",
+        claim_strength: str = "normal",
+    ) -> MasterCVEntry:
+        master_cv = self.get_or_create_master_cv(profile_id)
+        display_order = len(master_cv.entries) * 10 + 10
+        entry = MasterCVEntry(
+            master_cv_id=master_cv.id,
+            category=category.strip() or "work_experience",
+            title=title.strip(),
+            content=content.strip(),
+            keywords_json=[
+                item.strip() for item in keywords.split(",") if item.strip()
+            ],
+            allowed_wording=allowed_wording.strip(),
+            forbidden_wording=forbidden_wording.strip(),
+            inference_notes=inference_notes.strip(),
+            claim_strength=claim_strength,
+            display_order=display_order,
         )
-        self.session.add(fact)
+        self.session.add(entry)
         self.session.commit()
-        return fact
+        return entry
 
-    def list_facts(self, profile_id: int) -> list[Fact]:
-        return list(
-            self.session.scalars(
-                select(Fact)
-                .where(Fact.profile_id == profile_id)
-                .order_by(Fact.fact_key)
-            )
-        )
-
-    def delete_profile(
-        self, profile_id: int, app_data_root: Path | None = None
-    ) -> None:
-        profile = self.session.get(PersonProfile, profile_id)
-        if profile is None:
-            raise NotFoundError("Profile not found.")
-        if app_data_root is not None:
-            self._delete_profile_files(profile_id, app_data_root)
-        resume_ids = [resume.id for resume in profile.resumes]
-        section_ids = list(
-            self.session.scalars(
-                select(ResumeSection.id).where(ResumeSection.resume_id.in_(resume_ids))
-            )
-        )
-        prompt_conditions = [PromptTemplate.profile_id == profile_id]
-        if resume_ids:
-            prompt_conditions.append(PromptTemplate.resume_id.in_(resume_ids))
-        if section_ids:
-            prompt_conditions.append(PromptTemplate.section_id.in_(section_ids))
-        self.session.execute(delete(PromptTemplate).where(or_(*prompt_conditions)))
-        self.session.delete(profile)
+    def update_master_entry(self, entry_id: int, **values: str) -> MasterCVEntry:
+        entry = self.session.get(MasterCVEntry, entry_id)
+        if entry is None:
+            raise NotFoundError("Master CV entry not found.")
+        for field in [
+            "category",
+            "title",
+            "content",
+            "allowed_wording",
+            "forbidden_wording",
+            "inference_notes",
+            "claim_strength",
+        ]:
+            if field in values:
+                setattr(entry, field, values[field].strip())
+        if "keywords" in values:
+            entry.keywords_json = [
+                item.strip() for item in values["keywords"].split(",") if item.strip()
+            ]
         self.session.commit()
+        return entry
 
     def require_delete_confirmation(self, profile_id: int, confirmation: str) -> None:
-        profile = self.session.get(PersonProfile, profile_id)
-        if profile is None:
-            raise NotFoundError("Profile not found.")
+        profile = self.get_profile(profile_id)
         if confirmation.strip() != profile.display_name:
             raise ValidationAppError(
                 "Type the profile display name to confirm deletion."
             )
 
-    def _delete_profile_files(self, profile_id: int, app_data_root: Path) -> None:
-        root = app_data_root.resolve()
-        resume_ids = select(Resume.id).where(Resume.profile_id == profile_id)
-        application_ids = select(Application.id).where(
-            Application.profile_id == profile_id
-        )
-        uploads = list(
-            self.session.scalars(
-                select(ResumeUpload).where(ResumeUpload.resume_id.in_(resume_ids))
-            )
-        )
-        artifacts = list(
-            self.session.scalars(
-                select(Artifact).where(Artifact.application_id.in_(application_ids))
-            )
-        )
-        relative_paths = [
-            *(item.relative_path for item in uploads),
-            *(item.relative_path for item in artifacts),
-        ]
-        for relative_path in relative_paths:
-            path = (root / relative_path).resolve()
-            if root in path.parents and path.exists():
-                path.unlink()
+    def delete_profile(
+        self, profile_id: int, app_data_root: Path | None = None
+    ) -> None:
+        profile = self.get_profile(profile_id)
+        self.session.delete(profile)
+        self.session.commit()
+
+
+def _split_name(value: str) -> tuple[str, str]:
+    parts = value.strip().split()
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], " ".join(parts[1:])

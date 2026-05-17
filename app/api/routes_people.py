@@ -4,12 +4,26 @@ from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
 from app.api.dependencies import SessionDep, get_app_data_root, read_form_data
-from app.db.models import ClaimLevel, PersonProfile
+from app.db.models import ClaimStrength
 from app.people.service import PeopleService
 from app.settings.service import SettingsService
 from app.web.templating import templates
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
+
+MASTER_CV_CATEGORIES = [
+    ("header", "Header / Contact"),
+    ("summary", "Summary source"),
+    ("skill", "Skills source"),
+    ("work_experience", "Work Experience"),
+    ("education", "Education"),
+    ("project", "Projects"),
+    ("tool", "Tools"),
+    ("certificate", "Certificates"),
+    ("language", "Languages"),
+    ("reference", "Private references"),
+    ("instruction", "Instructions"),
+]
 
 
 @router.get("")
@@ -31,7 +45,7 @@ def new_profile(request: Request):
 async def create_profile(request: Request, session: SessionDep):
     data = await read_form_data(request)
     profile = PeopleService(session).create_profile(
-        data["display_name"], data.get("full_name", ""), ""
+        data["display_name"], data.get("full_name", ""), data.get("preferred_name", "")
     )
     if SettingsService(session).get_active_profile() is None:
         SettingsService(session).set_active_profile(profile.id)
@@ -40,9 +54,9 @@ async def create_profile(request: Request, session: SessionDep):
 
 @router.get("/{profile_id}")
 def profile_detail(profile_id: int, request: Request, session: SessionDep):
-    profile = session.get(PersonProfile, profile_id)
     return templates.TemplateResponse(
-        "profile_detail.html", {"request": request, "profile": profile}
+        "profile_detail.html",
+        {"request": request, "profile": PeopleService(session).get_profile(profile_id)},
     )
 
 
@@ -50,7 +64,7 @@ def profile_detail(profile_id: int, request: Request, session: SessionDep):
 def edit_profile(profile_id: int, request: Request, session: SessionDep):
     return templates.TemplateResponse(
         "profile_form.html",
-        {"request": request, "profile": session.get(PersonProfile, profile_id)},
+        {"request": request, "profile": PeopleService(session).get_profile(profile_id)},
     )
 
 
@@ -62,56 +76,69 @@ async def update_profile(profile_id: int, request: Request, session: SessionDep)
         display_name=data["display_name"],
         full_name=data.get("full_name", ""),
         preferred_name=data.get("preferred_name", ""),
-        location="",
+        location=data.get("location", ""),
         email=data.get("email", ""),
         phone=data.get("phone", ""),
         address_line=data.get("address_line", ""),
         city=data.get("city", ""),
         country=data.get("country", ""),
+        linkedin_url=data.get("linkedin_url", ""),
+        github_url=data.get("github_url", ""),
+        extra_text=data.get("extra_text", ""),
     )
     return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
 
 
-@router.get("/{profile_id}/facts")
-def facts(profile_id: int, request: Request, session: SessionDep):
+@router.get("/{profile_id}/master-cv")
+def master_cv_default(profile_id: int):
+    return RedirectResponse(
+        f"/profiles/{profile_id}/master-cv/work_experience", status_code=303
+    )
+
+
+@router.get("/{profile_id}/master-cv/{category}")
+def master_cv(profile_id: int, category: str, request: Request, session: SessionDep):
+    service = PeopleService(session)
+    entries = service.list_master_entries(profile_id)
+    valid_categories = {key for key, _title in MASTER_CV_CATEGORIES}
+    current_category = category if category in valid_categories else "work_experience"
     return templates.TemplateResponse(
-        "facts.html",
+        "master_cv.html",
         {
             "request": request,
-            "profile_id": profile_id,
-            "active_profile": session.get(PersonProfile, profile_id),
-            "facts": PeopleService(session).list_facts(profile_id),
+            "profile": service.get_profile(profile_id),
+            "entries": entries,
+            "current_entries": [
+                entry for entry in entries if entry.category == current_category
+            ],
+            "category_nav": MASTER_CV_CATEGORIES,
+            "current_category": current_category,
+            "current_title": dict(MASTER_CV_CATEGORIES)[current_category],
+            "strengths": [item.value for item in ClaimStrength],
         },
     )
 
 
-@router.get("/{profile_id}/facts/new")
-def new_fact(profile_id: int, request: Request):
-    return templates.TemplateResponse(
-        "fact_form.html",
-        {
-            "request": request,
-            "profile_id": profile_id,
-            "levels": [level.value for level in ClaimLevel],
-        },
-    )
-
-
-@router.post("/{profile_id}/facts/new")
-async def create_fact(profile_id: int, request: Request, session: SessionDep):
+@router.post("/{profile_id}/master-cv")
+async def create_master_cv_entry(
+    profile_id: int, request: Request, session: SessionDep
+):
     data = await read_form_data(request)
-    PeopleService(session).create_fact(
+    PeopleService(session).create_master_entry(
         profile_id,
-        fact_key=data["fact_key"],
-        category=data.get("category", ""),
-        claim=data["claim"],
-        evidence=data.get("evidence", ""),
-        source=data.get("source", ""),
-        allowed_claim_level=data.get(
-            "allowed_claim_level", ClaimLevel.MENTION_ONLY.value
-        ),
+        category=data.get("category", "work_experience"),
+        title=data.get("title", ""),
+        content=data.get("content", ""),
+        keywords=data.get("keywords", ""),
+        allowed_wording=data.get("allowed_wording", ""),
+        forbidden_wording=data.get("forbidden_wording", ""),
+        inference_notes=data.get("inference_notes", ""),
+        claim_strength=data.get("claim_strength", ClaimStrength.NORMAL.value),
     )
-    return RedirectResponse(f"/profiles/{profile_id}/facts", status_code=303)
+    return RedirectResponse(
+        f"/profiles/{profile_id}/master-cv/{data.get('category', 'work_experience')}",
+        status_code=303,
+    )
 
 
 @router.post("/{profile_id}/set-active")
@@ -127,16 +154,10 @@ async def delete_profile_applications(
     from app.applications.service import ApplicationService
 
     data = await read_form_data(request)
-    if data.get("confirm_delete_applications") != "on":
-        return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
-    older_than_days = None
-    if data.get("delete_mode") == "older-than":
-        older_than_days = int(data.get("older_than_days") or "0")
-    ApplicationService(session).delete_profile_applications(
-        profile_id,
-        older_than_days=older_than_days,
-        app_data_root=get_app_data_root(request),
-    )
+    if data.get("confirm_delete_applications") == "on":
+        ApplicationService(session).delete_profile_applications(
+            profile_id, app_data_root=get_app_data_root(request)
+        )
     return RedirectResponse(f"/profiles/{profile_id}", status_code=303)
 
 

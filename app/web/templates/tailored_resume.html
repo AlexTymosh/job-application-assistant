@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero-card"><h1>Tailored Resume</h1><p>The app saved this job-specific resume automatically. Review the tailored resume, cover letter, and export when ready.</p></section>
+<section class="compare">
+  <article class="card"><h2>Base Resume Variant</h2>{{ base_preview_html|safe }}</article>
+  <article class="card"><h2>Tailored Resume Preview</h2>{{ tailored_preview_html|safe }}</article>
+</section>
+{% if tailored %}
+<section class="card">
+  <h2>Cover Letter</h2>
+  {% if cover_letter %}
+    <div id="cover-letter-content" class="before">{{ cover_letter.content }}</div>
+    <div class="actions">
+      <button class="secondary" type="button" data-copy-target="#cover-letter-content">Copy cover letter</button>
+      <a class="button ghost" href="/applications/{{ application.id }}/cover-letter/download">Download cover letter TXT</a>
+    </div>
+  {% else %}
+    <p class="empty">No cover letter has been generated yet.</p>
+  {% endif %}
+</section>
+<div class="actions card">
+  <form method="post" action="/applications/{{ application.id }}/tailored-resume/export/pdf"><button type="submit">Download resume PDF</button></form>
+  <form method="post" action="/applications/{{ application.id }}/tailored-resume/export/docx"><button class="secondary" type="submit">Download resume DOCX</button></form>
+</div>
+{% endif %}
+{% endblock %}

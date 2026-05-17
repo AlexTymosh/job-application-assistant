@@ -4,12 +4,12 @@ Stable instructions for agents working on this local FastAPI/Jinja2 application.
 
 ## Product direction
 
-The product is AI JOB APPLICATION ASSISTANT: a local-first Resume Builder and AI Tailoring assistant. SQLite is the source of truth for user-managed data. YAML and Markdown are not runtime sources of truth. Markdown may exist only as an optional export format.
+The product is AI JOB APPLICATION ASSISTANT: a local-first CV Builder and AI Tailoring assistant. SQLite is the source of truth for user-managed data. YAML and Markdown are not runtime sources of truth. Markdown may exist only as an optional export/rendering format.
 
 The core flow is:
 
 ```text
-Active profile -> structured resume -> job description -> extracted requirements -> structured AI change proposals -> human review/edit -> approved snapshot -> private contact layer at render time -> PDF/DOCX export and cover letter -> copy/download/manual tracking
+Profile -> Master CV / Extended Experience -> Resume Variants -> Job Application -> AI tailoring -> saved Tailored Resume -> PDF/DOCX export
 ```
 
 The application is not an auto-apply bot. Do not add automatic applications, LinkedIn automation, email sending, broad job scraping, cloud multi-user auth, payments, fake ATS scores, or hidden background submissions.
@@ -20,18 +20,20 @@ The application is not an auto-apply bot. Do not add automatic applications, Lin
 - Keep routes thin: routes call services; services call repositories, SQLAlchemy models, LLM clients, exporters, or artifact boundaries.
 - Store all normal product data in one app-level SQLite database under the selected app data folder.
 - Store the active profile as app-level SQLite settings and validate that it points to an existing `PersonProfile`.
-- Dashboard and Application are scoped to the active profile. Settings remains available without an active profile.
+- Dashboard, Application, CV Builder, Master CV, and Resume Variants are scoped to the active profile. Settings remains available without an active profile.
 - Store OpenAI API keys through the OS keyring boundary, never in SQLite and never in templates.
 - Tests must not call real OpenAI and must not touch the real OS keyring.
 - Private contact details must be excluded from AI prompt builders by default.
 - Private contact details are added only during final rendering/export.
-- AI tailoring must return structured proposals only. Never apply LLM output directly to the base resume.
-- Every proposal must go through review and be accepted, accepted as edited, or rejected before final export.
-- Prompt-template user instructions must never override protected safety rules: no fabrication, untrusted job posting, private contact exclusion, and structured output.
+- Master CV is the user's local extended experience source. It is not external fact-checking.
+- AI tailoring uses the selected Resume Variant as the base and Master CV as source material.
+- AI must not invent employers, dates, degrees, certificates, education, metrics, or private contact data.
+- AI may edit Summary, Skills, Work Experience key bullets, and Education achievements by default.
+- Header, Languages, Certificates, and References are not AI-editable by default.
+- Prompt-template user instructions must never override internal safety rules.
 - Copy/download means likely applied only. Do not claim definite submission unless the user manually marks the application as applied.
-- Export uses approved snapshot content and adds private contact data only during final rendering/export.
-- Fact links are configurable. When required, AI must not strengthen claims without active verified facts.
-- If schema changes, keep deterministic initialisation or migrations explicit, idempotent, tested, and documented.
+- Export uses base Resume Variant or saved Tailored Resume content and adds private contact data only during final rendering/export.
+- If schema changes, keep deterministic initialisation explicit, idempotent, tested, and documented. The app is pre-release, so old development databases may be deleted/recreated instead of migrated.
 
 ## Required reading before tasks
 
@@ -63,29 +65,16 @@ Use emoji plus conventional commit style:
 - optional detail
 ```
 
-## First-release implementation notes
+## Current first-release notes
 
-- Use `app/core/errors.py` domain errors for expected user-facing workflow failures instead of bare `ValueError` in new code.
-- Keep prompt safety guardrails internal to prompt builders; do not expose protected rules as editable UI fields.
-- Resume uploads are local artifacts only and must not be sent to AI automatically.
-- Empty builder sections should guide the user, but empty final render/export sections should be hidden.
+- The old user-facing facts/evidence workflow has been replaced with Master CV / Extended Experience terminology.
+- Startup initialises a clean SQL-first schema; legacy development schema repair code is intentionally removed.
+- CV Builder uses a left-navigation, central-editor, right-preview layout.
+- Base Resume Variant and Tailored Resume PDF/DOCX exports are available without automatic job submission.
 
-## First-release fix-up notes
+## PR #94 fix-up notes
 
-- Startup includes an explicit idempotent SQLite schema repair bridge for older local MVP databases. It creates missing model tables via metadata and repairs safe missing columns, including fact claim/evidence metadata and prompt-template scope columns.
-- The active profile remains the workflow boundary for Dashboard, Application, CV Builder, resumes, and facts. Settings remains accessible without an active profile.
-- Header navigation is Dashboard / Application / CV Builder, with Settings and the active-profile selector on the right. The project link points to `https://github.com/AlexTymosh/job-application-assistant`.
-- Dashboard activity supports 10, 20, and 30 day ranges with hoverable server-rendered count bars.
-- Settings uses a left-menu/right-panel layout. OpenAI API keys are stored in OS keyring only; model IDs are configurable SQLite/env settings, not secrets. Data-folder selection uses path input/validation because a native folder picker is not available in this server-rendered local UI.
-- Prompt instructions are scoped by selected global/profile/resume/section objects instead of raw ID-only typing. Protected prompt guardrails stay internal and non-editable.
-- Resume uploads are local reference artifacts for PDF/DOC/DOCX only and are validated before resume creation. Uploaded resume parsing remains out of scope for the first release.
-- Resume Builder uses compact controls and type-specific block forms. Summary and skills avoid irrelevant move/sub-block controls; work experience uses month fields for CV periods.
-
-## Current first-release polish notes
-
-- Dashboard chart UI now includes date/count axes and no likely/manual applied metric cards; keep future Dashboard changes aligned with active-profile scoping.
-- Data folder management lives in Settings -> Data folder; `/data-folder` should remain a compatibility redirect unless a deliberate migration plan changes it.
-- Settings split checkbox forms must treat the submitted `settings_section` as the source of truth so users can save all checkboxes off.
-- Repaired SQLite databases rely on Python-side timestamp defaults for new app-created rows; do not reintroduce permanent frozen timestamp behaviour for future inserts.
-- Base resume PDF/DOCX exports are generated from CV Builder/resume builder without requiring an application and must not call AI.
-- Application/profile deletion must stay explicit, confirmed, profile-scoped, and local-first; never delete resumes/profiles as a side effect of application cleanup.
+- Keep application routes active-profile scoped. Never load, adapt, export, or download applications across profiles.
+- Master CV should visually follow the CV Builder layout. Do not reintroduce a generic admin-card layout for Extended Experience.
+- Tailored Resume review shows generated cover letter output, not raw Markdown editing.
+- Styled DOCX/PDF export should be generated from structured resume content where possible.

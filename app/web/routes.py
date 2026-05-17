@@ -15,11 +15,11 @@ router = APIRouter()
 def dashboard(request: Request, session: SessionDep, days: int = 30):
     settings = SettingsService(session)
     active_profile = settings.get_active_profile()
-    stats = None
-    if active_profile is not None:
-        stats = ApplicationService(session).dashboard_stats(
-            active_profile.id, days=days
-        )
+    stats = (
+        ApplicationService(session).dashboard_stats(active_profile.id, days=days)
+        if active_profile
+        else None
+    )
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -35,18 +35,13 @@ def dashboard(request: Request, session: SessionDep, days: int = 30):
 def cv_builder(request: Request, session: SessionDep, resume_id: int | None = None):
     settings = SettingsService(session)
     active_profile = settings.get_active_profile()
-    resumes = []
-    selected_resume = None
-    if active_profile is not None:
-        service = ResumeService(session)
-        resumes = service.list_resumes(active_profile.id)
-        if resumes:
-            selected_id = resume_id or resumes[0].id
-            selected_resume = next(
-                (resume for resume in resumes if resume.id == selected_id), None
-            )
-            if selected_resume is None:
-                selected_resume = resumes[0]
+    resumes = (
+        ResumeService(session).list_resumes(active_profile.id) if active_profile else []
+    )
+    selected_resume = next(
+        (resume for resume in resumes if resume.id == resume_id),
+        resumes[0] if resumes else None,
+    )
     return templates.TemplateResponse(
         "cv_builder.html",
         {
