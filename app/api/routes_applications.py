@@ -108,14 +108,6 @@ def tailored_resume(application_id: int, request: Request, session: SessionDep):
     )
 
 
-@router.post("/{application_id}/tailored-resume")
-async def save_tailored_resume(application_id: int, session: SessionDep):
-    _guarded_application(application_id, session)
-    return RedirectResponse(
-        f"/applications/{application_id}/tailored-resume", status_code=303
-    )
-
-
 @router.post("/{application_id}/tailored-resume/export/pdf")
 def export_tailored_resume_pdf(
     application_id: int, request: Request, session: SessionDep

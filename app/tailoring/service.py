@@ -11,6 +11,11 @@ from app.settings.service import SettingsService
 
 AI_EDITABLE_SECTIONS = {"summary", "skills", "work_experience", "education"}
 PRIVATE_SECTIONS = {"header", "references"}
+PRIVATE_MASTER_CV_CATEGORIES = {
+    "header",
+    "reference",
+    "references",
+}
 
 
 @dataclass
@@ -96,19 +101,9 @@ class TailoringService:
         return TailoringPayload(
             base_resume=base_content,
             master_cv_items=[
-                {
-                    "id": item.id,
-                    "category": item.category,
-                    "title": item.title,
-                    "content": item.content,
-                    "keywords": item.keywords_json or [],
-                    "allowed_wording": item.allowed_wording,
-                    "forbidden_wording": item.forbidden_wording,
-                    "inference_notes": item.inference_notes,
-                    "claim_strength": item.claim_strength,
-                }
+                _master_item_payload(item)
                 for item in master_items
-                if item.is_active
+                if _is_ai_safe_master_item(item)
             ],
             job_description=job_description,
             prompt_instructions=prompt_instructions,
@@ -179,6 +174,24 @@ class TailoringService:
         self.session.add(tailored)
         self.session.flush()
         return tailored
+
+
+def _master_item_payload(item: MasterCVEntry) -> dict[str, Any]:
+    return {
+        "id": item.id,
+        "category": item.category,
+        "title": item.title,
+        "content": item.content,
+        "keywords": item.keywords_json or [],
+        "allowed_wording": item.allowed_wording,
+        "forbidden_wording": item.forbidden_wording,
+        "inference_notes": item.inference_notes,
+        "claim_strength": item.claim_strength,
+    }
+
+
+def _is_ai_safe_master_item(item: MasterCVEntry) -> bool:
+    return item.is_active and item.category not in PRIVATE_MASTER_CV_CATEGORIES
 
 
 def _deepcopy_content(content: dict[str, Any]) -> dict[str, Any]:
