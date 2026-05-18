@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero-card"><h1>Tailored Resume</h1><p>The app saved this job-specific resume automatically. Review the tailored resume, cover letter, and export when ready.</p></section>
+{% if fit_analysis %}
+<section class="card fit-analysis">
+  <h2>Fit Analysis</h2>
+  <div class="before">{{ fit_analysis.content }}</div>
+</section>
+{% endif %}
 <section class="compare">
   <article class="card"><h2>Base Resume Variant</h2>{{ base_preview_html|safe }}</article>
   <article class="card"><h2>Tailored Resume Preview</h2>{{ tailored_preview_html|safe }}</article>

@@ -24,6 +24,7 @@ PROMPT_SECTION_TYPE_BY_BLOCK_TYPE: dict[str, str | None] = {
     "work_experience_bullets": "work_experience",
     "education_achievements": "education",
     "cover_letter": None,
+    "fit_analysis": None,
 }
 
 
@@ -90,6 +91,8 @@ async def update_settings(request: Request, session: SessionDep):
         "openai_model_extract",
         "openai_model_tailor",
     }
+    if "llm_mode" in data:
+        service.set_llm_mode(data.get("llm_mode", "fake"))
     if model_fields & data.keys():
         service.set_model_settings({key: data.get(key, "") for key in model_fields})
     if data.get("openai_api_key", "").strip():

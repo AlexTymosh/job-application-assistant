@@ -32,25 +32,36 @@ PROMPT_TEMPLATE_TYPES = [
     "work_experience_bullets",
     "education_achievements",
     "cover_letter",
+    "fit_analysis",
 ]
 
 DEFAULT_USER_PROMPTS: dict[str, str] = {
-    "summary": "Rewrite the summary conservatively for the selected job.",
+    "summary": (
+        "Rewrite the summary for the selected job according to the user's instruction."
+    ),
     "skills": (
-        "Refine hard and soft skills using only the resume variant and Master CV."
+        "Rewrite the hard and soft skills for the selected job according to the "
+        "user's instruction."
     ),
     "work_experience_bullets": (
-        "Improve key bullets without changing employers, dates, or roles."
+        "Rewrite work experience key bullets for the selected job according to the "
+        "user's instruction."
     ),
     "education_achievements": (
-        "Improve achievement bullets without changing institution, specialisation, "
-        "or dates."
+        "Rewrite education achievement bullets for the selected job according to the "
+        "user's instruction."
     ),
     "cover_letter": "Draft a concise cover letter from the tailored resume content.",
+    "fit_analysis": (
+        "Compare the selected resume content with the pasted job description. Write "
+        "a concise fit analysis for the user, including strong matches, weak/missing "
+        "areas, and suggested positioning. Do not use a fake numeric ATS score."
+    ),
 }
 
 INTERNAL_GUARDRAILS = (
-    "Internal guardrails are applied in code and are not user-editable."
+    "Internal technical data-boundary rules are applied in code and are "
+    "not user-editable."
 )
 PROMPT_SCOPES = {"global", "profile", "resume", "section"}
 
@@ -169,6 +180,7 @@ class SettingsService:
     def model_settings(self) -> dict[str, str]:
         effective = self.effective()
         return {
+            "llm_mode": effective.llm_mode,
             "openai_model_default": effective.openai_model_default,
             "openai_model_qa": effective.openai_model_qa,
             "openai_model_extract": effective.openai_model_extract,
@@ -184,6 +196,9 @@ class SettingsService:
         ]:
             if key in values:
                 self.set(key, values[key].strip())
+
+    def set_llm_mode(self, value: str) -> None:
+        self.set("llm_mode", value if value in {"fake", "openai"} else "fake")
 
     def ensure_prompt_templates(self, *, commit: bool = True) -> None:
         existing = {

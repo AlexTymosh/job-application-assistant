@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.db.models import MasterCVEntry, Resume, TailoredResume
+from app.llm.tailoring_client import SectionTailoringClient
 from app.resumes.renderer import render_resume_markdown_from_content, resume_to_content
 from app.settings.service import SettingsService
 
@@ -19,6 +21,17 @@ PRIVATE_MASTER_CV_CATEGORIES = {
     "languages",
     "certificates",
 }
+VARIANT_ONLY_TASKS = (
+    "summary",
+    "skills",
+    "work_experience_bullets",
+    "education_achievements",
+)
+
+
+class TailoringMode(StrEnum):
+    VARIANT_ONLY = "variant_only"
+    MASTER_CV_ENHANCED = "master_cv_enhanced"
 
 
 @dataclass
@@ -85,10 +98,16 @@ class DeterministicTailoringClient:
 
 class TailoringService:
     def __init__(
-        self, session: Session, client: DeterministicTailoringClient | None = None
+        self,
+        session: Session,
+        client: DeterministicTailoringClient | None = None,
+        section_client: SectionTailoringClient | None = None,
+        model: str = "",
     ) -> None:
         self.session = session
         self.client = client or DeterministicTailoringClient()
+        self.section_client = section_client
+        self.model = model
 
     def build_payload(
         self, resume: Resume, master_items: list[MasterCVEntry], job_description: str
@@ -145,6 +164,11 @@ class TailoringService:
                 profile_id=resume.profile_id,
                 resume_id=resume.id,
             ),
+            "fit_analysis": settings.get_prompt_instruction(
+                "fit_analysis",
+                profile_id=resume.profile_id,
+                resume_id=resume.id,
+            ),
         }
 
     def tailor(
@@ -155,17 +179,14 @@ class TailoringService:
         resume: Resume,
         master_items: list[MasterCVEntry],
         job_description: str,
+        mode: TailoringMode = TailoringMode.MASTER_CV_ENHANCED,
     ) -> TailoredResume:
-        payload = self.build_payload(resume, master_items, job_description)
-        tailored_content = self.client.adapt(payload)
-        # Render/export needs private header/reference sections.
-        # Those sections are never sent to the AI payload.
-        full_base = resume_to_content(resume)
-        for private_key in PRIVATE_SECTIONS:
-            if private_key in full_base.get("sections", {}):
-                tailored_content.setdefault("sections", {})[private_key] = full_base[
-                    "sections"
-                ][private_key]
+        if mode == TailoringMode.VARIANT_ONLY:
+            tailored_content = self._tailor_variant_only(resume, job_description)
+        else:
+            payload = self.build_payload(resume, master_items, job_description)
+            tailored_content = self.client.adapt(payload)
+        tailored_content = self._reattach_private_sections(resume, tailored_content)
         rendered = render_resume_markdown_from_content(tailored_content)
         tailored = TailoredResume(
             application_id=application_id,
@@ -177,6 +198,112 @@ class TailoringService:
         self.session.add(tailored)
         self.session.flush()
         return tailored
+
+    def build_variant_only_payloads(
+        self, resume: Resume, job_description: str
+    ) -> dict[str, dict[str, Any]]:
+        safe_content = self._safe_resume_content(resume)
+        sections = safe_content.get("sections", {})
+        base = {
+            "resume_id": safe_content.get("resume_id"),
+            "resume_name": safe_content.get("name", ""),
+            "target_role": safe_content.get("target_role", ""),
+            "job_description": job_description,
+        }
+        return {
+            "summary": {**base, "summary": sections.get("summary", {}).get("text", "")},
+            "skills": {**base, "skills": sections.get("skills", {})},
+            "work_experience_bullets": {
+                **base,
+                "work_experience": sections.get("work_experience", []),
+            },
+            "education_achievements": {
+                **base,
+                "education": sections.get("education", []),
+            },
+        }
+
+    def _tailor_variant_only(
+        self, resume: Resume, job_description: str
+    ) -> dict[str, Any]:
+        if self.section_client is None:
+            raise RuntimeError("Variant-only tailoring requires a section client.")
+        content = _deepcopy_content(self._safe_resume_content(resume))
+        prompts = self._prompt_instructions(resume)
+        payloads = self.build_variant_only_payloads(resume, job_description)
+        sections = content.setdefault("sections", {})
+        for task_name in VARIANT_ONLY_TASKS:
+            result = self.section_client.complete_json(
+                task_name,
+                payloads[task_name],
+                prompts.get(task_name, ""),
+                self.model,
+            )
+            if task_name == "summary" and "text" in result:
+                sections.setdefault("summary", {})["text"] = str(result["text"])
+            elif task_name == "skills":
+                sections["skills"] = {
+                    "hard": str(result.get("hard", "")),
+                    "soft": str(result.get("soft", "")),
+                }
+            elif task_name == "work_experience_bullets":
+                sections["work_experience"] = _merge_item_content(
+                    sections.get("work_experience", []),
+                    result.get("work_experience", []),
+                )
+            elif task_name == "education_achievements":
+                sections["education"] = _merge_item_content(
+                    sections.get("education", []), result.get("education", [])
+                )
+        content["tailoring_sources"] = []
+        content["tailoring_mode"] = TailoringMode.VARIANT_ONLY.value
+        return content
+
+    def _safe_resume_content(self, resume: Resume) -> dict[str, Any]:
+        base_content = resume_to_content(resume)
+        base_content["sections"] = {
+            key: value
+            for key, value in base_content.get("sections", {}).items()
+            if key not in PRIVATE_SECTIONS
+        }
+        return base_content
+
+    def _reattach_private_sections(
+        self, resume: Resume, tailored_content: dict[str, Any]
+    ) -> dict[str, Any]:
+        # Render/export needs private header/reference sections. Those sections are
+        # never sent to AI payloads.
+        full_base = resume_to_content(resume)
+        for private_key in PRIVATE_SECTIONS:
+            if private_key in full_base.get("sections", {}):
+                tailored_content.setdefault("sections", {})[private_key] = full_base[
+                    "sections"
+                ][private_key]
+        return tailored_content
+
+
+def _merge_item_content(
+    original_items: list[dict[str, Any]], tailored_items: Any
+) -> list[dict[str, Any]]:
+    if not isinstance(tailored_items, list):
+        return original_items
+    content_by_id = {
+        item.get("id"): item.get("content")
+        for item in tailored_items
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+    merged: list[dict[str, Any]] = []
+    for index, original in enumerate(original_items):
+        item = dict(original)
+        replacement = content_by_id.get(item.get("id"))
+        if replacement is None and index < len(tailored_items):
+            candidate = tailored_items[index]
+            if isinstance(candidate, dict):
+                replacement = candidate.get("content")
+        if replacement is not None:
+            item["content"] = str(replacement)
+        merged.append(item)
+    return merged
 
 
 def _master_item_payload(item: MasterCVEntry) -> dict[str, Any]:
