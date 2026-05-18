@@ -96,7 +96,7 @@ def _build_content_story(
                 )
             )
     _add_experience(
-        story, sections.get("work_experience", []), "Professional Experience", styles
+        story, sections.get("work_experience", []), "Work Experience", styles
     )
     _add_education(story, sections.get("education", []), styles)
     _add_rows(story, sections.get("languages", []), "Languages", _language_line, styles)
@@ -107,9 +107,7 @@ def _build_content_story(
         _certificate_line,
         styles,
     )
-    _add_rows(
-        story, sections.get("references", []), "References", _reference_line, styles
-    )
+    _add_reference_rows(story, sections.get("references", []), styles)
     return story
 
 
@@ -225,6 +223,46 @@ def _add_rows(
         return
     _add_heading(story, title, styles)
     _add_bullet_items(story, rendered, styles)
+
+
+def _add_reference_rows(
+    story: list[object], rows: list[dict[str, Any]], styles: dict[str, ParagraphStyle]
+) -> None:
+    rendered = [_reference_markup(row) for row in rows]
+    rendered = [item for item in rendered if item]
+    if not rendered:
+        return
+    _add_heading(story, "References", styles)
+    story.append(
+        ListFlowable(
+            [ListItem(Paragraph(item, styles["body"])) for item in rendered],
+            bulletType="bullet",
+            leftIndent=14,
+        )
+    )
+
+
+def _reference_markup(row: dict[str, Any]) -> str:
+    role_company = ", ".join(
+        _paragraph_text(part)
+        for part in [row.get("role_title", ""), row.get("company", "")]
+        if part
+    )
+    contact_parts = [
+        _paragraph_text(row.get("phone", "")),
+        _paragraph_text(row.get("email", "")),
+    ]
+    if row.get("linkedin_url"):
+        contact_parts.append(_link_markup(row["linkedin_url"], row["linkedin_url"]))
+    return " — ".join(
+        part
+        for part in [
+            _paragraph_text(row.get("name", row.get("title", ""))),
+            role_company,
+            " • ".join(part for part in contact_parts if part),
+        ]
+        if part
+    )
 
 
 def _add_bullets(

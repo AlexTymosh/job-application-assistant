@@ -11,7 +11,7 @@ Only these Master CV categories are allowed into tailoring and cover-letter payl
 - `work_experience` — key/source bullets only;
 - `education` — key bullets and achievements only.
 
-Legacy or private categories are excluded even if old rows exist in SQLite: `header`, `reference`, `references`, `languages`, and `certificates`.
+Legacy or private categories are hidden from Master CV UI pages and excluded even if old rows exist in SQLite: `header`, `reference`, `references`, `languages`, and `certificates`. The app is pre-release, so users may recreate their local database if old private Master CV rows need to be removed completely.
 
 ## Editable boundaries
 

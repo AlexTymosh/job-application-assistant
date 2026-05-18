@@ -14,7 +14,7 @@ The previous development schema repair bridge has been removed. Existing pre-rel
 
 ## Master CV source-material contract
 
-`master_cv_entries` may contain legacy categories from pre-release data, but AI payload builders allow only `summary`, `skills`, `work_experience`, and `education`. Header/contact, Languages, Certificates, References, and legacy singular `reference` rows are ignored for tailoring and cover-letter payloads even if they remain in SQLite.
+`master_cv_entries` may contain legacy categories from pre-release data, but AI payload builders allow only `summary`, `skills`, `work_experience`, and `education`. Header/contact, Languages, Certificates, References, and legacy singular `reference` rows are hidden from Master CV UI pages and ignored for tailoring and cover-letter payloads even if they remain in SQLite. Because the app is pre-release, recreating the local SQLite database is acceptable if users want to remove old private Master CV rows completely.
 
 Header Website URL is stored in Resume Header block metadata, so no schema change is required for the optional Website field.
 

@@ -246,12 +246,13 @@ def test_exports_for_base_and_tailored_resume_work(session, tmp_path: Path):
     )
     assert tailored_pdf.exists() and tailored_pdf.stat().st_size > 0
     assert tailored_docx.exists() and tailored_docx.stat().st_size > 0
-    assert (
-        "## Professional Experience"
-        in ApplicationService(session)
+    rendered = (
+        ApplicationService(session)
         .get_tailored_resume(application.id)
         .rendered_markdown
     )
+    assert "## Work Experience" in rendered
+    assert "## Professional Experience" not in rendered
 
 
 def test_ui_routes_render_new_workflow(app_client):
@@ -554,7 +555,8 @@ def test_docx_export_is_styled_without_markdown_markers(session, tmp_path: Path)
     docx_path = ResumeService(session).export_base_resume(resume.id, "docx", tmp_path)
     with ZipFile(docx_path) as archive:
         document_xml = archive.read("word/document.xml").decode("utf-8")
-    assert "PROFESSIONAL EXPERIENCE" in document_xml
+    assert "WORK EXPERIENCE" in document_xml
+    assert "PROFESSIONAL EXPERIENCE" not in document_xml
     assert "##" not in document_xml
     assert "**" not in document_xml
     assert "w:pBdr" in document_xml
@@ -905,5 +907,82 @@ def test_docx_export_uses_semantic_headings(session, tmp_path: Path):
     assert 'w:val="Heading3"' in document_xml
     assert "HARD SKILLS" in document_xml
     assert "SOFT SKILLS" in document_xml
+    assert "WORK EXPERIENCE" in document_xml
+    assert "PROFESSIONAL EXPERIENCE" not in document_xml
     assert "##" not in document_xml
     assert "**" not in document_xml
+
+
+def test_markdown_uses_work_experience_heading(session):
+    _profile, resume = create_profile_resume(session)
+
+    markdown = render_resume_markdown(resume)
+
+    assert "## Work Experience" in markdown
+    assert "## Professional Experience" not in markdown
+
+
+def test_pdf_reference_linkedin_uses_link_markup_and_exports(session, tmp_path: Path):
+    from app.exporters.pdf_exporter import _reference_markup
+
+    profile, resume = create_profile_resume(session)
+    ResumeService(session).save_section(
+        resume.id,
+        "references",
+        {
+            "name": ["Jane <Manager>"],
+            "role_title": ["Engineering & Delivery Lead"],
+            "company": ["Example Co"],
+            "phone": ["+44 123"],
+            "email": ["jane@example.com"],
+            "linkedin_url": ["https://linkedin.example/in/jane"],
+        },
+    )
+
+    markup = _reference_markup(
+        {
+            "name": "Jane <Manager>",
+            "role_title": "Engineering & Delivery Lead",
+            "company": "Example Co",
+            "phone": "+44 123",
+            "email": "jane@example.com",
+            "linkedin_url": "https://linkedin.example/in/jane",
+        }
+    )
+    assert "&lt;Manager&gt;" in markup
+    assert "Engineering &amp; Delivery Lead" in markup
+    assert '<link href="https://linkedin.example/in/jane" color="blue">' in markup
+
+    pdf_path = ResumeService(session).export_base_resume(resume.id, "pdf", tmp_path)
+
+    assert pdf_path.exists()
+    assert pdf_path.stat().st_size > 1000
+    assert b"https://linkedin.example/in/jane" in pdf_path.read_bytes()
+
+
+def test_legacy_private_master_cv_entry_is_hidden_from_ui_and_payload(
+    app_client, session
+):
+    profile, resume = create_profile_resume(session)
+    SettingsService(session).set_active_profile(profile.id)
+    PeopleService(session).create_master_entry(
+        profile.id,
+        category="reference",
+        title="Private legacy reference",
+        content="Jane Manager, jane@example.com, +44 123456",
+    )
+
+    page = app_client.get(f"/profiles/{profile.id}/master-cv/work_experience")
+    direct_edit = app_client.get(
+        f"/profiles/{profile.id}/master-cv/items/"
+        f"{PeopleService(session).list_master_entries(profile.id)[0].id}/edit"
+    )
+    payload = TailoringService(session).build_payload(
+        resume, PeopleService(session).list_master_entries(profile.id), "Backend role"
+    )
+
+    assert page.status_code == 200
+    assert "Private legacy reference" not in page.text
+    assert "jane@example.com" not in page.text
+    assert direct_edit.status_code in {403, 404}
+    assert payload.master_cv_items == []

@@ -128,7 +128,7 @@ def master_cv_default(profile_id: int, session: SessionDep):
 def master_cv(profile_id: int, category: str, request: Request, session: SessionDep):
     profile = require_active_profile_workspace(profile_id, session)
     service = PeopleService(session)
-    entries = service.list_master_entries(profile_id)
+    entries = service.list_master_entries(profile_id, ai_safe_only=True)
     current_category = _normalise_master_cv_category(category)
     if current_category != category:
         return RedirectResponse(
@@ -183,14 +183,14 @@ def edit_master_cv_entry(
 ):
     profile = require_active_profile_workspace(profile_id, session)
     service = PeopleService(session)
-    entry = service.get_profile_master_entry(profile_id, entry_id)
+    entry = service.get_profile_master_entry(profile_id, entry_id, ai_safe_only=True)
     current_category = _normalise_master_cv_category(entry.category)
     return templates.TemplateResponse(
         "master_cv.html",
         {
             "request": request,
             "profile": profile,
-            "entries": service.list_master_entries(profile_id),
+            "entries": service.list_master_entries(profile_id, ai_safe_only=True),
             "current_entries": [entry],
             "category_nav": MASTER_CV_CATEGORIES,
             "current_category": current_category,
@@ -206,7 +206,7 @@ async def update_master_cv_entry(
 ):
     require_active_profile_workspace(profile_id, session)
     service = PeopleService(session)
-    entry = service.get_profile_master_entry(profile_id, entry_id)
+    entry = service.get_profile_master_entry(profile_id, entry_id, ai_safe_only=True)
     data = await read_form_data(request)
     category = _normalise_master_cv_category(data.get("category", entry.category))
     title, content = _content_from_master_form(category, data)
@@ -224,7 +224,7 @@ async def delete_master_cv_entry(
 ):
     require_active_profile_workspace(profile_id, session)
     service = PeopleService(session)
-    entry = service.get_profile_master_entry(profile_id, entry_id)
+    entry = service.get_profile_master_entry(profile_id, entry_id, ai_safe_only=True)
     data = await read_form_data(request)
     service.delete_master_entry(entry_id, confirm=data.get("confirm_delete_entry", ""))
     return RedirectResponse(

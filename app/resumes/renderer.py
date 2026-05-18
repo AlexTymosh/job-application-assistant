@@ -18,7 +18,7 @@ SECTION_ORDER = [
 SECTION_TITLES = {
     "summary": "Summary",
     "skills": "Skills",
-    "work_experience": "Professional Experience",
+    "work_experience": "Work Experience",
     "education": "Education",
     "languages": "Languages",
     "certificates": "Certificates",
@@ -114,9 +114,7 @@ def render_resume_markdown_from_content(content: dict[str, Any]) -> str:
             lines.append(f"**Hard Skills:** {skills['hard']}")
         if skills.get("soft"):
             lines.append(f"**Soft Skills:** {skills['soft']}")
-    _append_experience(
-        lines, sections.get("work_experience", []), "Professional Experience"
-    )
+    _append_experience(lines, sections.get("work_experience", []), "Work Experience")
     _append_education(lines, sections.get("education", []))
     _append_rows(
         lines,

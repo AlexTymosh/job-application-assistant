@@ -25,7 +25,7 @@ STANDARD_SECTIONS = [
     ("header", "Header", False),
     ("skills", "Skills", True),
     ("summary", "Summary", True),
-    ("work_experience", "Professional Experience", True),
+    ("work_experience", "Work Experience", True),
     ("education", "Education", True),
     ("languages", "Languages", False),
     ("certificates", "Certificates", False),

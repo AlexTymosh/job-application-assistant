@@ -206,4 +206,6 @@ def test_dashboard_chart_uses_flat_bars_without_gradient(app_client, session):
     assert (
         "background:linear-gradient(180deg,#b9dcec,var(--brand))" not in response.text
     )
+    assert "background:linear-gradient(180deg,#f8fafc,#eef6ff)" not in response.text
+    assert "background:#f8fafc" in response.text
     assert "background:#9fc7dd" in response.text

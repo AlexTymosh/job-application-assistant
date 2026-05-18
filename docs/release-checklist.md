@@ -6,15 +6,15 @@
 - [ ] Master CV contains only Summary, Skills, Work Experience key bullets, and Education key bullets.
 - [ ] Header, Languages, Certificates, and References are available in Resume Builder only and are excluded from AI payloads.
 - [ ] Master CV payloads use the category allow-list: `summary`, `skills`, `work_experience`, and `education`.
-- [ ] Master CV item edit/delete works and delete requires visible confirmation.
+- [ ] Master CV item edit/delete works for AI-safe categories, legacy private Master CV rows are hidden from UI pages, and delete requires visible confirmation.
 - [ ] Tailored Resume is saved automatically after adaptation.
 - [ ] Base Resume Variant PDF/DOCX export works.
 - [ ] Tailored Resume PDF/DOCX export works.
-- [ ] DOCX export uses Heading 1/2/3 styles and has no raw Markdown artifacts.
+- [ ] DOCX export uses Heading 1/2/3 styles, labels the work section WORK EXPERIENCE, and has no raw Markdown artifacts.
 - [ ] PDF export remains readable for Latin and non-ASCII text.
-- [ ] Exported contact links include email mailto, LinkedIn, GitHub, Website, and reference LinkedIn where present.
+- [ ] Exported contact links include email mailto, LinkedIn, GitHub, Website, and reference LinkedIn where present, including PDF reference LinkedIn links where ReportLab supports them.
 - [ ] Settings profile actions are aligned and typed deletion confirmation is required.
-- [ ] Dashboard activity bars are flat muted blue with no gradient.
+- [ ] Dashboard chart background and activity bars are flat colours with no gradient.
 - [ ] Tests do not call real OpenAI or the real OS keyring.
 - [ ] `uv run ruff format .` passes.
 - [ ] `uv run ruff check .` passes.

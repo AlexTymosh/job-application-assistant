@@ -27,7 +27,7 @@ The CV Builder uses a screenshot-inspired workspace:
 - compact cards and focused fields;
 - PDF/DOCX export for the base Resume Variant.
 
-Sections are Header, Skills, Summary, Professional Experience, Education, Languages, Certificates, and References. Empty optional sections are hidden in preview and export. The Header supports optional LinkedIn, GitHub, and Website URLs. Exports render email as a `mailto:` link and render LinkedIn, GitHub, Website, and reference LinkedIn URLs as link text/clickable links where the output format supports it. DOCX exports use semantic Word styles: Heading 1 for the candidate name/title, Heading 2 for major sections, and Heading 3 for skill groups and work/education entries.
+Sections are Header, Skills, Summary, Work Experience, Education, Languages, Certificates, and References. Empty optional sections are hidden in preview and export. The Header supports optional LinkedIn, GitHub, and Website URLs. Exports render email as a `mailto:` link and render LinkedIn, GitHub, Website, and reference LinkedIn URLs as visible/clickable links where the output format supports it, including ReportLab PDF link annotations where practical. DOCX exports use semantic Word styles: Heading 1 for the candidate name/title, Heading 2 for major sections such as WORK EXPERIENCE, and Heading 3 for skill groups and work/education entries.
 
 ## Master CV / Extended Experience
 
@@ -60,7 +60,7 @@ Use **Application → New adaptation** to select a Resume Variant, paste a job d
 
 ## Database reset note
 
-This app is pre-release. The schema has been reset around Master CV, Resume Variants, and Tailored Resumes. Existing development SQLite databases can be deleted and recreated when schema changes. Startup initialises the clean SQL-first schema deterministically and no longer carries old development schema repair bridges.
+This app is pre-release. The schema has been reset around Master CV, Resume Variants, and Tailored Resumes. Existing development SQLite databases can be deleted and recreated when schema changes. If an old local SQLite database contains legacy Master CV private categories, they are hidden from the Master CV UI and excluded from AI payloads; recreating the local database is acceptable during pre-release. Startup initialises the clean SQL-first schema deterministically and no longer carries old development schema repair bridges.
 
 ## Run locally
 

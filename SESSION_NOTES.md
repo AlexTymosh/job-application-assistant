@@ -25,7 +25,7 @@ Application tailoring selects a Resume Variant, loads active Master CV items, ad
 
 ## Guardrails
 
-Internal prompt and fake-client guardrails prohibit invented employers, dates, degrees, certificates, metrics, and private contact changes. Tests must use deterministic fake AI and must not touch real OpenAI or the real OS keyring. DOCX exports use Word Heading 1/2/3 styles for semantic ATS-friendly structure. PDF exports keep readable visual headings. Exports include email `mailto:` and LinkedIn/GitHub/website/reference LinkedIn links where practical. Settings profile actions use compact typed-confirmation controls, and Dashboard bars use flat muted blue without gradients.
+Internal prompt and fake-client guardrails prohibit invented employers, dates, degrees, certificates, metrics, and private contact changes. Tests must use deterministic fake AI and must not touch real OpenAI or the real OS keyring. DOCX exports use Word Heading 1/2/3 styles for semantic ATS-friendly structure and label the work section as WORK EXPERIENCE. PDF exports keep readable visual headings and preserve visible/clickable header links and reference LinkedIn links where ReportLab supports them. Settings profile actions use compact typed-confirmation controls, and Dashboard chart styling uses flat colours without gradients.
 
 ## PR #94 fix-up
 

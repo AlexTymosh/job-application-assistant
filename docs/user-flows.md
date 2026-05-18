@@ -14,7 +14,7 @@
 
 The builder shows left section navigation, a central section editor, and a right live preview. Each section has only relevant fields. Header supports optional email, phone, LinkedIn, GitHub, Website, location, and extra text. Header, Languages, Certificates, and References have no AI controls in the main editor. Work Experience and Education allow AI only for key bullet/achievement text.
 
-Exports include private contact details only during final rendering/export. DOCX uses Word Heading 1 for candidate name/title, Heading 2 for major sections, and Heading 3 for skill groups and work/education entries. Email, LinkedIn, GitHub, Website, and reference LinkedIn links are rendered as links where supported.
+Exports include private contact details only during final rendering/export. DOCX uses Word Heading 1 for candidate name/title, Heading 2 for major sections including WORK EXPERIENCE, and Heading 3 for skill groups and work/education entries. Email, LinkedIn, GitHub, Website, and reference LinkedIn links are rendered as links where supported, including ReportLab PDF links where practical.
 
 ## Master CV workflow
 
@@ -25,7 +25,7 @@ Master CV is not a full resume builder clone. It captures only source material t
 - Work Experience key/source bullets;
 - Education key bullets and achievements.
 
-Header, Languages, Certificates, References, and private contact details belong to Resume Builder only. Master CV items can be edited or deleted from the builder-style page; deletion requires a visible confirmation checkbox.
+Header, Languages, Certificates, References, and private contact details belong to Resume Builder only. Legacy private Master CV rows from old pre-release databases are hidden from Master CV UI pages and excluded from AI payloads. Master CV items can be edited or deleted from the builder-style page; deletion requires a visible confirmation checkbox.
 
 ## Fix-up workflow guarantees
 
@@ -34,4 +34,4 @@ Header, Languages, Certificates, References, and private contact details belong 
 - Adapt Resume automatically creates the Application, Tailored Resume, and Cover Letter, then redirects to the Tailored Resume review page.
 - Tailored Resume review contains Base Resume, Tailored Resume, Cover Letter, and resume export buttons. It no longer exposes raw Markdown editing.
 - Settings profile actions are shown in compact rows and keep typed profile-name deletion confirmation.
-- Dashboard activity bars use a flat muted blue without gradients while keeping range switching and date/count axes.
+- Dashboard chart background and activity bars use flat colours without gradients while keeping range switching and date/count axes.

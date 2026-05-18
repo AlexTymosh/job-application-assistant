@@ -73,9 +73,7 @@ def _render_content(document: Document, content: dict[str, Any]) -> None:
             _add_labelled_paragraph(document, "Hard Skills", skills["hard"])
         if skills.get("soft"):
             _add_labelled_paragraph(document, "Soft Skills", skills["soft"])
-    _add_experience(
-        document, sections.get("work_experience", []), "Professional Experience"
-    )
+    _add_experience(document, sections.get("work_experience", []), "Work Experience")
     _add_education(document, sections.get("education", []))
     _add_rows(document, sections.get("languages", []), "Languages", _language_line)
     _add_rows(
