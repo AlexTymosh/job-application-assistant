@@ -26,14 +26,16 @@
           <tr>
             <td><strong>{{ profile.display_name }}</strong></td>
             <td>{% if settings.active_profile_id == profile.id %}<span class="badge good">Active</span>{% else %}<span class="badge">Inactive</span>{% endif %}</td>
-            <td class="actions">
+            <td class="profile-actions">
               <a class="button compact ghost" href="/profiles/{{ profile.id }}">Open</a>
               <a class="button compact ghost" href="/profiles/{{ profile.id }}/edit">Edit</a>
               <form class="inline-form" method="post" action="/profiles/{{ profile.id }}/set-active"><button class="compact secondary" type="submit">Set active</button></form>
-              <form class="inline-form" method="post" action="/profiles/{{ profile.id }}/delete" onsubmit="return confirm('Delete this profile and all related local data?');">
+              <form class="profile-delete-form" method="post" action="/profiles/{{ profile.id }}/delete">
                 <input
+                  type="text"
                   name="confirm_profile_name"
-                  placeholder="Type {{ profile.display_name }} to confirm"
+                  aria-label="Type {{ profile.display_name }} to confirm deletion"
+                  placeholder="Type profile name"
                   autocomplete="off"
                 >
                 <button class="compact danger" type="submit">Delete</button>

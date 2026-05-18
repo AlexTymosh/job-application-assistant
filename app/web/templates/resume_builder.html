@@ -19,7 +19,7 @@
         <div class="form-grid"><label>First Name<input name="first_name" value="{{ meta.get('first_name','') }}"></label><label>Surname<input name="surname" value="{{ meta.get('surname','') }}"></label></div>
         <label>Location<input name="location" value="{{ meta.get('location','') }}"></label>
         <div class="form-grid"><label>Phone<input name="phone" value="{{ meta.get('phone','') }}"></label><label>Email address<input name="email" value="{{ meta.get('email','') }}"></label></div>
-        <label>LinkedIn URL<input name="linkedin_url" value="{{ meta.get('linkedin_url','') }}"></label><label>GitHub URL optional<input name="github_url" value="{{ meta.get('github_url','') }}"></label><label>Extra text optional<input name="extra_text" value="{{ meta.get('extra_text','') }}"></label>
+        <label>LinkedIn URL<input name="linkedin_url" value="{{ meta.get('linkedin_url','') }}"></label><label>GitHub URL optional<input name="github_url" value="{{ meta.get('github_url','') }}"></label><label>Website URL optional<input name="website_url" value="{{ meta.get('website_url', meta.get('personal_website_url','')) }}"></label><label>Extra text optional<input name="extra_text" value="{{ meta.get('extra_text','') }}"></label>
       {% elif section_type == "summary" %}
         {% set block = section.blocks[0] if section.blocks else none %}<label>Summary<textarea name="description">{{ block.content if block else '' }}</textarea></label>
       {% elif section_type == "skills" %}

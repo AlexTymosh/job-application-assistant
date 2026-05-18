@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.errors import NotFoundError, ValidationAppError
+from app.core.errors import NotFoundError, ProfileScopeError, ValidationAppError
 from app.db.models import MasterCV, MasterCVEntry, PersonProfile, ProfileContact
 
 
@@ -150,6 +150,15 @@ class PeopleService:
         self.session.commit()
         return entry
 
+    def get_profile_master_entry(self, profile_id: int, entry_id: int) -> MasterCVEntry:
+        master_cv = self.get_or_create_master_cv(profile_id)
+        entry = self.session.get(MasterCVEntry, entry_id)
+        if entry is None or entry.master_cv_id != master_cv.id:
+            raise ProfileScopeError(
+                "Master CV entry not found in this profile workspace."
+            )
+        return entry
+
     def update_master_entry(self, entry_id: int, **values: str) -> MasterCVEntry:
         entry = self.session.get(MasterCVEntry, entry_id)
         if entry is None:
@@ -171,6 +180,17 @@ class PeopleService:
             ]
         self.session.commit()
         return entry
+
+    def delete_master_entry(self, entry_id: int, *, confirm: str) -> None:
+        if confirm != "delete":
+            raise ValidationAppError(
+                "Tick the delete confirmation before deleting this Master CV item."
+            )
+        entry = self.session.get(MasterCVEntry, entry_id)
+        if entry is None:
+            raise NotFoundError("Master CV entry not found.")
+        self.session.delete(entry)
+        self.session.commit()
 
     def require_delete_confirmation(self, profile_id: int, confirmation: str) -> None:
         profile = self.get_profile(profile_id)

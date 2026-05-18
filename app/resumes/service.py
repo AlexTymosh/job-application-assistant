@@ -138,6 +138,7 @@ class ResumeService:
                             "email": contact.email if contact else "",
                             "linkedin_url": contact.linkedin_url if contact else "",
                             "github_url": contact.github_url if contact else "",
+                            "website_url": "",
                             "extra_text": contact.extra_text if contact else "",
                         },
                     )
@@ -213,6 +214,8 @@ class ResumeService:
                     "email",
                     "linkedin_url",
                     "github_url",
+                    "website_url",
+                    "personal_website_url",
                     "extra_text",
                 ]
             }

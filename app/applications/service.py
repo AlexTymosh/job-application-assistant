@@ -25,10 +25,13 @@ from app.resumes.service import ResumeService
 from app.settings.service import SettingsService
 from app.tailoring.service import DeterministicTailoringClient, TailoringService
 
+AI_SAFE_MASTER_CV_CATEGORIES = {"summary", "skills", "work_experience", "education"}
 PRIVATE_AI_SOURCE_CATEGORIES = {
     "header",
     "reference",  # legacy singular category used before the Master CV reset
     "references",
+    "languages",
+    "certificates",
 }
 
 
@@ -366,7 +369,7 @@ class ApplicationService:
 def _is_ai_safe_master_item(item: object) -> bool:
     return (
         getattr(item, "is_active", False)
-        and getattr(item, "category", "") not in PRIVATE_AI_SOURCE_CATEGORIES
+        and getattr(item, "category", "") in AI_SAFE_MASTER_CV_CATEGORIES
     )
 
 

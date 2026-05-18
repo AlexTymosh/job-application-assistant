@@ -71,20 +71,9 @@ def _build_content_story(
                 _paragraph_text(str(content["target_role"])).upper(), styles["role"]
             )
         )
-    contact = " • ".join(
-        _clean_text(str(part))
-        for part in [
-            header.get("phone", ""),
-            header.get("email", ""),
-            header.get("linkedin_url", ""),
-            header.get("github_url", ""),
-            header.get("location", ""),
-            header.get("extra_text", ""),
-        ]
-        if part
-    )
+    contact = _contact_markup(header)
     if contact:
-        story.append(Paragraph(_paragraph_text(contact), styles["body"]))
+        story.append(Paragraph(contact, styles["body"]))
     summary = sections.get("summary", {}).get("text", "").strip()
     if summary:
         story.append(Spacer(1, 6))
@@ -122,6 +111,38 @@ def _build_content_story(
         story, sections.get("references", []), "References", _reference_line, styles
     )
     return story
+
+
+def _contact_markup(header: dict[str, Any]) -> str:
+    items = [
+        _paragraph_text(header.get("phone", "")),
+        _link_markup(_mailto(header.get("email", "")), header.get("email", "")),
+        _link_markup(header.get("linkedin_url", ""), header.get("linkedin_url", "")),
+        _link_markup(header.get("github_url", ""), header.get("github_url", "")),
+        _link_markup(
+            header.get("website_url") or header.get("personal_website_url", ""),
+            header.get("website_url") or header.get("personal_website_url", ""),
+        ),
+        _paragraph_text(header.get("location", "")),
+        _paragraph_text(header.get("extra_text", "")),
+    ]
+    return " • ".join(item for item in items if item)
+
+
+def _mailto(email: str) -> str:
+    email = str(email).strip()
+    return f"mailto:{email}" if email else ""
+
+
+def _link_markup(url: str, text: str) -> str:
+    url = str(url).strip()
+    text = str(text).strip()
+    if not url or not text:
+        return ""
+    return (
+        f'<link href="{escape(url, quote=True)}" color="blue">'
+        f"{_paragraph_text(text)}</link>"
+    )
 
 
 def _add_heading(
@@ -329,6 +350,10 @@ def _certificate_line(row: dict[str, Any]) -> str:
 
 
 def _reference_line(row: dict[str, Any]) -> str:
+    linkedin = row.get("linkedin_url", "")
+    contact_parts = [row.get("phone", ""), row.get("email", "")]
+    if linkedin:
+        contact_parts.append(linkedin)
     return " — ".join(
         part
         for part in [
@@ -338,15 +363,7 @@ def _reference_line(row: dict[str, Any]) -> str:
                 for part in [row.get("role_title", ""), row.get("company", "")]
                 if part
             ),
-            " • ".join(
-                part
-                for part in [
-                    row.get("phone", ""),
-                    row.get("email", ""),
-                    row.get("linkedin_url", ""),
-                ]
-                if part
-            ),
+            " • ".join(part for part in contact_parts if part),
         ]
         if part
     )

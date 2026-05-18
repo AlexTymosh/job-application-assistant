@@ -65,12 +65,15 @@ Use emoji plus conventional commit style:
 - optional detail
 ```
 
+
 ## Current first-release notes
 
 - The old user-facing facts/evidence workflow has been replaced with Master CV / Extended Experience terminology.
 - Startup initialises a clean SQL-first schema; legacy development schema repair code is intentionally removed.
 - CV Builder uses a left-navigation, central-editor, right-preview layout.
-- Base Resume Variant and Tailored Resume PDF/DOCX exports are available without automatic job submission.
+- Master CV is restricted to AI source material only: Summary, Skills, Work Experience key bullets, and Education key bullets. Header, Languages, Certificates, and References belong to Resume Builder only and are excluded from AI payloads by an allow-list.
+- Base Resume Variant and Tailored Resume PDF/DOCX exports are available without automatic job submission. DOCX exports use Heading 1/2/3 styles, and exports render email, LinkedIn, GitHub, website, and reference LinkedIn links where present.
+- Settings profile actions use compact rows with typed delete confirmation. Dashboard activity bars use flat muted blue, not gradients.
 
 ## PR #94 fix-up notes
 

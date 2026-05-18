@@ -97,6 +97,7 @@ def render_resume_markdown_from_content(content: dict[str, Any]) -> str:
         header.get("email", ""),
         header.get("linkedin_url", ""),
         header.get("github_url", ""),
+        header.get("website_url") or header.get("personal_website_url", ""),
         header.get("location", ""),
         header.get("extra_text", ""),
     ]

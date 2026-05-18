@@ -16,6 +16,7 @@ Profile → Master CV → Resume Variants → Job Application → Tailored Resum
 
 SQLite is the runtime source of truth for user-managed data. YAML and Markdown are not runtime sources of truth; Markdown is only an export/rendering representation.
 
+
 ## Resume Builder
 
 The CV Builder uses a screenshot-inspired workspace:
@@ -26,17 +27,25 @@ The CV Builder uses a screenshot-inspired workspace:
 - compact cards and focused fields;
 - PDF/DOCX export for the base Resume Variant.
 
-Sections are Header, Skills, Summary, Professional Experience, Education, Languages, Certificates, and References. Empty optional sections are hidden in preview and export.
+Sections are Header, Skills, Summary, Professional Experience, Education, Languages, Certificates, and References. Empty optional sections are hidden in preview and export. The Header supports optional LinkedIn, GitHub, and Website URLs. Exports render email as a `mailto:` link and render LinkedIn, GitHub, Website, and reference LinkedIn URLs as link text/clickable links where the output format supports it. DOCX exports use semantic Word styles: Heading 1 for the candidate name/title, Heading 2 for major sections, and Heading 3 for skill groups and work/education entries.
 
 ## Master CV / Extended Experience
 
-The Master CV stores source material that AI can use while tailoring a selected Resume Variant. Items include category, title, content, keywords, allowed wording, forbidden wording, inference notes, and claim strength. This supports conservative wording such as using “Python dependency management experience” when Master CV says Poetry, while blocking direct claims such as “uv experience” unless explicitly present.
+The Master CV stores only AI-safe source material that can participate in tailoring:
+
+- Summary source material;
+- Hard Skills and Soft Skills;
+- Work Experience key/source bullets;
+- Education key bullets and achievements.
+
+Header, Languages, Certificates, References, private contact details, and other non-AI sections belong to Resume Builder only. They are not part of Master CV and are excluded from tailoring and cover-letter payloads through the Master CV category allow-list. Master CV items can be edited and deleted from the builder-style page; deletion requires visible confirmation.
 
 ## AI tailoring policy
 
 Tailoring uses the selected Resume Variant as the base and the Master CV as additional source material. Internal code guardrails prevent AI from editing private or fixed fields by default:
 
 - Header/contact fields are not AI-editable and are not sent to AI prompts.
+- Master CV payloads use an allow-list: summary, skills, work_experience, and education.
 - References are not sent to AI prompts.
 - Languages, Certificates, and References are not AI-editable by default.
 - Summary, Skills, Work Experience key bullets, and Education achievements are AI-editable.
@@ -73,7 +82,7 @@ uv run pre-commit run --all-files
 ## PR #94 fix-up notes
 
 - Applications are strictly scoped to the active profile. Forged Resume Variant IDs and direct links to another profile's applications are rejected before tailoring, review, export, or download.
-- Master CV now uses the same builder-style pattern as CV Builder: left navigation, central section editor, compact cards, and an Extended Experience preview.
+- Master CV now uses the same builder-style pattern as CV Builder: left navigation, central section editor, compact cards, and an AI source preview.
 - Adapt Resume saves both a Tailored Resume and deterministic Cover Letter automatically. The raw Markdown edit block was removed from the tailored resume review page.
 - Prompt instructions are resolved for editable tailoring boundaries in section → resume → profile → global order and are included in the fake tailoring payload for deterministic testing.
 - DOCX/PDF exports now render styled resume output from structured content, avoid Markdown artifacts, and use runtime Unicode font discovery for readable PDF text.
