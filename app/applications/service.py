@@ -25,7 +25,11 @@ from app.resumes.service import ResumeService
 from app.settings.service import SettingsService
 from app.tailoring.service import DeterministicTailoringClient, TailoringService
 
-PRIVATE_AI_SOURCE_CATEGORIES = {"header", "references"}
+PRIVATE_AI_SOURCE_CATEGORIES = {
+    "header",
+    "reference",  # legacy singular category used before the Master CV reset
+    "references",
+}
 
 
 class ApplicationService:

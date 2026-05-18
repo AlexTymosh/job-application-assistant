@@ -11,7 +11,11 @@ from app.settings.service import SettingsService
 
 AI_EDITABLE_SECTIONS = {"summary", "skills", "work_experience", "education"}
 PRIVATE_SECTIONS = {"header", "references"}
-PRIVATE_MASTER_CV_CATEGORIES = {"header", "references"}
+PRIVATE_MASTER_CV_CATEGORIES = {
+    "header",
+    "reference",
+    "references",
+}
 
 
 @dataclass

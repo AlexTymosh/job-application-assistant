@@ -599,3 +599,102 @@ def test_application_workflow_rejects_missing_active_profile_and_empty_job(
     )
     assert empty_job.status_code == 400
     assert "Paste a job description" in empty_job.text
+
+
+def test_legacy_reference_master_cv_entries_are_excluded_from_tailoring_payload(
+    session,
+):
+    profile = PeopleService(session).create_profile("Alice", "Alice")
+    resume = ResumeService(session).create_resume(
+        profile.id,
+        "Backend Resume",
+        "Backend Developer",
+        create_standard_sections=True,
+    )
+    SettingsService(session).set_active_profile(profile.id)
+
+    PeopleService(session).create_master_entry(
+        profile.id,
+        category="reference",
+        title="Private reference",
+        content="Jane Manager, jane@example.com, +44 123456",
+    )
+
+    application = ApplicationService(session).create_application(
+        profile_id=profile.id,
+        resume_id=resume.id,
+        raw_job_text="Python backend role",
+        source_url="",
+    )
+
+    payload = TailoringService(session).build_payload(
+        resume,
+        PeopleService(session).list_master_entries(profile.id),
+        application.raw_job_text,
+    )
+
+    assert payload.master_cv_items == []
+
+
+def test_legacy_reference_master_cv_entries_are_excluded_from_cover_letter_payload(
+    monkeypatch, session
+):
+    captured_payloads: list[dict] = []
+
+    class SpyCoverLetterClient:
+        def draft(self, payload: dict) -> str:
+            captured_payloads.append(payload)
+            return "Generated cover letter."
+
+    monkeypatch.setattr(
+        "app.applications.service.FakeCoverLetterClient",
+        SpyCoverLetterClient,
+    )
+
+    profile = PeopleService(session).create_profile("Alice", "Alice")
+    resume = ResumeService(session).create_resume(
+        profile.id,
+        "Backend Resume",
+        "Backend Developer",
+        create_standard_sections=True,
+    )
+
+    ResumeService(session).save_section(
+        resume.id,
+        "summary",
+        {"summary": "Python backend developer."},
+    )
+
+    PeopleService(session).create_master_entry(
+        profile.id,
+        category="reference",  # legacy singular private category
+        title="Private reference",
+        content="Jane Manager, jane@example.com, +44 123456",
+    )
+
+    PeopleService(session).create_master_entry(
+        profile.id,
+        category="work_experience",
+        title="Backend automation",
+        content="Built Python automation tools.",
+    )
+
+    application = ApplicationService(session).create_application(
+        profile_id=profile.id,
+        resume_id=resume.id,
+        raw_job_text="Python backend role",
+        source_url="",
+    )
+
+    ApplicationService(session).adapt_application(application.id)
+
+    assert captured_payloads
+    payload = captured_payloads[0]
+
+    payload_text = str(payload)
+
+    assert "Built Python automation tools." in payload_text
+    assert "Private reference" not in payload_text
+    assert "Jane Manager" not in payload_text
+    assert "jane@example.com" not in payload_text
+    assert "+44 123456" not in payload_text
