@@ -1,6 +1,10 @@
 # AI Tailoring Policy
 
-Tailoring adapts a selected Resume Variant using active Master CV source material and pasted job text. The Master CV is local AI source material, not external fact-checking.
+Tailoring adapts a selected Resume Variant using active-profile Master CV source material and pasted job text. The Master CV is local AI source material, not external fact-checking.
+
+## Current implementation status
+
+The current workflow uses deterministic local fake clients for tailoring and cover-letter generation. Tests must never call real OpenAI or the real OS keyring. OpenAI model settings and OS keyring storage exist as configuration surfaces, but the current default tailoring path does not call a real OpenAI provider.
 
 ## Master CV allow-list
 
