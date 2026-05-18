@@ -18,6 +18,15 @@ from app.web.templating import templates
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
+PROMPT_SECTION_TYPE_BY_BLOCK_TYPE: dict[str, str | None] = {
+    "summary": "summary",
+    "skills": "skills",
+    "work_experience_bullets": "work_experience",
+    "education_achievements": "education",
+    "cover_letter": None,
+}
+
+
 @router.get("")
 def settings(
     request: Request,
@@ -129,11 +138,23 @@ def prompt_templates(
     service = SettingsService(session)
     prompt_types = PROMPT_TEMPLATE_TYPES
     current_block_type = block_type if block_type in prompt_types else "summary"
+    expected_section_type = PROMPT_SECTION_TYPE_BY_BLOCK_TYPE.get(current_block_type)
     templates_for_type = [
         template
         for template in service.list_prompt_templates()
         if template.block_type == current_block_type
     ]
+    matching_sections = (
+        list(
+            session.scalars(
+                select(ResumeSection)
+                .where(ResumeSection.section_type == expected_section_type)
+                .order_by(ResumeSection.title)
+            )
+        )
+        if expected_section_type is not None
+        else []
+    )
     return templates.TemplateResponse(
         "prompt_templates.html",
         {
@@ -144,9 +165,9 @@ def prompt_templates(
             "current_block_type": current_block_type,
             "profiles": service.list_profiles(),
             "resumes": list(session.scalars(select(Resume).order_by(Resume.name))),
-            "sections": list(
-                session.scalars(select(ResumeSection).order_by(ResumeSection.title))
-            ),
+            "sections": matching_sections,
+            "section_scope_enabled": expected_section_type is not None,
+            "expected_section_type": expected_section_type,
         },
     )
 
@@ -161,13 +182,36 @@ async def create_scoped_prompt_template(request: Request, session: SessionDep):
 
     scope = data.get("scope", "global")
     block_type = data.get("block_type", "summary")
+    expected_section_type = PROMPT_SECTION_TYPE_BY_BLOCK_TYPE.get(block_type)
+    section_id = optional_int("section_id")
+
+    if scope == "section":
+        if expected_section_type is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Section-scoped prompts are not available for this prompt type.",
+            )
+        if section_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Choose a matching resume section for this prompt.",
+            )
+        section = session.get(ResumeSection, section_id)
+        if section is None or section.section_type != expected_section_type:
+            raise HTTPException(
+                status_code=400,
+                detail="Selected section does not match this prompt type.",
+            )
+    else:
+        section_id = None
+
     SettingsService(session).upsert_scoped_prompt_template(
         scope=scope,
         block_type=block_type,
         user_prompt_template=data.get("user_prompt_template", ""),
         profile_id=optional_int("profile_id"),
         resume_id=optional_int("resume_id"),
-        section_id=optional_int("section_id"),
+        section_id=section_id,
     )
     return RedirectResponse(
         f"/settings/prompts?block_type={block_type}", status_code=303

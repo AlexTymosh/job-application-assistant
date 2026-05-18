@@ -130,3 +130,26 @@ def test_dashboard_explanatory_sentence_removed(app_client, session):
     assert response.status_code == 200
     assert "X axis shows dates. Y axis shows application count" not in response.text
     assert "data-chart-bar" in response.text
+
+
+def test_prompt_sections_are_filtered_by_prompt_type(app_client, session):
+    profile, resume = _profile_with_resume(session, "Alice")
+    SettingsService(session).set_active_profile(profile.id)
+
+    sections = {section.section_type: section.id for section in resume.sections}
+
+    summary_response = app_client.get("/settings/prompts?block_type=summary")
+
+    assert summary_response.status_code == 200
+    assert f'value="{sections["summary"]}"' in summary_response.text
+    assert f'value="{sections["work_experience"]}"' not in summary_response.text
+    assert f'value="{sections["education"]}"' not in summary_response.text
+
+    work_response = app_client.get(
+        "/settings/prompts?block_type=work_experience_bullets"
+    )
+
+    assert work_response.status_code == 200
+    assert f'value="{sections["work_experience"]}"' in work_response.text
+    assert f'value="{sections["summary"]}"' not in work_response.text
+    assert f'value="{sections["education"]}"' not in work_response.text

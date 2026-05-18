@@ -46,7 +46,9 @@
               <option value="global">Global</option>
               <option value="profile">Profile</option>
               <option value="resume">Resume</option>
-              <option value="section">Section</option>
+              {% if section_scope_enabled %}
+                <option value="section">Section</option>
+              {% endif %}
             </select>
           </label>
           <label>Profile
@@ -62,10 +64,22 @@
             </select>
           </label>
           <label>Section
-            <select name="section_id">
-              <option value="">No section scope</option>
-              {% for section in sections %}<option value="{{ section.id }}">{{ section.title }} · Resume {{ section.resume_id }}</option>{% endfor %}
-            </select>
+            {% if section_scope_enabled %}
+              <select name="section_id">
+                <option value="">No section scope</option>
+                {% for section in sections %}
+                  <option value="{{ section.id }}">
+                    {{ section.title }} · Resume {{ section.resume_id }}
+                  </option>
+                {% endfor %}
+              </select>
+              <span class="muted">Only {{ expected_section_type.replace('_', ' ')|title }} sections are available for this prompt type.</span>
+            {% else %}
+              <select name="section_id" disabled>
+                <option value="">Section scope is not available for this prompt type</option>
+              </select>
+              <span class="muted">Use Global, Profile, or Resume scope for this prompt type.</span>
+            {% endif %}
           </label>
         </div>
         <label>User instruction<textarea name="user_prompt_template" placeholder="Write the guidance for this part of the resume."></textarea></label>

@@ -31,7 +31,11 @@
               <a class="button compact ghost" href="/profiles/{{ profile.id }}/edit">Edit</a>
               <form class="inline-form" method="post" action="/profiles/{{ profile.id }}/set-active"><button class="compact secondary" type="submit">Set active</button></form>
               <form class="inline-form" method="post" action="/profiles/{{ profile.id }}/delete" onsubmit="return confirm('Delete this profile and all related local data?');">
-                <input type="hidden" name="confirm_profile_name" value="{{ profile.display_name }}">
+                <input
+                  name="confirm_profile_name"
+                  placeholder="Type {{ profile.display_name }} to confirm"
+                  autocomplete="off"
+                >
                 <button class="compact danger" type="submit">Delete</button>
               </form>
             </td>
