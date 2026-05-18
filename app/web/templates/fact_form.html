@@ -1,1 +1,4 @@
-{% extends "base.html" %}{% block content %}<h1>Add verified fact</h1><form method="post"><label>Fact key<input name="fact_key" required></label><label>Category<input name="category"></label><label>Claim<textarea name="claim" required></textarea></label><label>Evidence<textarea name="evidence"></textarea></label><label>Source<input name="source"></label><label>Allowed claim level<select name="allowed_claim_level">{% for level in levels %}<option value="{{ level }}">{{ level }}</option>{% endfor %}</select></label><button>Save fact</button></form>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="hero-card"><h1>Master CV moved</h1><p>Add Extended Experience from the Master CV page.</p><a class="button" href="/cv-builder">Open CV Builder</a></section>
+{% endblock %}

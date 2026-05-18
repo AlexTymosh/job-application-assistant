@@ -1,16 +1,4 @@
 {% extends "base.html" %}
 {% block content %}
-{% set is_edit = resume is defined and resume %}
-<section class="hero"><p class="badge">CV Builder</p><h1>{{ "Edit resume metadata" if is_edit else "Create resume" }}</h1><p class="muted">Create or rename a profile-scoped resume version such as Software Engineer, Automation Engineer, Data Analyst, or Backend Developer.</p></section>
-<form method="post" {% if not is_edit %}enctype="multipart/form-data"{% endif %}>
-  <label>Resume name <input name="name" value="{{ resume.name if is_edit else '' }}" required></label>
-  <label>Target role <input name="target_role" value="{{ resume.target_role if is_edit else '' }}"></label>
-  <label>Language <input name="language" value="{{ resume.language if is_edit else 'en' }}"></label>
-  {% if not is_edit %}
-    <label><input type="checkbox" name="create_standard_sections" checked> Create standard CV sections</label>
-    <label>Upload existing resume (PDF, DOC, DOCX)<input type="file" name="resume_upload" accept=".pdf,.doc,.docx"></label>
-    <p class="muted">Uploaded files are stored locally under app-owned artifacts/uploads. Automatic extraction is not implemented yet.</p>
-  {% endif %}
-  <button class="compact">{{ "Save resume" if is_edit else "Create resume" }}</button>
-</form>
+<section class="card"><h1>{% if resume is defined and resume %}Edit Resume Variant{% else %}New Resume Variant{% endif %}</h1><form method="post"><label>Name<input name="name" value="{{ resume.name if resume is defined and resume else '' }}" required></label><label>Target role<input name="target_role" value="{{ resume.target_role if resume is defined and resume else '' }}"></label><label>Language<input name="language" value="{{ resume.language if resume is defined and resume else 'en' }}"></label>{% if not (resume is defined and resume) %}<label class="checkbox-line"><input type="checkbox" name="is_default"> Make default variant</label>{% endif %}<button type="submit">Save Resume Variant</button></form></section>
 {% endblock %}

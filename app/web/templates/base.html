@@ -57,6 +57,29 @@
     .block-card h3, .section-card h2 { margin-bottom:.25rem; }
     .block-card p { margin:.35rem 0; }
     .section-header-row { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.5rem; align-items:center; }
+
+    .hero-card { border:1px solid var(--line); border-radius:18px; background:linear-gradient(135deg,#eff6ff,#fff); padding:1.2rem; margin-bottom:1rem; }
+    .grid-two { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1rem; }
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.65rem; }
+    .checkbox-line { display:flex; grid-template-columns:auto 1fr; flex-direction:row; align-items:center; gap:.5rem; font-weight:600; }
+    .checkbox-line input { width:auto; }
+    .builder-shell { display:grid; grid-template-columns:230px minmax(380px, 1fr) 430px; min-height:calc(100vh - 95px); margin:-1rem; }
+    .builder-nav { background:#08047a; color:white; padding:1rem .85rem; display:flex; flex-direction:column; gap:.45rem; }
+    .brand-mini { color:white; font-weight:900; text-decoration:none; font-size:1.15rem; margin-bottom:1.5rem; }
+    .builder-nav-item { color:#c7d2fe; text-decoration:none; padding:.75rem .9rem; border-radius:999px; font-weight:800; }
+    .builder-nav-item.active, .builder-nav-item:hover { background:#4338ca; color:white; }
+    .builder-nav-actions { margin-top:auto; display:flex; gap:.4rem; }
+    .builder-editor { padding:1.4rem; background:white; }
+    .builder-form { padding:1rem; }
+    .builder-preview { background:#f2f6ff; padding:1.4rem; overflow:auto; }
+    .preview-toolbar { display:flex; justify-content:space-between; margin-bottom:.75rem; color:#1d4ed8; font-weight:800; }
+    .resume-preview-paper { background:white; max-width:820px; margin:0 auto; padding:2rem; box-shadow:0 8px 28px rgba(15,23,42,.12); color:#111827; font-size:.88rem; line-height:1.45; }
+    .resume-preview-paper h1 { color:#0b4a6f; font-size:1.65rem; text-transform:uppercase; letter-spacing:.02em; margin:0 0 .15rem; }
+    .resume-preview-paper h2 { color:#0b4a6f; font-size:1.05rem; text-transform:uppercase; border-top:1px solid #111827; border-bottom:1px solid #111827; padding:.18rem 0; margin:.85rem 0 .45rem; }
+    .resume-preview-paper p { margin:.28rem 0; }
+    .resume-preview-paper ul { margin:.2rem 0 .45rem 1rem; padding:0; }
+    .resume-preview-paper li { margin:.12rem 0; }
+    @media (max-width:1100px) { .builder-shell { grid-template-columns:1fr; margin:0; } .builder-nav { border-radius:14px; } .builder-preview { padding:.8rem; } }
     @media (max-width:820px) { .shell-header { grid-template-columns:1fr; } nav { justify-content:flex-start; overflow-x:auto; } .header-tools { justify-content:flex-start; flex-wrap:wrap; } .workspace-layout, .settings-layout { grid-template-columns:1fr; } }
   </style>
 </head>
@@ -67,6 +90,7 @@
       <a href="/">🏠 Dashboard</a>
       <a href="/applications">📄 Application</a>
       <a href="/cv-builder">🧩 CV Builder</a>
+      {% if shell.active_profile %}<a href="/profiles/{{ shell.active_profile.id }}/master-cv">📚 Master CV</a>{% endif %}
     </nav>
     <div class="header-tools" aria-label="Header tools">
       <a href="/settings">⚙ Settings</a>

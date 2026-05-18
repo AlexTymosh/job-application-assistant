@@ -1,32 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero">
-  <p class="badge">📄 Application</p>
-  <h1>Adapt a resume for a job</h1>
-  <p class="muted">Paste a job description, choose an active-profile resume, review structured proposals, then copy or download only after human approval.</p>
-</section>
-{% if not active_profile %}
-  <div class="empty-state"><h2>Select an active profile first</h2><p>The Application workspace is profile-scoped and never opens applications without an active profile.</p><a class="button compact" href="/settings">Open Settings</a></div>
-{% elif not resumes %}
-  <div class="empty-state"><h2>Create resume first</h2><p>{{ active_profile.display_name }} does not have any resumes yet.</p><a class="button compact" href="/profiles/{{ active_profile.id }}/resumes/new">Create resume</a></div>
-{% else %}
-  <div class="tabs"><span class="tab active">1. New application / job input</span><span class="tab">2. Adapted result / review</span></div>
-  <section class="card">
-    <div class="section-header-row"><h2>New application for {{ active_profile.display_name }}</h2><span class="badge good">Active profile</span></div>
-    <form method="post" action="/applications/adapt" class="compact-form">
-      <label>Resume
-        <select name="resume_id" required>
-          {% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}{% if resume.target_role %} — {{ resume.target_role }}{% endif %}</option>{% endfor %}
-        </select>
-      </label>
-      <label>Source URL <input name="source_url" placeholder="Optional job posting URL"></label>
-      <label>Job description <textarea class="job-description" name="raw_job_text" required placeholder="Paste the job description here"></textarea></label>
-      <button class="compact">Adapt</button>
-    </form>
-  </section>
-  <section class="card" style="margin-top:1rem">
-    <h2>Application history for active profile</h2>
-    {% if applications %}<table><thead><tr><th>Job</th><th>Company</th><th>Status</th><th></th></tr></thead><tbody>{% for application in applications %}<tr><td>{{ application.job_title or "Untitled role" }}</td><td>{{ application.company_name }}</td><td><span class="badge">{{ application.status }}</span></td><td><a href="/applications/{{ application.id }}">Open review</a></td></tr>{% endfor %}</tbody></table>{% else %}<p class="muted">No applications for this profile yet.</p>{% endif %}
-  </section>
-{% endif %}
+<section class="hero-card"><h1>Applications</h1><p>Create and review job-specific Tailored Resumes.</p><a class="button" href="/applications/new">New adaptation</a></section>
+<section class="card">{% if applications %}<table><thead><tr><th>#</th><th>Job</th><th>Status</th><th></th></tr></thead><tbody>{% for app in applications %}<tr><td>{{ app.application_number }}</td><td>{{ app.job_title or 'Untitled job' }}</td><td>{{ app.status.replace('_',' ')|title }}</td><td><a class="button compact" href="/applications/{{ app.id }}/tailored-resume">Open</a></td></tr>{% endfor %}</tbody></table>{% else %}<p class="empty">No applications yet.</p>{% endif %}</section>
 {% endblock %}

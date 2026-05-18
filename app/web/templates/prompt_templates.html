@@ -1,22 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero"><p class="badge">Prompt templates</p><h1>AI prompt instructions</h1><p class="muted">Create user guidance for global, profile, resume, or section scopes. Internal privacy and anti-fabrication guardrails are applied automatically and are not editable here.</p></section>
+<section class="hero-card"><h1>Prompt instructions</h1><p>These user instructions guide tone and focus. Non-editable safety guardrails remain internal to the application code.</p></section>
 <section class="card">
-  <h2>Create prompt instruction</h2>
-  <form method="post" action="/settings/prompts-scoped" class="compact-form">
-    <div class="two-column"><label>Scope<select name="scope"><option value="global">Global</option><option value="profile">Profile</option><option value="resume">Resume</option><option value="section">Section</option></select></label><label>Prompt type<select name="block_type"><option value="summary">Summary</option><option value="skills">Skills</option><option value="work_experience_bullet">Work experience bullet</option><option value="job_title">Job title</option><option value="description_custom_block">Custom description</option><option value="cover_letter">Cover letter</option></select></label></div>
-    <div class="two-column"><label>Profile<select name="profile_id"><option value="">Global / not profile-scoped</option>{% for profile in profiles %}<option value="{{ profile.id }}" {% if request.query_params.get('profile_id') == profile.id|string %}selected{% endif %}>Profile: {{ profile.display_name }}</option>{% endfor %}</select></label><label>Resume<select name="resume_id"><option value="">No resume scope</option>{% for resume in resumes %}<option value="{{ resume.id }}" {% if request.query_params.get('resume_id') == resume.id|string %}selected{% endif %}>Resume: {{ resume.name }}{% if resume.profile %} / {{ resume.profile.display_name }}{% endif %}</option>{% endfor %}</select></label></div>
-    <label>Section<select name="section_id"><option value="">No section scope</option>{% for section in sections %}<option value="{{ section.id }}" {% if request.query_params.get('section_id') == section.id|string %}selected{% endif %}>Section: {{ section.resume.name if section.resume else 'Resume' }} / {{ section.title }}</option>{% endfor %}</select></label>
-    <label>User instruction<textarea name="user_prompt_template" required></textarea></label>
-    <button class="compact">Apply instruction to selected scope</button>
-  </form>
+  {% for template in prompt_templates %}
+    <form class="block-card" method="post" action="/settings/prompts/{{ template.id }}"><h2>{{ template.name }}</h2><p class="muted">Scope: {{ template.scope }}</p><label>User instruction<textarea name="user_prompt_template">{{ template.user_prompt_template }}</textarea></label><button class="compact">Save</button></form>
+  {% endfor %}
 </section>
-{% for template in prompt_templates %}
-  <form method="post" action="/settings/prompts/{{ template.id }}" class="card" style="margin-top:.8rem">
-    <h2>{{ template.name }}</h2>
-    <p><span class="badge">{{ template.scope }}</span> <span class="badge">{{ template.block_type }}</span>{% if template.profile_id %} <span class="badge">profile {{ template.profile_id }}</span>{% endif %}{% if template.resume_id %} <span class="badge">resume {{ template.resume_id }}</span>{% endif %}{% if template.section_id %} <span class="badge">section {{ template.section_id }}</span>{% endif %}</p>
-    <label>User-editable instruction<textarea name="user_prompt_template">{{ template.user_prompt_template }}</textarea></label>
-    <button class="compact">Save prompt template</button>
-  </form>
-{% endfor %}
+<section class="card"><h2>Add scoped instruction</h2><form method="post" action="/settings/prompts-scoped"><label>Scope<select name="scope"><option value="global">Global</option><option value="profile">Profile</option><option value="resume">Resume</option><option value="section">Section</option></select></label><label>Prompt type<input name="block_type" value="summary"></label><label>Profile optional<select name="profile_id"><option value=""></option>{% for profile in profiles %}<option value="{{ profile.id }}">{{ profile.display_name }}</option>{% endfor %}</select></label><label>Resume optional<select name="resume_id"><option value=""></option>{% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}</option>{% endfor %}</select></label><label>Section optional<select name="section_id"><option value=""></option>{% for section in sections %}<option value="{{ section.id }}">{{ section.title }}</option>{% endfor %}</select></label><label>User instruction<textarea name="user_prompt_template"></textarea></label><button>Add instruction</button></form></section>
 {% endblock %}
