@@ -7,8 +7,8 @@
 3. Create one or more Resume Variants for target roles.
 4. Open Application and paste a job description.
 5. Select the Resume Variant to adapt.
-6. The app uses the Resume Variant plus allowed Master CV source material to save a Tailored Resume.
-7. Review, edit, and export PDF/DOCX.
+6. The app uses the Resume Variant plus allowed Master CV source material to save a Tailored Resume and generate a Cover Letter draft.
+7. Review the Base Resume preview, Tailored Resume preview, and Cover Letter, then export PDF/DOCX or download the cover letter TXT.
 
 ## CV Builder workflow
 
@@ -27,11 +27,20 @@ Master CV is not a full resume builder clone. It captures only source material t
 
 Header, Languages, Certificates, References, and private contact details belong to Resume Builder only. Legacy private Master CV rows from old pre-release databases are hidden from Master CV UI pages and excluded from AI payloads. Master CV items can be edited or deleted from the builder-style page; deletion requires a visible confirmation checkbox.
 
+## Application review workflow
+
+Adapt Resume automatically creates the Application, Tailored Resume, and Cover Letter, then redirects to the Tailored Resume review page. The review page contains:
+
+- Base Resume preview;
+- Tailored Resume preview;
+- Cover Letter block with copy and TXT download actions;
+- resume PDF/DOCX export buttons.
+
+The current UI does not expose raw Tailored Resume editing. Future section-based editing should be implemented separately if needed.
+
 ## Fix-up workflow guarantees
 
 - Application pages, adaptation, exports, and downloads require an active profile and must belong to that active profile.
 - Master CV uses a builder-style layout with left navigation, central editor, and AI source preview.
-- Adapt Resume automatically creates the Application, Tailored Resume, and Cover Letter, then redirects to the Tailored Resume review page.
-- Tailored Resume review contains Base Resume, Tailored Resume, Cover Letter, and resume export buttons. It no longer exposes raw Markdown editing.
 - Settings profile actions are shown in compact rows and keep typed profile-name deletion confirmation.
 - Dashboard chart background and activity bars use flat colours without gradients while keeping range switching and date/count axes.
