@@ -180,14 +180,19 @@ class ApplicationService:
             if mode == TailoringMode.MASTER_CV_ENHANCED
             else []
         )
-        resolved_section_client = self._section_client(
-            section_client, effective.llm_mode, openai_secret_service
+        resolved_model = effective.openai_model_tailor or effective.openai_model_default
+        resolved_section_client = (
+            self._section_client(
+                section_client, effective.llm_mode, openai_secret_service
+            )
+            if mode == TailoringMode.VARIANT_ONLY
+            else None
         )
         tailored = TailoringService(
             self.session,
             client=client,
             section_client=resolved_section_client,
-            model=effective.openai_model_tailor or effective.openai_model_default,
+            model=resolved_model,
         ).tailor(
             application_id=application.id,
             profile_id=application.profile_id,
@@ -211,14 +216,14 @@ class ApplicationService:
             master_items,
             mode,
             resolved_section_client,
-            effective.openai_model_tailor,
+            resolved_model,
         )
         self._create_fit_analysis(
             application,
             tailored,
             mode,
             resolved_section_client,
-            effective.openai_model_tailor,
+            resolved_model,
         )
         self.session.commit()
         return tailored

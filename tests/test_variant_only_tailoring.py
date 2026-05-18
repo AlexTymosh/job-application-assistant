@@ -93,6 +93,69 @@ def test_master_cv_enhanced_mode_still_uses_current_master_cv_behaviour(session)
     assert "Poetry dependency management" in tailored.rendered_markdown
 
 
+def test_master_cv_enhanced_openai_mode_without_key_stays_deterministic(session):
+    profile, resume = create_profile_resume(session)
+    SettingsService(session).set_llm_mode("openai")
+    SettingsService(session).set(
+        "ai_policy_defaults",
+        {
+            "use_master_cv": True,
+            "allow_new_bullets": True,
+            "allow_hide_bullets": False,
+            "allow_title_edits": False,
+        },
+    )
+    PeopleService(session).create_master_entry(
+        profile.id,
+        category="skills",
+        title="Poetry",
+        content="Used Poetry.",
+        allowed_wording="Poetry dependency management",
+    )
+    application = ApplicationService(session).create_application(
+        profile_id=profile.id,
+        resume_id=resume.id,
+        raw_job_text="Dependency management role",
+    )
+    client = DeterministicTailoringClient()
+
+    tailored = ApplicationService(session).adapt_application(
+        application.id, client=client, openai_secret_service=None
+    )
+
+    assert client.last_payload is not None
+    assert tailored.content_json.get("tailoring_mode") != "variant_only"
+    assert "Poetry dependency management" in tailored.rendered_markdown
+
+
+def test_variant_only_text_tasks_use_default_model_when_tailor_model_is_blank(session):
+    profile, resume = create_profile_resume(session)
+    _set_variant_only(session)
+    settings = SettingsService(session)
+    settings.set("openai_model_default", "fallback-model")
+    settings.set("openai_model_tailor", "")
+    application = ApplicationService(session).create_application(
+        profile_id=profile.id,
+        resume_id=resume.id,
+        raw_job_text="FastAPI role",
+    )
+    client = FakeSectionTailoringClient()
+
+    ApplicationService(session).adapt_application(application.id, section_client=client)
+
+    assert client.captured_text_calls
+    assert all(call["model"] == "fallback-model" for call in client.captured_json_calls)
+    assert all(call["model"] == "fallback-model" for call in client.captured_text_calls)
+
+
+def test_default_variant_only_prompts_do_not_include_hidden_claim_constraints():
+    assert "Master CV" not in DEFAULT_USER_PROMPTS["skills"]
+    assert "without changing" not in DEFAULT_USER_PROMPTS["work_experience_bullets"]
+    assert "without changing" not in DEFAULT_USER_PROMPTS["education_achievements"]
+    assert "employers" not in DEFAULT_USER_PROMPTS["work_experience_bullets"]
+    assert "institution" not in DEFAULT_USER_PROMPTS["education_achievements"]
+
+
 def test_variant_only_section_calls_are_separate(session):
     _profile, _resume, _application, _tailored, client = _adapt_variant_only(session)
 
