@@ -11,3 +11,7 @@ Core tables:
 - `prompt_templates`, `app_settings`, uploads, cover letters, and artifacts
 
 The previous development schema repair bridge has been removed. Existing pre-release development databases can be deleted and recreated when schema changes.
+
+## Active-profile isolation contract
+
+Application creation verifies that the selected `base_resume_id` belongs to the active profile before inserting an Application. Application review, save, export, and download routes verify `application.profile_id` against the active profile before returning data. The Applications list never falls back to a global query when no active profile is selected.

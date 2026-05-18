@@ -25,3 +25,9 @@ The app applies non-editable code-level guardrails:
 - return structured content.
 
 Prompt-template user instructions can refine tone and focus, but they cannot override these guardrails.
+
+## Prompt instruction resolution
+
+Editable section prompts resolve in this order: section, resume, profile, then global. The resolved instructions are included in deterministic fake tailoring payloads, while internal guardrails remain non-editable code-level rules.
+
+Cover letter generation uses the selected Resume Variant, Tailored Resume content, job description, Master CV source material, and the resolved `cover_letter` instruction. Header/contact and private references are excluded from AI payloads by default.

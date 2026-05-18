@@ -25,3 +25,12 @@ Application tailoring selects a Resume Variant, loads active Master CV items, ad
 ## Guardrails
 
 Internal prompt and fake-client guardrails prohibit invented employers, dates, degrees, certificates, metrics, and private contact changes. Tests must use deterministic fake AI and must not touch real OpenAI or the real OS keyring.
+
+## PR #94 fix-up
+
+- Hardened profile isolation for application creation, review, export, and download. Applications are never listed globally when no active profile is selected.
+- Restored the Dashboard stats service contract expected by the existing dashboard template, including 10/20/30-day activity ranges.
+- Updated Master CV to use the same builder shell, left navigation, central editor, and right preview style as CV Builder.
+- Removed the raw tailored Markdown editor and added automatic deterministic cover letter generation during adaptation.
+- Wired scoped prompt instructions into tailoring payloads and fake-client capture.
+- Reworked DOCX/PDF exports to render styled resume content without Markdown artifacts and with runtime Unicode font handling for PDFs.

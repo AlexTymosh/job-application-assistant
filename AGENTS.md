@@ -71,3 +71,10 @@ Use emoji plus conventional commit style:
 - Startup initialises a clean SQL-first schema; legacy development schema repair code is intentionally removed.
 - CV Builder uses a left-navigation, central-editor, right-preview layout.
 - Base Resume Variant and Tailored Resume PDF/DOCX exports are available without automatic job submission.
+
+## PR #94 fix-up notes
+
+- Keep application routes active-profile scoped. Never load, adapt, export, or download applications across profiles.
+- Master CV should visually follow the CV Builder layout. Do not reintroduce a generic admin-card layout for Extended Experience.
+- Tailored Resume review shows generated cover letter output, not raw Markdown editing.
+- Styled DOCX/PDF export should be generated from structured resume content where possible.

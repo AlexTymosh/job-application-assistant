@@ -17,3 +17,10 @@ The builder shows left section navigation, a central section editor, and a right
 ## Master CV workflow
 
 Master CV entries capture extended experience, allowed wording, forbidden wording, inference notes, keywords, and claim strength. They are source material for tailoring, not external verification records.
+
+## Fix-up workflow guarantees
+
+- Application pages, adaptation, exports, and downloads require an active profile and must belong to that active profile.
+- Master CV uses a builder-style layout so Extended Experience editing feels consistent with CV Builder.
+- Adapt Resume automatically creates the Application, Tailored Resume, and Cover Letter, then redirects to the Tailored Resume review page.
+- Tailored Resume review contains Base Resume, Tailored Resume, Cover Letter, and resume export buttons. It no longer exposes raw Markdown editing.

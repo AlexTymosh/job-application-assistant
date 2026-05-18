@@ -17,7 +17,7 @@ from app.db.models import (
 )
 from app.exporters.docx_exporter import DocxExporter
 from app.exporters.pdf_exporter import PdfExporter
-from app.resumes.renderer import render_resume_markdown
+from app.resumes.renderer import render_resume_markdown, resume_to_content
 
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".doc", ".docx"}
 SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
@@ -351,11 +351,13 @@ class ResumeService:
     ) -> Path:
         resume = self.get_resume(resume_id)
         markdown = render_resume_markdown(resume)
+        content = resume_to_content(resume)
         return _write_export(
             markdown,
             resume.name,
             export_format,
             app_data_root / "artifacts" / "resumes" / f"resume-{resume.id}",
+            content=content,
         )
 
     def base_resume_export_path(
@@ -373,15 +375,26 @@ class ResumeService:
 
 
 def _write_export(
-    markdown: str, title: str, export_format: str, directory: Path
+    markdown: str,
+    title: str,
+    export_format: str,
+    directory: Path,
+    *,
+    content: dict | None = None,
 ) -> Path:
     suffix = _normalise_format(export_format)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{_safe_export_name(title)}.{suffix}"
     if suffix == "pdf":
-        path.write_bytes(PdfExporter().export(markdown, title=title))
+        if content is None:
+            path.write_bytes(PdfExporter().export(markdown, title=title))
+        else:
+            path.write_bytes(PdfExporter().export_content(content, title=title))
     elif suffix == "docx":
-        path.write_bytes(DocxExporter().export(markdown, title=title))
+        if content is None:
+            path.write_bytes(DocxExporter().export(markdown, title=title))
+        else:
+            path.write_bytes(DocxExporter().export_content(content, title=title))
     else:
         path.write_text(markdown, encoding="utf-8")
     return path
@@ -466,6 +479,24 @@ def _rows_from_form(
         ],
     }
     keys = keys_by_section[prefix]
+    indexed_rows: dict[int, dict[str, str]] = {}
+    indexed_pattern = re.compile(r"^rows\[(\d+)]\[([A-Za-z0-9_]+)]$")
+    for form_key, raw_value in data.items():
+        match = indexed_pattern.match(form_key)
+        if match is None:
+            continue
+        row_index = int(match.group(1))
+        row_key = match.group(2)
+        if row_key not in keys:
+            continue
+        value = raw_value[-1] if isinstance(raw_value, list) else raw_value
+        indexed_rows.setdefault(row_index, {})[row_key] = str(value).strip()
+    if indexed_rows:
+        return [
+            {key: indexed_rows[index].get(key, "") for key in keys}
+            for index in sorted(indexed_rows)
+        ]
+
     lists: dict[str, list[str]] = {}
     max_len = 0
     for key in keys:

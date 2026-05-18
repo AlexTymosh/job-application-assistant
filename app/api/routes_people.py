@@ -11,6 +11,20 @@ from app.web.templating import templates
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
+MASTER_CV_CATEGORIES = [
+    ("header", "Header / Contact"),
+    ("summary", "Summary source"),
+    ("skill", "Skills source"),
+    ("work_experience", "Work Experience"),
+    ("education", "Education"),
+    ("project", "Projects"),
+    ("tool", "Tools"),
+    ("certificate", "Certificates"),
+    ("language", "Languages"),
+    ("reference", "Private references"),
+    ("instruction", "Instructions"),
+]
+
 
 @router.get("")
 def profiles(request: Request, session: SessionDep):
@@ -76,14 +90,30 @@ async def update_profile(profile_id: int, request: Request, session: SessionDep)
 
 
 @router.get("/{profile_id}/master-cv")
-def master_cv(profile_id: int, request: Request, session: SessionDep):
+def master_cv_default(profile_id: int):
+    return RedirectResponse(
+        f"/profiles/{profile_id}/master-cv/work_experience", status_code=303
+    )
+
+
+@router.get("/{profile_id}/master-cv/{category}")
+def master_cv(profile_id: int, category: str, request: Request, session: SessionDep):
     service = PeopleService(session)
+    entries = service.list_master_entries(profile_id)
+    valid_categories = {key for key, _title in MASTER_CV_CATEGORIES}
+    current_category = category if category in valid_categories else "work_experience"
     return templates.TemplateResponse(
         "master_cv.html",
         {
             "request": request,
             "profile": service.get_profile(profile_id),
-            "entries": service.list_master_entries(profile_id),
+            "entries": entries,
+            "current_entries": [
+                entry for entry in entries if entry.category == current_category
+            ],
+            "category_nav": MASTER_CV_CATEGORIES,
+            "current_category": current_category,
+            "current_title": dict(MASTER_CV_CATEGORIES)[current_category],
             "strengths": [item.value for item in ClaimStrength],
         },
     )
@@ -105,7 +135,10 @@ async def create_master_cv_entry(
         inference_notes=data.get("inference_notes", ""),
         claim_strength=data.get("claim_strength", ClaimStrength.NORMAL.value),
     )
-    return RedirectResponse(f"/profiles/{profile_id}/master-cv", status_code=303)
+    return RedirectResponse(
+        f"/profiles/{profile_id}/master-cv/{data.get('category', 'work_experience')}",
+        status_code=303,
+    )
 
 
 @router.post("/{profile_id}/set-active")

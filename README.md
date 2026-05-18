@@ -69,3 +69,11 @@ uv run ruff check .
 uv run pytest
 uv run pre-commit run --all-files
 ```
+
+## PR #94 fix-up notes
+
+- Applications are strictly scoped to the active profile. Forged Resume Variant IDs and direct links to another profile's applications are rejected before tailoring, review, export, or download.
+- Master CV now uses the same builder-style pattern as CV Builder: left navigation, central section editor, compact cards, and an Extended Experience preview.
+- Adapt Resume saves both a Tailored Resume and deterministic Cover Letter automatically. The raw Markdown edit block was removed from the tailored resume review page.
+- Prompt instructions are resolved for editable tailoring boundaries in section → resume → profile → global order and are included in the fake tailoring payload for deterministic testing.
+- DOCX/PDF exports now render styled resume output from structured content, avoid Markdown artifacts, and use runtime Unicode font discovery for readable PDF text.

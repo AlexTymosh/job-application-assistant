@@ -12,3 +12,14 @@
 - [ ] `uv run ruff check .` passes.
 - [ ] `uv run pytest` passes.
 - [ ] `uv run pre-commit run --all-files` passes or any environment limitation is documented.
+
+## PR #94 fix-up release gates
+
+- [ ] Cross-profile Resume Variant adaptation is rejected.
+- [ ] Cross-profile application review/export/download URLs are rejected.
+- [ ] Dashboard renders zero and non-zero activity for 10/20/30-day ranges.
+- [ ] Master CV uses the builder-style UI.
+- [ ] Cover Letter is generated and displayed after Adapt Resume.
+- [ ] Tailored Resume review has no raw Markdown edit block.
+- [ ] DOCX export has styled headings/separators and no Markdown artifacts.
+- [ ] PDF export is readable with non-ASCII text.

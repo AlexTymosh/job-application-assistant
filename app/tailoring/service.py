@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import MasterCVEntry, Resume, TailoredResume
 from app.resumes.renderer import render_resume_markdown_from_content, resume_to_content
+from app.settings.service import SettingsService
 
 AI_EDITABLE_SECTIONS = {"summary", "skills", "work_experience", "education"}
 PRIVATE_SECTIONS = {"header", "references"}
@@ -17,6 +18,7 @@ class TailoringPayload:
     base_resume: dict[str, Any]
     master_cv_items: list[dict[str, Any]]
     job_description: str
+    prompt_instructions: dict[str, str]
 
 
 class DeterministicTailoringClient:
@@ -32,12 +34,15 @@ class DeterministicTailoringClient:
         forbidden_terms = _forbidden_terms(payload.master_cv_items)
         sections = content.setdefault("sections", {})
         if sections.get("summary", {}).get("text"):
+            instruction = payload.prompt_instructions.get("summary", "")
+            summary_suffix = (
+                " Tailored for this role using the selected resume variant "
+                "and Master CV source material."
+            )
+            if instruction:
+                summary_suffix += f" Prompt focus: {instruction}"
             sections["summary"]["text"] = _append_once(
-                sections["summary"]["text"],
-                (
-                    " Tailored for this role using the selected resume variant "
-                    "and Master CV source material."
-                ),
+                sections["summary"]["text"], summary_suffix
             )
         if sections.get("skills") and allowed_terms:
             relevant = allowed_terms
@@ -87,6 +92,7 @@ class TailoringService:
             if key not in PRIVATE_SECTIONS
         }
         base_content["sections"] = safe_sections
+        prompt_instructions = self._prompt_instructions(resume)
         return TailoringPayload(
             base_resume=base_content,
             master_cv_items=[
@@ -105,7 +111,43 @@ class TailoringService:
                 if item.is_active
             ],
             job_description=job_description,
+            prompt_instructions=prompt_instructions,
         )
+
+    def _prompt_instructions(self, resume: Resume) -> dict[str, str]:
+        settings = SettingsService(self.session)
+        section_ids = {section.section_type: section.id for section in resume.sections}
+        return {
+            "summary": settings.get_prompt_instruction(
+                "summary",
+                profile_id=resume.profile_id,
+                resume_id=resume.id,
+                section_id=section_ids.get("summary"),
+            ),
+            "skills": settings.get_prompt_instruction(
+                "skills",
+                profile_id=resume.profile_id,
+                resume_id=resume.id,
+                section_id=section_ids.get("skills"),
+            ),
+            "work_experience_bullets": settings.get_prompt_instruction(
+                "work_experience_bullets",
+                profile_id=resume.profile_id,
+                resume_id=resume.id,
+                section_id=section_ids.get("work_experience"),
+            ),
+            "education_achievements": settings.get_prompt_instruction(
+                "education_achievements",
+                profile_id=resume.profile_id,
+                resume_id=resume.id,
+                section_id=section_ids.get("education"),
+            ),
+            "cover_letter": settings.get_prompt_instruction(
+                "cover_letter",
+                profile_id=resume.profile_id,
+                resume_id=resume.id,
+            ),
+        }
 
     def tailor(
         self,

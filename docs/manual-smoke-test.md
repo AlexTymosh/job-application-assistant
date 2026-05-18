@@ -12,3 +12,13 @@
 10. Edit and save the Tailored Resume markdown.
 11. Export the Tailored Resume as PDF and DOCX.
 12. Confirm no user-facing screen uses old evidence/fact-checking language.
+
+## PR #94 fix-up checks
+
+- Confirm Applications shows an active-profile empty state when no active profile is selected and does not list other profiles' records.
+- Confirm Master CV uses the builder-style layout with left navigation, central editor, and Extended Experience preview.
+- Confirm Adapt Resume redirects to the Tailored Resume page and displays a Cover Letter block.
+- Confirm the Tailored Resume page does not show a raw Markdown edit form.
+- Confirm base and tailored DOCX exports have styled headings/separators and no raw Markdown markers.
+- Confirm PDF exports are readable for Latin and non-ASCII text.
+- Confirm direct cross-profile application URLs and forged resume IDs are rejected.

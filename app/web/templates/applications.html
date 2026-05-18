@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>Applications</h1><p>Create and review job-specific Tailored Resumes.</p><a class="button" href="/applications/new">New adaptation</a></section>
-<section class="card">{% if applications %}<table><thead><tr><th>#</th><th>Job</th><th>Status</th><th></th></tr></thead><tbody>{% for app in applications %}<tr><td>{{ app.application_number }}</td><td>{{ app.job_title or 'Untitled job' }}</td><td>{{ app.status.replace('_',' ')|title }}</td><td><a class="button compact" href="/applications/{{ app.id }}/tailored-resume">Open</a></td></tr>{% endfor %}</tbody></table>{% else %}<p class="empty">No applications yet.</p>{% endif %}</section>
+<section class="hero-card"><h1>Applications</h1><p>Create and review job-specific Tailored Resumes for the active profile.</p>{% if active_profile %}<a class="button" href="/applications/new">New adaptation</a>{% endif %}</section>
+<section class="card">
+{% if not active_profile %}
+  <div class="empty-state"><p>Select an active profile before reviewing applications.</p><a class="button" href="/settings">Open Settings</a><a class="button secondary" href="/profiles/new">Create profile</a></div>
+{% elif applications %}
+  <table><thead><tr><th>#</th><th>Job</th><th>Status</th><th></th></tr></thead><tbody>{% for app in applications %}<tr><td>{{ app.application_number }}</td><td>{{ app.job_title or 'Untitled job' }}</td><td>{{ app.status.replace('_',' ')|title }}</td><td><a class="button compact" href="/applications/{{ app.id }}/tailored-resume">Open</a></td></tr>{% endfor %}</tbody></table>
+{% else %}<p class="empty">No applications yet.</p>{% endif %}
+</section>
 {% endblock %}

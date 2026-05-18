@@ -1,22 +1,48 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>Master CV</h1><p>Extended Experience source material for {{ profile.display_name }}. This is your private experience library for conservative AI tailoring.</p></section>
-<section class="grid-two">
-  <form class="card" method="post">
-    <h2>Add Extended Experience</h2>
-    <label>Category<select name="category"><option value="summary">Summary</option><option value="skill">Skill</option><option value="work_experience" selected>Work experience</option><option value="education">Education</option><option value="language">Language</option><option value="certificate">Certificate</option><option value="project">Project</option><option value="tool">Tool</option><option value="instruction">Instruction</option></select></label>
-    <label>Title<input name="title" required></label>
-    <label>Content<textarea name="content" required></textarea></label>
-    <label>Keywords (comma-separated)<input name="keywords"></label>
-    <label>Allowed wording<textarea name="allowed_wording"></textarea></label>
-    <label>Forbidden wording<textarea name="forbidden_wording"></textarea></label>
-    <label>Inference notes<textarea name="inference_notes"></textarea></label>
-    <label>Claim strength<select name="claim_strength">{% for value in strengths %}<option value="{{ value }}">{{ value.replace('_',' ')|title }}</option>{% endfor %}</select></label>
-    <button type="submit">Add item</button>
-  </form>
-  <article class="card">
-    <h2>Experience Library</h2>
-    {% if entries %}{% for entry in entries %}<div class="block-card"><h3>{{ entry.title }}</h3><p><span class="badge">{{ entry.category.replace('_',' ')|title }}</span> <span class="muted">{{ entry.claim_strength.replace('_',' ')|title }}</span></p><p>{{ entry.content }}</p>{% if entry.allowed_wording %}<p><strong>Allowed wording:</strong> {{ entry.allowed_wording }}</p>{% endif %}{% if entry.forbidden_wording %}<p><strong>Forbidden wording:</strong> {{ entry.forbidden_wording }}</p>{% endif %}{% if entry.inference_notes %}<p><strong>Inference notes:</strong> {{ entry.inference_notes }}</p>{% endif %}</div>{% endfor %}{% else %}<p class="empty">No Master CV items yet.</p>{% endif %}
-  </article>
-</section>
+<div class="builder-shell master-cv-shell">
+  <aside class="builder-nav" aria-label="Master CV sections">
+    <a class="brand-mini" href="/cv-builder">Master CV</a>
+    {% for key, title in category_nav %}
+      <a class="builder-nav-item {% if current_category == key %}active{% endif %}" href="/profiles/{{ profile.id }}/master-cv/{{ key }}">{{ title }}</a>
+    {% endfor %}
+  </aside>
+  <section class="builder-editor">
+    <div class="section-header-row">
+      <div><h1>{{ current_title }}</h1><p class="muted">Capture extended source material for {{ profile.display_name }}. This is broader than any single Resume Variant.</p></div>
+      <a class="button ghost" href="/cv-builder">Resume Variants</a>
+    </div>
+    <form class="builder-form card" method="post" action="/profiles/{{ profile.id }}/master-cv">
+      <input type="hidden" name="category" value="{{ current_category }}">
+      <article class="block-card">
+        <h2>Add Extended Experience</h2>
+        <label>Title<input name="title" required></label>
+        <label>Content<textarea name="content" required></textarea></label>
+        <label>Keywords (comma-separated)<input name="keywords"></label>
+        <label>Allowed wording<textarea name="allowed_wording"></textarea></label>
+        <label>Forbidden wording<textarea name="forbidden_wording"></textarea></label>
+        <label>Inference notes<textarea name="inference_notes"></textarea></label>
+        <label>Claim strength<select name="claim_strength">{% for value in strengths %}<option value="{{ value }}">{{ value.replace('_',' ')|title }}</option>{% endfor %}</select></label>
+      </article>
+      <div class="actions"><button type="submit">Save source material</button></div>
+    </form>
+    <section class="card">
+      <h2>{{ current_title }} items</h2>
+      {% for entry in current_entries %}
+        <article class="block-card"><h3>{{ entry.title }}</h3><p class="muted">{{ entry.claim_strength.replace('_',' ')|title }}</p><p>{{ entry.content }}</p>{% if entry.allowed_wording %}<p><strong>Allowed wording:</strong> {{ entry.allowed_wording }}</p>{% endif %}{% if entry.forbidden_wording %}<p><strong>Forbidden wording:</strong> {{ entry.forbidden_wording }}</p>{% endif %}{% if entry.inference_notes %}<p><strong>Inference notes:</strong> {{ entry.inference_notes }}</p>{% endif %}</article>
+      {% else %}<p class="empty">No source material in this section yet.</p>{% endfor %}
+    </section>
+  </section>
+  <aside class="builder-preview">
+    <div class="preview-toolbar"><span>Extended Experience Preview</span></div>
+    <article class="resume-preview-paper">
+      <h1>{{ profile.display_name }}</h1>
+      <p>Master CV source material</p>
+      {% for key, title in category_nav %}
+        {% set items = entries|selectattr('category','equalto',key)|list %}
+        {% if items %}<h2>{{ title.upper() }}</h2>{% for entry in items %}<p><strong>{{ entry.title }}</strong></p><ul><li>{{ entry.content }}</li></ul>{% endfor %}{% endif %}
+      {% endfor %}
+    </article>
+  </aside>
+</div>
 {% endblock %}
