@@ -9,88 +9,53 @@
   </aside>
   <section class="builder-editor">
     <div class="section-header-row">
-      <div><h1>{{ current_title }}</h1><p class="muted">Capture extended source material for {{ profile.display_name }}. Master CV uses the same field style as Resume Builder, but can contain more detail.</p></div>
+      <div><h1>{{ current_title }}</h1><p class="muted">Capture AI-safe source material for {{ profile.display_name }}. Header, languages, certificates, and references stay in Resume Builder only.</p></div>
       <a class="button ghost" href="/cv-builder">Resume Variants</a>
     </div>
-    <form class="builder-form card" method="post" action="/profiles/{{ profile.id }}/master-cv">
+    {% set form_action = "/profiles/" ~ profile.id ~ "/master-cv" %}
+    {% if editing_entry %}{% set form_action = "/profiles/" ~ profile.id ~ "/master-cv/items/" ~ editing_entry.id ~ "/edit" %}{% endif %}
+    <form class="builder-form card" method="post" action="{{ form_action }}">
       <input type="hidden" name="category" value="{{ current_category }}">
       <article class="block-card">
-        <h2>Add {{ current_title }} item</h2>
-        {% if current_category == 'header' %}
-          <div class="form-grid">
-            <label>First Name<input name="first_name"></label>
-            <label>Surname<input name="surname"></label>
-            <label>Location<input name="location"></label>
-            <label>Phone<input name="phone"></label>
-            <label>Email address<input name="email" type="email"></label>
-            <label>LinkedIn URL<input name="linkedin_url" type="url"></label>
-            <label>GitHub URL optional<input name="github_url" type="url"></label>
-          </div>
-          <label>Extra text optional<textarea name="extra_text"></textarea></label>
-        {% elif current_category == 'summary' %}
-          <label>Summary<textarea name="summary" required></textarea></label>
+        <h2>{% if editing_entry %}Edit {{ current_title }} item{% else %}Add {{ current_title }} item{% endif %}</h2>
+        {% if current_category == 'summary' %}
+          <label>Summary source material<textarea name="summary" required>{{ editing_entry.content if editing_entry else '' }}</textarea></label>
         {% elif current_category == 'skills' %}
-          <label>Hard Skills<textarea name="hard_skills" required></textarea></label>
-          <label>Soft Skills<textarea name="soft_skills"></textarea></label>
+          {% set skills_content = editing_entry.content if editing_entry else '' %}
+          <label>Hard Skills<textarea name="hard_skills" required>{{ skills_content.split('Soft Skills:')[0].replace('Hard Skills:', '').strip() if editing_entry else '' }}</textarea></label>
+          <label>Soft Skills<textarea name="soft_skills">{{ skills_content.split('Soft Skills:')[1].strip() if editing_entry and 'Soft Skills:' in skills_content else '' }}</textarea></label>
         {% elif current_category == 'work_experience' %}
-          <div class="form-grid">
-            <label>Job title<input name="job_title" required></label>
-            <label>Employer<input name="employer" required></label>
-            <label>Start Date<input name="start_date" type="month"></label>
-            <label>End Date<input name="end_date" type="month"></label>
-          </div>
-          <label class="checkbox-line"><input type="checkbox" name="is_current"> I currently work here</label>
-          <label class="checkbox-line"><input type="checkbox" name="optional_extra_enabled"> Add extra context</label>
-          <label>Optional extra text<textarea name="optional_extra_text"></textarea></label>
-          <label>Key bullets<textarea name="key_bullets" required></textarea></label>
+          <label>Key bullets / source bullets<textarea name="key_bullets" required>{{ editing_entry.content if editing_entry else '' }}</textarea></label>
         {% elif current_category == 'education' %}
-          <div class="form-grid">
-            <label>Institution name<input name="institution_name" required></label>
-            <label>Specialisation<input name="specialisation"></label>
-            <label>Start Date<input name="start_date" type="month"></label>
-            <label>End Date<input name="end_date" type="month"></label>
-          </div>
-          <label class="checkbox-line"><input type="checkbox" name="is_current"> Current</label>
-          <label>Key bullets / achievements<textarea name="key_bullets"></textarea></label>
-        {% elif current_category == 'languages' %}
-          <div class="form-grid">
-            <label>Language<input name="language" required></label>
-            <label>Level<input name="level" required></label>
-          </div>
-        {% elif current_category == 'certificates' %}
-          <div class="form-grid">
-            <label>Certificate name<input name="certificate_name" required></label>
-            <label>Certificate URL optional<input name="certificate_url" type="url"></label>
-            <label>Issue year<input name="issue_year" type="number" min="1900" max="2100"></label>
-          </div>
-        {% elif current_category == 'references' %}
-          <div class="form-grid">
-            <label>Name<input name="name" required></label>
-            <label>Role title<input name="role_title"></label>
-            <label>Company<input name="company"></label>
-            <label>Phone<input name="phone"></label>
-            <label>Email<input name="email" type="email"></label>
-            <label>LinkedIn URL optional<input name="linkedin_url" type="url"></label>
-          </div>
+          <label>Key bullets / achievements source material<textarea name="key_bullets" required>{{ editing_entry.content if editing_entry else '' }}</textarea></label>
         {% endif %}
       </article>
-      <div class="actions"><button type="submit">Save source material</button></div>
+      <div class="actions"><button type="submit">{% if editing_entry %}Save changes{% else %}Save source material{% endif %}</button>{% if editing_entry %}<a class="button secondary" href="/profiles/{{ profile.id }}/master-cv/{{ current_category }}">Cancel</a>{% endif %}</div>
     </form>
     <section class="card">
       <h2>{{ current_title }} items</h2>
       {% for entry in current_entries %}
         <article class="block-card">
-          <h3>{{ entry.title }}</h3>
+          <div class="section-header-row">
+            <h3>{{ entry.title }}</h3>
+            <div class="actions">
+              <a class="button compact ghost" href="/profiles/{{ profile.id }}/master-cv/items/{{ entry.id }}/edit">Edit</a>
+              <form class="inline-form compact-delete-form" method="post" action="/profiles/{{ profile.id }}/master-cv/items/{{ entry.id }}/delete">
+                <label class="checkbox-line compact-confirm"><input type="checkbox" name="confirm_delete_entry" value="delete"> Confirm delete</label>
+                <button class="compact danger" type="submit">Delete</button>
+              </form>
+            </div>
+          </div>
           <p style="white-space: pre-line;">{{ entry.content }}</p>
         </article>
       {% else %}<p class="empty">No source material in this section yet.</p>{% endfor %}
     </section>
   </section>
   <aside class="builder-preview">
-    <div class="preview-toolbar"><span>Extended Experience Preview</span></div>
+    <div class="preview-toolbar"><span>AI Source Preview</span></div>
     <article class="resume-preview-paper">
       <h1>{{ profile.display_name }}</h1>
-      <p>Master CV source material</p>
+      <p>Master CV AI source material</p>
       {% for key, title in category_nav %}
         {% set items = entries|selectattr('category','equalto',key)|list %}
         {% if items %}

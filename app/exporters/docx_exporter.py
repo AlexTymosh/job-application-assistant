@@ -52,30 +52,17 @@ def _render_content(document: Document, content: dict[str, Any]) -> None:
         for part in [header.get("first_name", ""), header.get("surname", "")]
         if part
     ).strip() or content.get("name", "Resume")
-    p = document.add_paragraph()
+    p = document.add_paragraph(style="Heading 1")
     run = p.add_run(_clean_text(name).upper())
     run.font.color.rgb = BRAND_BLUE
     run.font.size = Pt(16)
     run.bold = False
     if content.get("target_role"):
-        p = document.add_paragraph()
+        p = document.add_paragraph(style="Heading 1")
         run = p.add_run(_clean_text(str(content["target_role"])).upper())
         run.font.color.rgb = BRAND_BLUE
         run.font.size = Pt(13)
-    contact = " • ".join(
-        _clean_text(str(part))
-        for part in [
-            header.get("phone", ""),
-            header.get("email", ""),
-            header.get("linkedin_url", ""),
-            header.get("github_url", ""),
-            header.get("location", ""),
-            header.get("extra_text", ""),
-        ]
-        if part
-    )
-    if contact:
-        document.add_paragraph(contact)
+    _add_contact_line(document, header)
     summary = sections.get("summary", {}).get("text", "").strip()
     if summary:
         document.add_paragraph(_clean_text(summary))
@@ -86,30 +73,92 @@ def _render_content(document: Document, content: dict[str, Any]) -> None:
             _add_labelled_paragraph(document, "Hard Skills", skills["hard"])
         if skills.get("soft"):
             _add_labelled_paragraph(document, "Soft Skills", skills["soft"])
-    _add_experience(
-        document, sections.get("work_experience", []), "Professional Experience"
-    )
+    _add_experience(document, sections.get("work_experience", []), "Work Experience")
     _add_education(document, sections.get("education", []))
     _add_rows(document, sections.get("languages", []), "Languages", _language_line)
     _add_rows(
         document, sections.get("certificates", []), "Certificates", _certificate_line
     )
-    _add_rows(document, sections.get("references", []), "References", _reference_line)
+    _add_reference_rows(document, sections.get("references", []))
+
+
+def _add_contact_line(document: Document, header: dict[str, Any]) -> None:
+    items = [
+        (header.get("phone", ""), ""),
+        (header.get("email", ""), _mailto(header.get("email", ""))),
+        (header.get("linkedin_url", ""), header.get("linkedin_url", "")),
+        (header.get("github_url", ""), header.get("github_url", "")),
+        (
+            header.get("website_url") or header.get("personal_website_url", ""),
+            header.get("website_url") or header.get("personal_website_url", ""),
+        ),
+        (header.get("location", ""), ""),
+        (header.get("extra_text", ""), ""),
+    ]
+    items = [
+        (str(text).strip(), str(url).strip())
+        for text, url in items
+        if str(text).strip()
+    ]
+    if not items:
+        return
+    paragraph = document.add_paragraph()
+    for index, (text, url) in enumerate(items):
+        if index:
+            paragraph.add_run(" • ")
+        if url:
+            _add_hyperlink(paragraph, url, text)
+        else:
+            paragraph.add_run(_clean_text(text))
+
+
+def _mailto(email: str) -> str:
+    email = str(email).strip()
+    return f"mailto:{email}" if email else ""
+
+
+def _add_hyperlink(paragraph, url: str, text: str) -> None:  # type: ignore[no-untyped-def]
+    relationship_id = paragraph.part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True,
+    )
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), relationship_id)
+    run_element = OxmlElement("w:r")
+    run_properties = OxmlElement("w:rPr")
+    colour = OxmlElement("w:color")
+    colour.set(qn("w:val"), "0563C1")
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    run_properties.append(colour)
+    run_properties.append(underline)
+    run_element.append(run_properties)
+    text_element = OxmlElement("w:t")
+    text_element.text = _clean_text(text)
+    run_element.append(text_element)
+    hyperlink.append(run_element)
+    paragraph._p.append(hyperlink)
 
 
 def _add_section_heading(document: Document, title: str) -> None:
-    p = document.add_paragraph()
+    p = document.add_paragraph(style="Heading 2")
     _set_paragraph_border(p)
     run = p.add_run(title.upper())
     run.font.color.rgb = BRAND_BLUE
     run.font.size = Pt(12)
 
 
+def _add_subsection_heading(document: Document, title: str) -> None:
+    p = document.add_paragraph(style="Heading 3")
+    run = p.add_run(_clean_text(title).upper())
+    run.font.color.rgb = BRAND_BLUE
+    run.font.size = Pt(10.5)
+
+
 def _add_labelled_paragraph(document: Document, label: str, text: str) -> None:
-    p = document.add_paragraph()
-    label_run = p.add_run(f"{label}: ")
-    label_run.bold = True
-    p.add_run(_clean_text(text))
+    _add_subsection_heading(document, label)
+    document.add_paragraph(_clean_text(text))
 
 
 def _add_experience(document: Document, rows: list[dict[str, Any]], title: str) -> None:
@@ -126,10 +175,7 @@ def _add_experience(document: Document, rows: list[dict[str, Any]], title: str) 
             part for part in [row.get("role_title"), row.get("organisation")] if part
         )
         if heading:
-            p = document.add_paragraph()
-            run = p.add_run(_clean_text(heading))
-            run.font.color.rgb = BRAND_BLUE
-            run.font.size = Pt(10.5)
+            _add_subsection_heading(document, heading)
         period = _period(row)
         if period:
             p = document.add_paragraph()
@@ -153,7 +199,7 @@ def _add_education(document: Document, rows: list[dict[str, Any]]) -> None:
             part for part in [row.get("organisation"), row.get("role_title")] if part
         )
         if heading:
-            document.add_paragraph(_clean_text(heading))
+            _add_subsection_heading(document, heading)
         period = _period(row)
         if period:
             document.add_paragraph(_clean_text(period))
@@ -170,6 +216,22 @@ def _add_rows(
     _add_section_heading(document, title)
     for item in rendered:
         document.add_paragraph(item, style="List Bullet")
+
+
+def _add_reference_rows(document: Document, rows: list[dict[str, Any]]) -> None:
+    visible = [row for row in rows if _reference_line(row).strip()]
+    if not visible:
+        return
+    _add_section_heading(document, "References")
+    for row in visible:
+        paragraph = document.add_paragraph(style="List Bullet")
+        text = _reference_line({**row, "linkedin_url": ""}).strip()
+        if text:
+            paragraph.add_run(_clean_text(text))
+        if row.get("linkedin_url"):
+            if text:
+                paragraph.add_run(" • ")
+            _add_hyperlink(paragraph, row["linkedin_url"], row["linkedin_url"])
 
 
 def _add_bullets(document: Document, text: str) -> None:

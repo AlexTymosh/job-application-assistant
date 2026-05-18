@@ -5,8 +5,10 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.errors import NotFoundError, ValidationAppError
+from app.core.errors import NotFoundError, ProfileScopeError, ValidationAppError
 from app.db.models import MasterCV, MasterCVEntry, PersonProfile, ProfileContact
+
+AI_SAFE_MASTER_CV_CATEGORIES = {"summary", "skills", "work_experience", "education"}
 
 
 class PeopleService:
@@ -107,13 +109,16 @@ class PeopleService:
         self.session.commit()
         return master_cv
 
-    def list_master_entries(self, profile_id: int) -> list[MasterCVEntry]:
+    def list_master_entries(
+        self, profile_id: int, *, ai_safe_only: bool = False
+    ) -> list[MasterCVEntry]:
         master_cv = self.get_or_create_master_cv(profile_id)
+        stmt = select(MasterCVEntry).where(MasterCVEntry.master_cv_id == master_cv.id)
+        if ai_safe_only:
+            stmt = stmt.where(MasterCVEntry.category.in_(AI_SAFE_MASTER_CV_CATEGORIES))
         return list(
             self.session.scalars(
-                select(MasterCVEntry)
-                .where(MasterCVEntry.master_cv_id == master_cv.id)
-                .order_by(MasterCVEntry.display_order, MasterCVEntry.id)
+                stmt.order_by(MasterCVEntry.display_order, MasterCVEntry.id)
             )
         )
 
@@ -150,6 +155,21 @@ class PeopleService:
         self.session.commit()
         return entry
 
+    def get_profile_master_entry(
+        self, profile_id: int, entry_id: int, *, ai_safe_only: bool = False
+    ) -> MasterCVEntry:
+        master_cv = self.get_or_create_master_cv(profile_id)
+        entry = self.session.get(MasterCVEntry, entry_id)
+        if entry is None or entry.master_cv_id != master_cv.id:
+            raise ProfileScopeError(
+                "Master CV entry not found in this profile workspace."
+            )
+        if ai_safe_only and entry.category not in AI_SAFE_MASTER_CV_CATEGORIES:
+            raise ProfileScopeError(
+                "This legacy Master CV item is not editable in the AI source workspace."
+            )
+        return entry
+
     def update_master_entry(self, entry_id: int, **values: str) -> MasterCVEntry:
         entry = self.session.get(MasterCVEntry, entry_id)
         if entry is None:
@@ -171,6 +191,17 @@ class PeopleService:
             ]
         self.session.commit()
         return entry
+
+    def delete_master_entry(self, entry_id: int, *, confirm: str) -> None:
+        if confirm != "delete":
+            raise ValidationAppError(
+                "Tick the delete confirmation before deleting this Master CV item."
+            )
+        entry = self.session.get(MasterCVEntry, entry_id)
+        if entry is None:
+            raise NotFoundError("Master CV entry not found.")
+        self.session.delete(entry)
+        self.session.commit()
 
     def require_delete_confirmation(self, profile_id: int, confirmation: str) -> None:
         profile = self.get_profile(profile_id)

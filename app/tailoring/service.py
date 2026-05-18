@@ -11,10 +11,13 @@ from app.settings.service import SettingsService
 
 AI_EDITABLE_SECTIONS = {"summary", "skills", "work_experience", "education"}
 PRIVATE_SECTIONS = {"header", "references"}
+AI_SAFE_MASTER_CV_CATEGORIES = {"summary", "skills", "work_experience", "education"}
 PRIVATE_MASTER_CV_CATEGORIES = {
     "header",
     "reference",
     "references",
+    "languages",
+    "certificates",
 }
 
 
@@ -191,7 +194,7 @@ def _master_item_payload(item: MasterCVEntry) -> dict[str, Any]:
 
 
 def _is_ai_safe_master_item(item: MasterCVEntry) -> bool:
-    return item.is_active and item.category not in PRIVATE_MASTER_CV_CATEGORIES
+    return item.is_active and item.category in AI_SAFE_MASTER_CV_CATEGORIES
 
 
 def _deepcopy_content(content: dict[str, Any]) -> dict[str, Any]:

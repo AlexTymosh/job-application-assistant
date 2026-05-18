@@ -1,6 +1,17 @@
 # AI Tailoring Policy
 
-Tailoring adapts a selected Resume Variant using active Master CV items and pasted job text. The Master CV is local extended experience source material, not external fact-checking.
+Tailoring adapts a selected Resume Variant using active Master CV source material and pasted job text. The Master CV is local AI source material, not external fact-checking.
+
+## Master CV allow-list
+
+Only these Master CV categories are allowed into tailoring and cover-letter payloads:
+
+- `summary` — summary source material;
+- `skills` — hard and soft skill source material;
+- `work_experience` — key/source bullets only;
+- `education` — key bullets and achievements only.
+
+Legacy or private categories are hidden from Master CV UI pages and excluded even if old rows exist in SQLite: `header`, `reference`, `references`, `languages`, and `certificates`. The app is pre-release, so users may recreate their local database if old private Master CV rows need to be removed completely.
 
 ## Editable boundaries
 
@@ -18,9 +29,9 @@ The app applies non-editable code-level guardrails:
 - do not invent dates;
 - do not invent degrees;
 - do not invent certificates;
-- do not invent metrics unless present in the Resume Variant or Master CV;
+- do not invent metrics unless present in the Resume Variant or allowed Master CV source material;
 - do not modify Header/contact fields;
-- do not send Header/contact or References to AI prompt payloads;
+- do not send Header/contact, Languages, Certificates, or References to AI prompt payloads;
 - do not treat related tools as direct experience unless explicitly present;
 - return structured content.
 
@@ -30,4 +41,4 @@ Prompt-template user instructions can refine tone and focus, but they cannot ove
 
 Editable section prompts resolve in this order: section, resume, profile, then global. The resolved instructions are included in deterministic fake tailoring payloads, while internal guardrails remain non-editable code-level rules.
 
-Cover letter generation uses the selected Resume Variant, Tailored Resume content, job description, Master CV source material, and the resolved `cover_letter` instruction. Header/contact and private references are excluded from AI payloads by default.
+Cover letter generation uses the selected Resume Variant, Tailored Resume content, job description, AI-safe Master CV source material, and the resolved `cover_letter` instruction. Header/contact and private references are excluded from AI payloads by default.

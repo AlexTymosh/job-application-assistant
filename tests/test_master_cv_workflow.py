@@ -157,7 +157,7 @@ def test_master_cv_entry_can_be_created_and_listed(session):
     profile = PeopleService(session).create_profile("Oleksii", "Oleksii Tymoshenko")
     entry = PeopleService(session).create_master_entry(
         profile.id,
-        category="tool",
+        category="skills",
         title="Poetry",
         content="Used Poetry for Python dependency management.",
         keywords="Poetry, Python dependency management",
@@ -176,7 +176,7 @@ def test_tailoring_uses_master_cv_without_private_payload(session):
     profile, resume = create_profile_resume(session)
     PeopleService(session).create_master_entry(
         profile.id,
-        category="tool",
+        category="skills",
         title="Poetry",
         content="Used Poetry for Python dependency management.",
         keywords="Poetry",
@@ -207,7 +207,10 @@ def test_tailoring_uses_master_cv_without_private_payload(session):
 def test_prompt_payload_builder_excludes_contact_and_reference_data(session):
     profile, resume = create_profile_resume(session)
     PeopleService(session).create_master_entry(
-        profile.id, category="skill", title="FastAPI", content="Built FastAPI services."
+        profile.id,
+        category="skills",
+        title="FastAPI",
+        content="Built FastAPI services.",
     )
     payload = TailoringService(session).build_payload(
         resume, PeopleService(session).list_master_entries(profile.id), "FastAPI role"
@@ -222,7 +225,7 @@ def test_exports_for_base_and_tailored_resume_work(session, tmp_path: Path):
     profile, resume = create_profile_resume(session)
     PeopleService(session).create_master_entry(
         profile.id,
-        category="skill",
+        category="skills",
         title="FastAPI",
         content="Built FastAPI APIs.",
         allowed_wording="FastAPI APIs",
@@ -243,12 +246,13 @@ def test_exports_for_base_and_tailored_resume_work(session, tmp_path: Path):
     )
     assert tailored_pdf.exists() and tailored_pdf.stat().st_size > 0
     assert tailored_docx.exists() and tailored_docx.stat().st_size > 0
-    assert (
-        "## Professional Experience"
-        in ApplicationService(session)
+    rendered = (
+        ApplicationService(session)
         .get_tailored_resume(application.id)
         .rendered_markdown
     )
+    assert "## Work Experience" in rendered
+    assert "## Professional Experience" not in rendered
 
 
 def test_ui_routes_render_new_workflow(app_client):
@@ -275,7 +279,7 @@ def test_ui_routes_render_new_workflow(app_client):
     app_client.post(
         "/profiles/1/master-cv",
         data={
-            "category": "skill",
+            "category": "skills",
             "title": "FastAPI",
             "content": "Built APIs",
             "allowed_wording": "FastAPI APIs",
@@ -520,7 +524,7 @@ def test_master_cv_uses_builder_style(app_client, session):
     assert response.status_code == 200
     assert "builder-shell" in response.text
     assert "builder-nav" in response.text
-    assert "Extended Experience Preview" in response.text
+    assert "AI Source Preview" in response.text
     assert "Fact checking" not in response.text
     assert "Evidence matrix" not in response.text
     assert "Keywords (comma-separated)" not in response.text
@@ -533,22 +537,15 @@ def test_master_cv_uses_builder_style(app_client, session):
         f"/profiles/{profile.id}/master-cv",
         data={
             "category": "work_experience",
-            "job_title": "Python Developer",
-            "employer": "Hydro UK",
-            "start_date": "2024-09",
-            "end_date": "",
-            "is_current": "on",
-            "optional_extra_enabled": "on",
-            "optional_extra_text": "Internal automation and backend tooling.",
             "key_bullets": "Built Python automation tools for internal workflows.",
         },
     )
 
     work_page = app_client.get(f"/profiles/{profile.id}/master-cv/work_experience")
     assert work_page.status_code == 200
-    assert "Python Developer" in work_page.text
-    assert "Hydro UK" in work_page.text
     assert "Built Python automation tools" in work_page.text
+    assert "Python Developer" not in work_page.text
+    assert "Hydro UK" not in work_page.text
 
 
 def test_docx_export_is_styled_without_markdown_markers(session, tmp_path: Path):
@@ -558,7 +555,8 @@ def test_docx_export_is_styled_without_markdown_markers(session, tmp_path: Path)
     docx_path = ResumeService(session).export_base_resume(resume.id, "docx", tmp_path)
     with ZipFile(docx_path) as archive:
         document_xml = archive.read("word/document.xml").decode("utf-8")
-    assert "PROFESSIONAL EXPERIENCE" in document_xml
+    assert "WORK EXPERIENCE" in document_xml
+    assert "PROFESSIONAL EXPERIENCE" not in document_xml
     assert "##" not in document_xml
     assert "**" not in document_xml
     assert "w:pBdr" in document_xml
@@ -698,3 +696,293 @@ def test_legacy_reference_master_cv_entries_are_excluded_from_cover_letter_paylo
     assert "Jane Manager" not in payload_text
     assert "jane@example.com" not in payload_text
     assert "+44 123456" not in payload_text
+
+
+def test_master_cv_only_shows_ai_source_categories(app_client, session):
+    profile = PeopleService(session).create_profile("Source", "Source Person")
+    SettingsService(session).set_active_profile(profile.id)
+
+    response = app_client.get(f"/profiles/{profile.id}/master-cv/summary")
+
+    assert response.status_code == 200
+    for title in ["Summary", "Skills", "Work Experience", "Education"]:
+        assert title in response.text
+    for title in ["Header", "Languages", "Certificates", "References"]:
+        assert f">{title}</a>" not in response.text
+
+
+def test_removed_master_cv_category_redirects_without_private_fields(
+    app_client, session
+):
+    profile = PeopleService(session).create_profile("Source", "Source Person")
+    SettingsService(session).set_active_profile(profile.id)
+
+    response = app_client.get(
+        f"/profiles/{profile.id}/master-cv/header", follow_redirects=True
+    )
+
+    assert response.status_code == 200
+    assert "Key bullets / source bullets" in response.text
+    assert "Email address" not in response.text
+    assert "LinkedIn URL" not in response.text
+    assert "References" not in response.text
+
+
+def test_master_cv_simplified_fields_by_category(app_client, session):
+    profile = PeopleService(session).create_profile("Fields", "Fields Person")
+    SettingsService(session).set_active_profile(profile.id)
+
+    work = app_client.get(f"/profiles/{profile.id}/master-cv/work_experience")
+    education = app_client.get(f"/profiles/{profile.id}/master-cv/education")
+    summary = app_client.get(f"/profiles/{profile.id}/master-cv/summary")
+    skills = app_client.get(f"/profiles/{profile.id}/master-cv/skills")
+
+    assert "Key bullets / source bullets" in work.text
+    for forbidden in ["Job title", "Employer", "Start Date", "End Date"]:
+        assert forbidden not in work.text
+    assert "Key bullets / achievements source material" in education.text
+    for forbidden in ["Institution name", "Specialisation", "Start Date", "End Date"]:
+        assert forbidden not in education.text
+    assert "Summary source material" in summary.text
+    assert summary.text.count("<textarea") == 1
+    assert "Hard Skills" in skills.text
+    assert "Soft Skills" in skills.text
+
+
+def test_legacy_private_master_cv_categories_are_excluded_from_tailoring_payload(
+    session,
+):
+    profile, resume = create_profile_resume(session)
+    service = PeopleService(session)
+    for category in ["summary", "skills", "work_experience", "education"]:
+        service.create_master_entry(
+            profile.id,
+            category=category,
+            title=f"safe {category}",
+            content=f"Safe {category} content.",
+        )
+    for category in ["header", "reference", "references", "languages", "certificates"]:
+        service.create_master_entry(
+            profile.id,
+            category=category,
+            title=f"private {category}",
+            content=f"Private {category} content.",
+        )
+
+    payload = TailoringService(session).build_payload(
+        resume, service.list_master_entries(profile.id), "Python role"
+    )
+
+    categories = {item["category"] for item in payload.master_cv_items}
+    assert categories == {"summary", "skills", "work_experience", "education"}
+    assert "Private" not in str(payload.master_cv_items)
+
+
+def test_cover_letter_payload_uses_same_master_cv_allow_list(monkeypatch, session):
+    captured_payloads: list[dict] = []
+
+    class SpyCoverLetterClient:
+        def draft(self, payload: dict) -> str:
+            captured_payloads.append(payload)
+            return "Generated cover letter."
+
+    monkeypatch.setattr(
+        "app.applications.service.FakeCoverLetterClient",
+        SpyCoverLetterClient,
+    )
+    profile, resume = create_profile_resume(session)
+    people = PeopleService(session)
+    people.create_master_entry(
+        profile.id,
+        category="work_experience",
+        title="Safe work",
+        content="Safe backend work.",
+    )
+    people.create_master_entry(
+        profile.id,
+        category="certificates",
+        title="Private certificate",
+        content="Private certificate content.",
+    )
+    application = ApplicationService(session).create_application(
+        profile_id=profile.id, resume_id=resume.id, raw_job_text="Backend role"
+    )
+
+    ApplicationService(session).adapt_application(application.id)
+
+    payload_text = str(captured_payloads[0])
+    assert "Safe backend work" in payload_text
+    assert "Private certificate" not in payload_text
+    assert "Private certificate content" not in payload_text
+
+
+def test_master_cv_work_experience_edit_delete_and_scope(app_client, session):
+    profile_a = PeopleService(session).create_profile("A", "A Person")
+    profile_b = PeopleService(session).create_profile("B", "B Person")
+    SettingsService(session).set_active_profile(profile_a.id)
+    entry = PeopleService(session).create_master_entry(
+        profile_a.id,
+        category="work_experience",
+        title="Original",
+        content="Original bullet",
+    )
+
+    edit = app_client.post(
+        f"/profiles/{profile_a.id}/master-cv/items/{entry.id}/edit",
+        data={"category": "work_experience", "key_bullets": "Updated bullet"},
+        follow_redirects=True,
+    )
+    assert edit.status_code == 200
+    assert "Updated bullet" in edit.text
+
+    cross = app_client.get(f"/profiles/{profile_b.id}/master-cv/items/{entry.id}/edit")
+    assert cross.status_code in {403, 404}
+    missing_confirm = app_client.post(
+        f"/profiles/{profile_a.id}/master-cv/items/{entry.id}/delete",
+        data={},
+    )
+    assert missing_confirm.status_code == 400
+    delete = app_client.post(
+        f"/profiles/{profile_a.id}/master-cv/items/{entry.id}/delete",
+        data={"confirm_delete_entry": "delete"},
+        follow_redirects=True,
+    )
+    assert delete.status_code == 200
+    assert "Updated bullet" not in delete.text
+    payload = TailoringService(session).build_payload(
+        ResumeService(session).create_resume(
+            profile_a.id, "Resume", "Role", create_standard_sections=True
+        ),
+        PeopleService(session).list_master_entries(profile_a.id),
+        "Role",
+    )
+    assert payload.master_cv_items == []
+
+
+def test_header_website_is_saved_and_rendered_in_exports(session, tmp_path: Path):
+    from zipfile import ZipFile
+
+    profile, resume = create_profile_resume(session)
+    ResumeService(session).save_section(
+        resume.id,
+        "header",
+        {
+            "first_name": "Oleksii",
+            "surname": "Tymoshenko",
+            "email": "abc@example.com",
+            "linkedin_url": "https://linkedin.example/in/oleksii",
+            "github_url": "https://github.example/oleksii",
+            "website_url": "https://oleksii.example",
+        },
+    )
+    refreshed = ResumeService(session).get_resume(resume.id)
+    header = refreshed.sections[0].blocks[0].metadata_json
+    assert header["website_url"] == "https://oleksii.example"
+    markdown = render_resume_markdown(refreshed)
+    assert "https://oleksii.example" in markdown
+
+    docx_path = ResumeService(session).export_base_resume(resume.id, "docx", tmp_path)
+    with ZipFile(docx_path) as archive:
+        document_xml = archive.read("word/document.xml").decode("utf-8")
+        rels_xml = archive.read("word/_rels/document.xml.rels").decode("utf-8")
+    for target in [
+        "mailto:abc@example.com",
+        "https://linkedin.example/in/oleksii",
+        "https://github.example/oleksii",
+        "https://oleksii.example",
+    ]:
+        assert target in rels_xml
+    assert "w:hyperlink" in document_xml
+
+
+def test_docx_export_uses_semantic_headings(session, tmp_path: Path):
+    from zipfile import ZipFile
+
+    _profile, resume = create_profile_resume(session)
+    docx_path = ResumeService(session).export_base_resume(resume.id, "docx", tmp_path)
+    with ZipFile(docx_path) as archive:
+        document_xml = archive.read("word/document.xml").decode("utf-8")
+    assert 'w:val="Heading1"' in document_xml
+    assert 'w:val="Heading2"' in document_xml
+    assert 'w:val="Heading3"' in document_xml
+    assert "HARD SKILLS" in document_xml
+    assert "SOFT SKILLS" in document_xml
+    assert "WORK EXPERIENCE" in document_xml
+    assert "PROFESSIONAL EXPERIENCE" not in document_xml
+    assert "##" not in document_xml
+    assert "**" not in document_xml
+
+
+def test_markdown_uses_work_experience_heading(session):
+    _profile, resume = create_profile_resume(session)
+
+    markdown = render_resume_markdown(resume)
+
+    assert "## Work Experience" in markdown
+    assert "## Professional Experience" not in markdown
+
+
+def test_pdf_reference_linkedin_uses_link_markup_and_exports(session, tmp_path: Path):
+    from app.exporters.pdf_exporter import _reference_markup
+
+    profile, resume = create_profile_resume(session)
+    ResumeService(session).save_section(
+        resume.id,
+        "references",
+        {
+            "name": ["Jane <Manager>"],
+            "role_title": ["Engineering & Delivery Lead"],
+            "company": ["Example Co"],
+            "phone": ["+44 123"],
+            "email": ["jane@example.com"],
+            "linkedin_url": ["https://linkedin.example/in/jane"],
+        },
+    )
+
+    markup = _reference_markup(
+        {
+            "name": "Jane <Manager>",
+            "role_title": "Engineering & Delivery Lead",
+            "company": "Example Co",
+            "phone": "+44 123",
+            "email": "jane@example.com",
+            "linkedin_url": "https://linkedin.example/in/jane",
+        }
+    )
+    assert "&lt;Manager&gt;" in markup
+    assert "Engineering &amp; Delivery Lead" in markup
+    assert '<link href="https://linkedin.example/in/jane" color="blue">' in markup
+
+    pdf_path = ResumeService(session).export_base_resume(resume.id, "pdf", tmp_path)
+
+    assert pdf_path.exists()
+    assert pdf_path.stat().st_size > 1000
+    assert b"https://linkedin.example/in/jane" in pdf_path.read_bytes()
+
+
+def test_legacy_private_master_cv_entry_is_hidden_from_ui_and_payload(
+    app_client, session
+):
+    profile, resume = create_profile_resume(session)
+    SettingsService(session).set_active_profile(profile.id)
+    PeopleService(session).create_master_entry(
+        profile.id,
+        category="reference",
+        title="Private legacy reference",
+        content="Jane Manager, jane@example.com, +44 123456",
+    )
+
+    page = app_client.get(f"/profiles/{profile.id}/master-cv/work_experience")
+    direct_edit = app_client.get(
+        f"/profiles/{profile.id}/master-cv/items/"
+        f"{PeopleService(session).list_master_entries(profile.id)[0].id}/edit"
+    )
+    payload = TailoringService(session).build_payload(
+        resume, PeopleService(session).list_master_entries(profile.id), "Backend role"
+    )
+
+    assert page.status_code == 200
+    assert "Private legacy reference" not in page.text
+    assert "jane@example.com" not in page.text
+    assert direct_edit.status_code in {403, 404}
+    assert payload.master_cv_items == []
