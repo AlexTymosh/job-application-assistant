@@ -64,10 +64,12 @@ def _build_content_story(
         for part in [header.get("first_name", ""), header.get("surname", "")]
         if part
     ).strip() or content.get("name", "Resume")
-    story.append(Paragraph(_clean_text(name).upper(), styles["name"]))
+    story.append(Paragraph(_paragraph_text(name).upper(), styles["name"]))
     if content.get("target_role"):
         story.append(
-            Paragraph(_clean_text(str(content["target_role"])).upper(), styles["role"])
+            Paragraph(
+                _paragraph_text(str(content["target_role"])).upper(), styles["role"]
+            )
         )
     contact = " • ".join(
         _clean_text(str(part))
@@ -82,25 +84,25 @@ def _build_content_story(
         if part
     )
     if contact:
-        story.append(Paragraph(contact, styles["body"]))
+        story.append(Paragraph(_paragraph_text(contact), styles["body"]))
     summary = sections.get("summary", {}).get("text", "").strip()
     if summary:
         story.append(Spacer(1, 6))
-        story.append(Paragraph(_clean_text(summary), styles["body"]))
+        story.append(Paragraph(_paragraph_text(summary), styles["body"]))
     skills = sections.get("skills", {})
     if skills.get("hard") or skills.get("soft"):
         _add_heading(story, "Skills", styles)
         if skills.get("hard"):
             story.append(
                 Paragraph(
-                    f"<b>Hard Skills:</b> {escape(_clean_text(skills['hard']))}",
+                    f"<b>Hard Skills:</b> {_paragraph_text(skills['hard'])}",
                     styles["body"],
                 )
             )
         if skills.get("soft"):
             story.append(
                 Paragraph(
-                    f"<b>Soft Skills:</b> {escape(_clean_text(skills['soft']))}",
+                    f"<b>Soft Skills:</b> {_paragraph_text(skills['soft'])}",
                     styles["body"],
                 )
             )
@@ -129,7 +131,7 @@ def _add_heading(
     story.append(
         HRFlowable(width="100%", thickness=0.6, color=colors.black, spaceAfter=2)
     )
-    story.append(Paragraph(title.upper(), styles["heading"]))
+    story.append(Paragraph(_paragraph_text(title).upper(), styles["heading"]))
     story.append(
         HRFlowable(
             width="100%", thickness=0.6, color=colors.black, spaceBefore=1, spaceAfter=4
@@ -156,15 +158,13 @@ def _add_experience(
             part for part in [row.get("role_title"), row.get("organisation")] if part
         )
         if heading:
-            story.append(Paragraph(_clean_text(heading), styles["subheading"]))
+            story.append(Paragraph(_paragraph_text(heading), styles["subheading"]))
         period = _period(row)
         if period:
-            story.append(
-                Paragraph(f"<b>{escape(_clean_text(period))}</b>", styles["body"])
-            )
+            story.append(Paragraph(f"<b>{_paragraph_text(period)}</b>", styles["body"]))
         if row.get("optional_extra_enabled") and row.get("optional_extra_text"):
             story.append(
-                Paragraph(_clean_text(row["optional_extra_text"]), styles["body"])
+                Paragraph(_paragraph_text(row["optional_extra_text"]), styles["body"])
             )
         _add_bullets(story, row.get("content", ""), styles)
 
@@ -185,9 +185,9 @@ def _add_education(
             part for part in [row.get("organisation"), row.get("role_title")] if part
         )
         if heading:
-            story.append(Paragraph(_clean_text(heading), styles["subheading"]))
+            story.append(Paragraph(_paragraph_text(heading), styles["subheading"]))
         if _period(row):
-            story.append(Paragraph(_clean_text(_period(row)), styles["body"]))
+            story.append(Paragraph(_paragraph_text(_period(row)), styles["body"]))
         _add_bullets(story, row.get("content", ""), styles)
 
 
@@ -222,7 +222,10 @@ def _add_bullet_items(
         return
     story.append(
         ListFlowable(
-            [ListItem(Paragraph(escape(item), styles["body"])) for item in items],
+            [
+                ListItem(Paragraph(_paragraph_text(item), styles["body"]))
+                for item in items
+            ],
             bulletType="bullet",
             leftIndent=14,
         )
@@ -347,6 +350,11 @@ def _reference_line(row: dict[str, Any]) -> str:
         ]
         if part
     )
+
+
+def _paragraph_text(value: str) -> str:
+    """Escape user text before passing it to ReportLab Paragraph."""
+    return escape(_clean_text(str(value)), quote=False)
 
 
 def _clean_text(value: str) -> str:

@@ -159,9 +159,10 @@ async def create_scoped_prompt_template(request: Request, session: SessionDep):
         value = data.get(key, "").strip()
         return int(value) if value else None
 
+    scope = data.get("scope", "global")
     block_type = data.get("block_type", "summary")
     SettingsService(session).upsert_scoped_prompt_template(
-        scope=data.get("scope", "global"),
+        scope=scope,
         block_type=block_type,
         user_prompt_template=data.get("user_prompt_template", ""),
         profile_id=optional_int("profile_id"),

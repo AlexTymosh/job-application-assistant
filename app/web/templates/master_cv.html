@@ -79,7 +79,10 @@
     <section class="card">
       <h2>{{ current_title }} items</h2>
       {% for entry in current_entries %}
-        <article class="block-card"><h3>{{ entry.title }}</h3><p>{{ entry.content|replace('\n', '<br>')|safe }}</p></article>
+        <article class="block-card">
+          <h3>{{ entry.title }}</h3>
+          <p style="white-space: pre-line;">{{ entry.content }}</p>
+        </article>
       {% else %}<p class="empty">No source material in this section yet.</p>{% endfor %}
     </section>
   </section>
@@ -90,7 +93,13 @@
       <p>Master CV source material</p>
       {% for key, title in category_nav %}
         {% set items = entries|selectattr('category','equalto',key)|list %}
-        {% if items %}<h2>{{ title.upper() }}</h2>{% for entry in items %}<p><strong>{{ entry.title }}</strong></p><ul><li>{{ entry.content }}</li></ul>{% endfor %}{% endif %}
+        {% if items %}
+          <h2>{{ title.upper() }}</h2>
+          {% for entry in items %}
+            <p><strong>{{ entry.title }}</strong></p>
+            <ul><li style="white-space: pre-line;">{{ entry.content }}</li></ul>
+          {% endfor %}
+        {% endif %}
       {% endfor %}
     </article>
   </aside>

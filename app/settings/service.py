@@ -52,6 +52,7 @@ DEFAULT_USER_PROMPTS: dict[str, str] = {
 INTERNAL_GUARDRAILS = (
     "Internal guardrails are applied in code and are not user-editable."
 )
+PROMPT_SCOPES = {"global", "profile", "resume", "section"}
 
 
 @dataclass(frozen=True)
@@ -286,6 +287,9 @@ class SettingsService:
         resume_id: int | None = None,
         section_id: int | None = None,
     ) -> PromptTemplate:
+        scope, profile_id, resume_id, section_id = _normalise_prompt_scope(
+            scope, profile_id=profile_id, resume_id=resume_id, section_id=section_id
+        )
         template = self.session.scalar(
             select(PromptTemplate).where(
                 PromptTemplate.scope == scope,
@@ -312,3 +316,22 @@ class SettingsService:
             template.user_prompt_template = user_prompt_template.strip()
         self.session.commit()
         return template
+
+
+def _normalise_prompt_scope(
+    scope: str,
+    *,
+    profile_id: int | None,
+    resume_id: int | None,
+    section_id: int | None,
+) -> tuple[str, int | None, int | None, int | None]:
+    """Drop irrelevant ids so stored overrides match resolution rules."""
+    if scope not in PROMPT_SCOPES:
+        scope = "global"
+    if scope == "global":
+        return scope, None, None, None
+    if scope == "profile":
+        return scope, profile_id, None, None
+    if scope == "resume":
+        return scope, None, resume_id, None
+    return scope, None, None, section_id

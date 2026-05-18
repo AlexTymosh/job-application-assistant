@@ -25,6 +25,8 @@ from app.resumes.service import ResumeService
 from app.settings.service import SettingsService
 from app.tailoring.service import DeterministicTailoringClient, TailoringService
 
+PRIVATE_AI_SOURCE_CATEGORIES = {"header", "references"}
+
 
 class ApplicationService:
     def __init__(self, session: Session) -> None:
@@ -233,7 +235,7 @@ class ApplicationService:
             "master_cv_items": [
                 {"id": item.id, "title": item.title, "content": item.content}
                 for item in master_items
-                if item.is_active
+                if _is_ai_safe_master_item(item)
             ],
             "user_prompt_instruction": instruction,
         }
@@ -355,6 +357,13 @@ class ApplicationService:
         for application in self.list_applications(profile_id):
             self.session.delete(application)
         self.session.commit()
+
+
+def _is_ai_safe_master_item(item: object) -> bool:
+    return (
+        getattr(item, "is_active", False)
+        and getattr(item, "category", "") not in PRIVATE_AI_SOURCE_CATEGORIES
+    )
 
 
 def _normalise_export_format(export_format: str) -> str:
