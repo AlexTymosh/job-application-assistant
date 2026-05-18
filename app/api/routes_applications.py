@@ -65,7 +65,9 @@ async def adapt_application(request: Request, session: SessionDep):
         job_title=data.get("job_title", ""),
         company_name=data.get("company_name", ""),
     )
-    ApplicationService(session).adapt_application(application.id)
+    ApplicationService(session).adapt_application(
+        application.id, openai_secret_service=request.app.state.openai_secret_service
+    )
     return RedirectResponse(
         f"/applications/{application.id}/tailored-resume", status_code=303
     )
@@ -89,6 +91,7 @@ def tailored_resume(application_id: int, request: Request, session: SessionDep):
         else None
     )
     cover_letter = service.latest_cover_letter(application_id)
+    fit_analysis = service.latest_fit_analysis(application_id)
     base_resume = ResumeService(session).get_resume(application.base_resume_id)
     return templates.TemplateResponse(
         "tailored_resume.html",
@@ -98,6 +101,7 @@ def tailored_resume(application_id: int, request: Request, session: SessionDep):
             "base_resume": base_resume,
             "tailored": tailored,
             "cover_letter": cover_letter,
+            "fit_analysis": fit_analysis,
             "base_preview_html": render_resume_html(base_resume),
             "tailored_preview_html": render_resume_html_from_content(
                 tailored.content_json

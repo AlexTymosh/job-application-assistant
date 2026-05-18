@@ -1,23 +1,34 @@
 # Release Checklist
 
-- [ ] Profile → Master CV → Resume Variants → Job Tailoring → Tailored Resume + Cover Letter → Export works from an empty database.
-- [ ] Existing development databases can be deleted/recreated after schema changes.
-- [ ] CV Builder has left navigation, central section forms, and right preview.
-- [ ] Master CV contains only Summary, Skills, Work Experience key bullets, and Education key bullets.
-- [ ] Header, Languages, Certificates, and References are available in Resume Builder only and are excluded from AI payloads.
-- [ ] Master CV payloads use the category allow-list: `summary`, `skills`, `work_experience`, and `education`.
-- [ ] Master CV item edit/delete works for AI-safe categories, legacy private Master CV rows are hidden from UI pages, and delete requires visible confirmation.
-- [ ] Tailored Resume is saved automatically after adaptation.
-- [ ] Cover Letter is generated automatically after adaptation and can be copied/downloaded as TXT.
-- [ ] Tailored Resume review shows previews and export actions but does not expose a raw Markdown editor.
-- [ ] Base Resume Variant PDF/DOCX export works.
-- [ ] Tailored Resume PDF/DOCX export works.
-- [ ] DOCX export uses Heading 1/2/3 styles, labels the work section WORK EXPERIENCE, and has no raw Markdown artifacts.
-- [ ] PDF export remains readable for Latin and non-ASCII text.
-- [ ] Exported contact links include email mailto, LinkedIn, GitHub, Website, and reference LinkedIn where present, including PDF reference LinkedIn links where ReportLab supports them.
-- [ ] Settings profile actions are aligned and typed deletion confirmation is required.
-- [ ] Dashboard chart background and activity bars are flat colours with no gradient.
+## Product gates
+
+- [ ] The app remains local-first and does not add auto-apply, hidden submissions, job scraping, payments, or cloud multi-user auth.
+- [ ] SQLite remains the runtime source of truth for user-managed data.
+- [ ] Master CV remains AI-source-only: Summary, Skills, Work Experience key/source bullets, and Education key bullets/achievements.
+- [ ] Variant-only mode works when **Use Master CV source material** is disabled.
+- [ ] Variant-only mode sends no Master CV entries and excludes Header and References from all AI payloads.
+- [ ] Variant-only mode saves a separate Tailored Resume and never overwrites the base Resume Variant.
+- [ ] Variant-only mode generates Fit Analysis text without fake numeric ATS scoring.
+- [ ] Variant-only mode generates Cover Letter text without Header, References, or Master CV payload data.
+- [ ] Master CV enhanced mode keeps the deterministic existing behaviour until the future real Master CV enhanced implementation.
+- [ ] OpenAI mode requires a configured key and returns a friendly error when the key is missing.
+- [ ] OpenAI API keys are stored through the OS keyring boundary only, never in SQLite and never in templates.
+- [ ] Saving an OpenAI API key does not claim that a real provider call was tested.
+
+## UI gates
+
+- [ ] Settings → AI policy exposes **Use Master CV source material** and it controls the pipeline.
+- [ ] Settings → Models exposes Fake / deterministic local mode and OpenAI mode.
+- [ ] Settings → Models explains that model identifiers are stored in SQLite and the OpenAI key is stored in the OS keyring only.
+- [ ] Settings → Models shows **Key available: yes/no** without revealing the key.
+- [ ] Settings → Prompt instructions includes `fit_analysis` and does not allow section scope for Cover Letter or Fit Analysis.
+- [ ] Tailored Resume review shows Fit Analysis above Base Resume Variant and Tailored Resume Preview.
+- [ ] Tailored Resume review keeps Cover Letter copy and TXT download actions.
+
+## Validation gates
+
 - [ ] Tests do not call real OpenAI or the real OS keyring.
+- [ ] `.gitignore` keeps `.env`, local app data, private profile data, and generated application artefacts ignored.
 - [ ] `uv run ruff format .` passes.
 - [ ] `uv run ruff check .` passes.
 - [ ] `uv run pytest` passes.

@@ -32,6 +32,7 @@ PROMPT_TEMPLATE_TYPES = [
     "work_experience_bullets",
     "education_achievements",
     "cover_letter",
+    "fit_analysis",
 ]
 
 DEFAULT_USER_PROMPTS: dict[str, str] = {
@@ -47,6 +48,11 @@ DEFAULT_USER_PROMPTS: dict[str, str] = {
         "or dates."
     ),
     "cover_letter": "Draft a concise cover letter from the tailored resume content.",
+    "fit_analysis": (
+        "Compare the selected resume content with the pasted job description. Write "
+        "a concise fit analysis for the user, including strong matches, weak/missing "
+        "areas, and suggested positioning. Do not use a fake numeric ATS score."
+    ),
 }
 
 INTERNAL_GUARDRAILS = (
@@ -169,6 +175,7 @@ class SettingsService:
     def model_settings(self) -> dict[str, str]:
         effective = self.effective()
         return {
+            "llm_mode": effective.llm_mode,
             "openai_model_default": effective.openai_model_default,
             "openai_model_qa": effective.openai_model_qa,
             "openai_model_extract": effective.openai_model_extract,
@@ -184,6 +191,9 @@ class SettingsService:
         ]:
             if key in values:
                 self.set(key, values[key].strip())
+
+    def set_llm_mode(self, value: str) -> None:
+        self.set("llm_mode", value if value in {"fake", "openai"} else "fake")
 
     def ensure_prompt_templates(self, *, commit: bool = True) -> None:
         existing = {

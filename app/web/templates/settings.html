@@ -11,8 +11,23 @@
       <h2>AI policy defaults</h2>
       <form method="post"><input type="hidden" name="settings_section" value="ai-policy"><label class="checkbox-line"><input type="checkbox" name="use_master_cv" {% if settings.ai_policy_defaults.use_master_cv %}checked{% endif %}> Use Master CV source material</label><label class="checkbox-line"><input type="checkbox" name="allow_new_bullets" {% if settings.ai_policy_defaults.allow_new_bullets %}checked{% endif %}> Allow new bullets in editable sections</label><label class="checkbox-line"><input type="checkbox" name="allow_hide_bullets" {% if settings.ai_policy_defaults.allow_hide_bullets %}checked{% endif %}> Allow hiding weak bullets</label><button>Save policy</button></form>
     {% elif section == 'models' %}
-      <h2>Model identifiers</h2>
-      <form method="post"><input type="hidden" name="settings_section" value="models">{% for key, value in model_settings.items() %}<label>{{ key.replace('_',' ')|title }}<input name="{{ key }}" value="{{ value }}"></label>{% endfor %}<label>OpenAI API key<input name="openai_api_key" type="password" placeholder="Stored in OS keyring only"></label><p class="muted">Key available: {{ 'yes' if openai_key_available else 'no' }}</p><button>Save models</button></form>
+      <h2>Models and provider mode</h2>
+      <p class="muted">Model identifiers are stored in SQLite settings. The OpenAI API key is stored in the OS keyring only, and saving it does not test a real API call.</p>
+      <form method="post">
+        <input type="hidden" name="settings_section" value="models">
+        <label>LLM mode
+          <select name="llm_mode">
+            <option value="fake" {% if settings.llm_mode == 'fake' %}selected{% endif %}>Fake / deterministic local mode</option>
+            <option value="openai" {% if settings.llm_mode == 'openai' %}selected{% endif %}>OpenAI mode</option>
+          </select>
+        </label>
+        {% for key, value in model_settings.items() %}
+          {% if key != 'llm_mode' %}<label>{{ key.replace('_',' ')|title }}<input name="{{ key }}" value="{{ value }}"></label>{% endif %}
+        {% endfor %}
+        <label>OpenAI API key<input name="openai_api_key" type="password" value="" placeholder="Stored in OS keyring only"></label>
+        <p class="muted">Key available: {{ 'yes' if openai_key_available else 'no' }}</p>
+        <button>Save models</button>
+      </form>
     {% elif section == 'data-folder' %}
       <h2>Data folder</h2>
       <form method="post"><input type="hidden" name="settings_section" value="data-folder"><label>Folder path<input name="root"></label>{% if data_folder_error %}<p class="badge bad">{{ data_folder_error }}</p>{% endif %}<button>Save folder</button><button class="secondary" name="data_folder_action" value="reset">Reset</button></form>

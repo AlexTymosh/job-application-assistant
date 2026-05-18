@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.errors import ApplicationWorkflowError, NotFoundError, ProfileScopeError
 from app.db.models import (
     Application,
+    ApplicationAnalysis,
     ApplicationEvent,
     ApplicationStatus,
     CoverLetter,
@@ -19,11 +20,20 @@ from app.db.models import (
 from app.exporters.docx_exporter import DocxExporter
 from app.exporters.pdf_exporter import PdfExporter
 from app.llm.fake_client import FakeCoverLetterClient
+from app.llm.tailoring_client import (
+    FakeSectionTailoringClient,
+    OpenAISectionTailoringClient,
+    SectionTailoringClient,
+)
 from app.people.service import PeopleService
 from app.resumes.renderer import render_resume_markdown_from_content
 from app.resumes.service import ResumeService
 from app.settings.service import SettingsService
-from app.tailoring.service import DeterministicTailoringClient, TailoringService
+from app.tailoring.service import (
+    DeterministicTailoringClient,
+    TailoringMode,
+    TailoringService,
+)
 
 AI_SAFE_MASTER_CV_CATEGORIES = {"summary", "skills", "work_experience", "education"}
 PRIVATE_AI_SOURCE_CATEGORIES = {
@@ -149,19 +159,42 @@ class ApplicationService:
         return application
 
     def adapt_application(
-        self, application_id: int, client: DeterministicTailoringClient | None = None
+        self,
+        application_id: int,
+        client: DeterministicTailoringClient | None = None,
+        section_client: SectionTailoringClient | None = None,
+        openai_secret_service: object | None = None,
     ) -> TailoredResume:
         application = self.get_application(application_id)
         resume = ResumeService(self.session).get_resume(application.base_resume_id)
-        master_items = PeopleService(self.session).list_master_entries(
-            application.profile_id
+        settings = SettingsService(self.session)
+        effective = settings.effective()
+        use_master_cv = bool(effective.ai_policy_defaults.get("use_master_cv", True))
+        mode = (
+            TailoringMode.MASTER_CV_ENHANCED
+            if use_master_cv
+            else TailoringMode.VARIANT_ONLY
         )
-        tailored = TailoringService(self.session, client=client).tailor(
+        master_items = (
+            PeopleService(self.session).list_master_entries(application.profile_id)
+            if mode == TailoringMode.MASTER_CV_ENHANCED
+            else []
+        )
+        resolved_section_client = self._section_client(
+            section_client, effective.llm_mode, openai_secret_service
+        )
+        tailored = TailoringService(
+            self.session,
+            client=client,
+            section_client=resolved_section_client,
+            model=effective.openai_model_tailor or effective.openai_model_default,
+        ).tailor(
             application_id=application.id,
             profile_id=application.profile_id,
             resume=resume,
             master_items=master_items,
             job_description=application.raw_job_text,
+            mode=mode,
         )
         application.tailored_resume_id = tailored.id
         application.status = ApplicationStatus.TAILORED.value
@@ -169,12 +202,43 @@ class ApplicationService:
             application.id,
             "resume_tailored",
             "Tailored resume saved automatically.",
-            {"tailored_resume_id": tailored.id},
+            {"tailored_resume_id": tailored.id, "tailoring_mode": mode.value},
             commit=False,
         )
-        self._create_cover_letter(application, tailored, master_items)
+        self._create_cover_letter(
+            application,
+            tailored,
+            master_items,
+            mode,
+            resolved_section_client,
+            effective.openai_model_tailor,
+        )
+        self._create_fit_analysis(
+            application,
+            tailored,
+            mode,
+            resolved_section_client,
+            effective.openai_model_tailor,
+        )
         self.session.commit()
         return tailored
+
+    def _section_client(
+        self,
+        injected: SectionTailoringClient | None,
+        llm_mode: str,
+        openai_secret_service: object | None,
+    ) -> SectionTailoringClient | None:
+        if injected is not None:
+            return injected
+        if llm_mode == "openai":
+            api_key = (
+                openai_secret_service.get_api_key()
+                if openai_secret_service is not None
+                else None
+            )
+            return OpenAISectionTailoringClient(api_key or "")
+        return FakeSectionTailoringClient()
 
     def get_application(self, application_id: int) -> Application:
         application = self.session.scalar(
@@ -216,11 +280,24 @@ class ApplicationService:
             .order_by(CoverLetter.created_at.desc())
         )
 
+    def latest_fit_analysis(self, application_id: int) -> ApplicationAnalysis | None:
+        return self.session.scalar(
+            select(ApplicationAnalysis)
+            .where(
+                ApplicationAnalysis.application_id == application_id,
+                ApplicationAnalysis.analysis_type == "fit_analysis",
+            )
+            .order_by(ApplicationAnalysis.created_at.desc())
+        )
+
     def _create_cover_letter(
         self,
         application: Application,
         tailored: TailoredResume,
         master_items: list,
+        mode: TailoringMode,
+        section_client: SectionTailoringClient | None,
+        model: str,
     ) -> CoverLetter:
         existing = self.latest_cover_letter(application.id)
         if existing is not None:
@@ -242,11 +319,17 @@ class ApplicationService:
             "master_cv_items": [
                 {"id": item.id, "title": item.title, "content": item.content}
                 for item in master_items
-                if _is_ai_safe_master_item(item)
+                if mode == TailoringMode.MASTER_CV_ENHANCED
+                and _is_ai_safe_master_item(item)
             ],
             "user_prompt_instruction": instruction,
         }
-        content = FakeCoverLetterClient().draft(payload)
+        if mode == TailoringMode.VARIANT_ONLY and section_client is not None:
+            content = section_client.complete_text(
+                "cover_letter", payload, instruction, model
+            )
+        else:
+            content = FakeCoverLetterClient().draft(payload)
         cover_letter = CoverLetter(
             application_id=application.id,
             profile_id=application.profile_id,
@@ -257,6 +340,55 @@ class ApplicationService:
         self.session.add(cover_letter)
         self.session.flush()
         return cover_letter
+
+    def _create_fit_analysis(
+        self,
+        application: Application,
+        tailored: TailoredResume,
+        mode: TailoringMode,
+        section_client: SectionTailoringClient | None,
+        model: str,
+    ) -> ApplicationAnalysis:
+        existing = self.latest_fit_analysis(application.id)
+        if existing is not None:
+            self.session.delete(existing)
+            self.session.flush()
+        safe_tailored_content = deepcopy(tailored.content_json or {})
+        for private_key in ["header", "references"]:
+            safe_tailored_content.get("sections", {}).pop(private_key, None)
+        instruction = SettingsService(self.session).get_prompt_instruction(
+            "fit_analysis",
+            profile_id=application.profile_id,
+            resume_id=application.base_resume_id,
+        )
+        payload = {
+            "tailored_resume": render_resume_markdown_from_content(
+                safe_tailored_content
+            ),
+            "job_description": application.raw_job_text,
+            "user_prompt_instruction": instruction,
+            "master_cv_items": [],
+        }
+        if mode == TailoringMode.VARIANT_ONLY and section_client is not None:
+            content = section_client.complete_text(
+                "fit_analysis", payload, instruction, model
+            )
+        else:
+            content = (
+                "Fit analysis: deterministic Master CV-enhanced mode is available. "
+                "Review the tailored resume against the pasted job description "
+                "before use."
+            )
+        analysis = ApplicationAnalysis(
+            application_id=application.id,
+            profile_id=application.profile_id,
+            resume_id=application.base_resume_id,
+            analysis_type="fit_analysis",
+            content=content,
+        )
+        self.session.add(analysis)
+        self.session.flush()
+        return analysis
 
     def update_tailored_resume(
         self, application_id: int, markdown: str

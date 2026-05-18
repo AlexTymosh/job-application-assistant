@@ -314,6 +314,11 @@ class Application(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="ApplicationEvent.created_at",
     )
+    analyses: Mapped[list[ApplicationAnalysis]] = relationship(
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="ApplicationAnalysis.created_at",
+    )
 
 
 class TailoredResume(Base, TimestampMixin):
@@ -348,6 +353,27 @@ class ApplicationEvent(Base):
     )
 
     application: Mapped[Application] = relationship(back_populates="events")
+
+
+class ApplicationAnalysis(Base, TimestampMixin):
+    __tablename__ = "application_analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("person_profiles.id", ondelete="CASCADE"), index=True
+    )
+    resume_id: Mapped[int] = mapped_column(
+        ForeignKey("resumes.id", ondelete="CASCADE"), index=True
+    )
+    analysis_type: Mapped[str] = mapped_column(
+        String(80), default="fit_analysis", nullable=False
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    application: Mapped[Application] = relationship(back_populates="analyses")
 
 
 class CoverLetter(Base, TimestampMixin):

@@ -13,7 +13,7 @@
     <div class="section-header-row">
       <div>
         <h1>{{ current_block_type.replace('_',' ')|title }}</h1>
-        <p class="muted">Edit user-facing instructions for this resume area. Internal privacy and anti-fabrication guardrails are applied automatically in code.</p>
+        <p class="muted">Edit user-facing instructions for this resume area. Internal privacy boundaries are applied automatically in code.</p>
       </div>
     </div>
 
@@ -99,6 +99,7 @@
       <section class="prompt-skeleton-line {% if current_block_type == 'work_experience_bullets' %}highlight{% endif %}">WORK EXPERIENCE BULLETS</section>
       <section class="prompt-skeleton-line {% if current_block_type == 'education_achievements' %}highlight{% endif %}">EDUCATION ACHIEVEMENTS</section>
       <section class="prompt-skeleton-line {% if current_block_type == 'cover_letter' %}highlight{% endif %}">COVER LETTER</section>
+      <section class="prompt-skeleton-line {% if current_block_type == 'fit_analysis' %}highlight{% endif %}">FIT ANALYSIS</section>
     </article>
   </aside>
 </div>

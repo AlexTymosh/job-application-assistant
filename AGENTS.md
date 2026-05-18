@@ -9,7 +9,7 @@ The product is AI JOB APPLICATION ASSISTANT: a local-first CV Builder and AI Tai
 The core flow is:
 
 ```text
-Profile -> Master CV / AI source material -> Resume Variants -> Job Application -> deterministic tailoring -> saved Tailored Resume + Cover Letter -> PDF/DOCX export
+Profile -> Master CV / AI source material -> Resume Variants -> Job Application -> tailoring -> saved Tailored Resume + Fit Analysis + Cover Letter -> PDF/DOCX export
 ```
 
 The application is not an auto-apply bot. Do not add automatic applications, LinkedIn automation, email sending, broad job scraping, cloud multi-user auth, payments, fake ATS scores, or hidden background submissions.
@@ -24,12 +24,12 @@ The application is not an auto-apply bot. Do not add automatic applications, Lin
 - Dashboard, Application, CV Builder, Master CV, and Resume Variants are scoped to the active profile. Settings remains available without an active profile.
 - Store OpenAI API keys through the OS keyring boundary, never in SQLite and never in templates.
 - Tests must not call real OpenAI and must not touch the real OS keyring.
-- The current tailoring and cover-letter workflow uses deterministic local fake clients unless a future task explicitly adds and tests a real provider boundary.
+- Variant-only mode has a real OpenAI-capable section-by-section client boundary, but tests must use deterministic fake clients.
 - Private contact details must be excluded from AI prompt builders by default.
 - Private contact details are added only during final rendering/export.
 - Master CV is the user's local AI source material. It is not external fact-checking.
-- AI tailoring uses the selected Resume Variant as the base and Master CV as source material.
-- AI must not invent employers, dates, degrees, certificates, education, metrics, or private contact data.
+- AI tailoring branches by `ai_policy_defaults.use_master_cv`: Variant-only mode uses only the selected Resume Variant and job description; Master CV enhanced mode uses deterministic Master CV-enhanced behaviour for now.
+- In Master CV enhanced mode, AI must not invent employers, dates, degrees, certificates, education, metrics, or private contact data. Variant-only mode intentionally leaves factual review to the user and must not add hallucination validation.
 - AI may edit Summary, Skills, Work Experience key bullets, and Education achievements by default.
 - Header, Languages, Certificates, and References are not AI-editable by default.
 - Prompt-template user instructions must never override internal safety rules.
@@ -74,5 +74,8 @@ Use emoji plus conventional commit style:
 - CV Builder uses a left-navigation, central-editor, right-preview layout.
 - Master CV is restricted to AI source material only: Summary, Skills, Work Experience key bullets, and Education key bullets. Header, Languages, Certificates, and References belong to Resume Builder only and are excluded from AI payloads by an allow-list.
 - Base Resume Variant and Tailored Resume PDF/DOCX exports are available without automatic job submission. DOCX exports use Heading 1/2/3 styles with WORK EXPERIENCE as the work section heading, and exports render email, LinkedIn, GitHub, website, and reference LinkedIn links where present, including PDF reference links where ReportLab supports them.
-- Tailored Resume review shows generated cover letter output and export actions. It does not expose raw Markdown editing in the current UI.
+- Tailored Resume review shows Fit Analysis, generated cover letter output, and export actions. It does not expose raw Markdown editing in the current UI.
 - Settings profile actions use compact rows with typed delete confirmation. Dashboard chart and activity bars use flat muted colours, not gradients.
+
+- Variant-only mode excludes Master CV, Header, and References from all AI payloads; Header and References are reattached only for local preview/export.
+- OpenAI API keys are stored through the OS keyring boundary only. Saving a key does not prove real OpenAI calls work, and tests never call real OpenAI.
