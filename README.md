@@ -62,7 +62,7 @@ OpenAI API keys are stored only through the OS keyring boundary, never in SQLite
 
 ## Application tailoring
 
-Use **Application → New adaptation** to select a Resume Variant, paste a job description, and adapt the resume. The app creates the Application, branches by the **Use Master CV source material** setting, saves a Tailored Resume automatically, creates Fit Analysis and Cover Letter output, and opens the review page.
+Use **Application → New adaptation** to select a Resume Variant, select a Prompt Variant prompt pack (`resume_tailoring`, `cover_letter`, `fit_analysis`), paste a job description, and adapt the resume. The app creates the Application, branches by the **Use Master CV source material** setting, saves a Tailored Resume automatically, creates Fit Analysis and Cover Letter output, and opens the review page.
 
 The Tailored Resume review page shows Fit Analysis above the Base Resume preview and Tailored Resume preview, then the Cover Letter block and export/download actions. It does not currently expose a raw Tailored Resume editor in the UI.
 

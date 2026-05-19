@@ -212,6 +212,7 @@ class ApplicationService:
             master_items=master_items,
             job_description=application.raw_job_text,
             mode=mode,
+            variant_prompts=variant_prompts,
         )
         application.tailored_resume_id = tailored.id
         application.status = ApplicationStatus.TAILORED.value

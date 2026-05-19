@@ -10,7 +10,7 @@ Core tables:
 - `applications`, `tailored_resumes`, `application_events`, `application_analyses`, and `cover_letters`
 - `prompt_templates`, `app_settings`, uploads, and artifacts
 
-The previous development schema repair bridge has been removed. Existing pre-release development databases can be deleted and recreated when schema changes.
+Pre-release startup applies a small SQLite compatibility repair for active local databases: if `applications.prompt_variant_id` is missing, startup adds it with `ALTER TABLE` after metadata `create_all()`. Existing pre-release development databases can still be deleted and recreated when convenient.
 
 ## Master CV source-material contract
 

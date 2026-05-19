@@ -55,11 +55,13 @@ class PromptVariantService:
 
     def list_active(self) -> list[PromptVariant]:
         self.ensure_default_variant()
-        self.session.commit()
         return list(
             self.session.scalars(
                 select(PromptVariant)
-                .where(PromptVariant.is_active.is_(True))
+                .where(
+                    PromptVariant.is_active.is_(True),
+                    PromptVariant.profile_id.is_(None),
+                )
                 .order_by(PromptVariant.is_builtin.desc(), PromptVariant.name)
             )
         )

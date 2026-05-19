@@ -52,3 +52,5 @@ The current UI does not expose raw Tailored Resume editing. Future section-based
 - Master CV uses a builder-style layout with left navigation, central editor, and AI source preview.
 - Settings profile actions are shown in compact rows and keep typed profile-name deletion confirmation.
 - Dashboard chart background and activity bars use flat colours without gradients while keeping range switching and date/count axes.
+
+Variant-only adaptation now requires selecting a Prompt Variant on the application form, and the selected pack controls all three AI tasks.

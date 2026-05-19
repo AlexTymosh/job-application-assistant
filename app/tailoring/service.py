@@ -180,9 +180,12 @@ class TailoringService:
         master_items: list[MasterCVEntry],
         job_description: str,
         mode: TailoringMode = TailoringMode.MASTER_CV_ENHANCED,
+        variant_prompts: dict[str, str] | None = None,
     ) -> TailoredResume:
         if mode == TailoringMode.VARIANT_ONLY:
-            tailored_content = self._tailor_variant_only(resume, job_description)
+            tailored_content = self._tailor_variant_only(
+                resume, job_description, variant_prompts=variant_prompts
+            )
         else:
             payload = self.build_payload(resume, master_items, job_description)
             tailored_content = self.client.adapt(payload)
@@ -224,12 +227,22 @@ class TailoringService:
         }
 
     def _tailor_variant_only(
-        self, resume: Resume, job_description: str
+        self,
+        resume: Resume,
+        job_description: str,
+        *,
+        variant_prompts: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         if self.section_client is None:
             raise RuntimeError("Variant-only tailoring requires a section client.")
         content = _deepcopy_content(self._safe_resume_content(resume))
-        prompts = self._prompt_instructions(resume)
+        # Variant-only mode uses Prompt Variant prompt pack instructions.
+        # Legacy scoped section prompts remain in SettingsService for existing
+        # Master CV-enhanced flow and future compatibility.
+        resume_tailoring_prompt = (variant_prompts or {}).get("resume_tailoring", "")
+        prompts = {
+            task_name: resume_tailoring_prompt for task_name in VARIANT_ONLY_TASKS
+        }
         payloads = self.build_variant_only_payloads(resume, job_description)
         sections = content.setdefault("sections", {})
         for task_name in VARIANT_ONLY_TASKS:

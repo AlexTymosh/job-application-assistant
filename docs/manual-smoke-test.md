@@ -28,3 +28,5 @@
 - The base Resume Variant remains unchanged after adaptation.
 - PDF and DOCX exports work for both base and tailored resumes.
 - Tests use fake clients and do not call real OpenAI or the real OS keyring.
+
+21. On Application → New adaptation, choose a custom Prompt Variant and confirm its prompt text is reflected in resume tailoring, cover letter, and fit analysis behaviour (covered by automated tests).
