@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>Settings</h1><p>Configure local data, exports, prompt instructions, and model identifiers.</p></section>
+<section class="hero-card"><h1>Settings</h1><p>Configure local data, exports, prompt variants, and model identifiers.</p></section>
 <div class="settings-layout">
-  <aside class="side-menu"><a href="/settings?section=profiles">Profiles</a><a href="/settings?section=exports">Exports</a><a href="/settings?section=ai-policy">AI policy</a><a href="/settings/prompts">Prompt instructions</a><a href="/settings/prompt-variants">Prompt Variants</a><a href="/settings?section=models">Models</a><a href="/settings?section=data-folder">Data folder</a></aside>
+  <aside class="side-menu"><a href="/settings?section=profiles">Profiles</a><a href="/settings?section=exports">Exports</a><a href="/settings?section=ai-policy">AI policy</a><a href="/settings/prompt-variants">Prompt Variants</a><a href="/settings?section=models">Models</a><a href="/settings?section=data-folder">Data folder</a></aside>
   <section class="card">
     {% if section == 'exports' %}
       <h2>Export formats</h2>
@@ -13,16 +13,25 @@
     {% elif section == 'models' %}
       <h2>Models and provider mode</h2>
       <p class="muted">Model identifiers are stored in SQLite settings. The OpenAI API key is stored in the OS keyring only, and saving it does not test a real API call.</p>
+      <p class="model-links"><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API keys</a><span class="muted">·</span><a href="https://platform.openai.com/docs/models" target="_blank" rel="noopener noreferrer">OpenAI Models documentation</a></p>
       <form method="post">
         <input type="hidden" name="settings_section" value="models">
         <label>LLM mode
           <select name="llm_mode">
-            <option value="fake" {% if settings.llm_mode == 'fake' %}selected{% endif %}>Fake / deterministic local mode</option>
             <option value="openai" {% if settings.llm_mode == 'openai' %}selected{% endif %}>OpenAI mode</option>
+            <option value="fake" {% if settings.llm_mode == 'fake' %}selected{% endif %}>Fake / deterministic local mode</option>
           </select>
         </label>
+        {% set model_options = ['gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.4', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini'] %}
         {% for key, value in model_settings.items() %}
-          {% if key != 'llm_mode' %}<label>{{ key.replace('_',' ')|title }}<input name="{{ key }}" value="{{ value }}"></label>{% endif %}
+          {% if key != 'llm_mode' %}
+            <label>{{ key.replace('_',' ')|title }}
+              <select name="{{ key }}">
+                {% if value and value not in model_options %}<option value="{{ value }}" selected>{{ value }} (current)</option>{% endif %}
+                {% for model in model_options %}<option value="{{ model }}" {% if value == model %}selected{% endif %}>{{ model }}</option>{% endfor %}
+              </select>
+            </label>
+          {% endif %}
         {% endfor %}
         <label>OpenAI API key<input name="openai_api_key" type="password" value="" placeholder="Stored in OS keyring only"></label>
         <p class="muted">Key available: {{ 'yes' if openai_key_available else 'no' }}</p>

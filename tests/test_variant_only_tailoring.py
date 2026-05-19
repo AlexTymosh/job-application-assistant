@@ -9,6 +9,7 @@ from app.applications.service import ApplicationService
 from app.db.models import AppSetting
 from app.llm.tailoring_client import FakeSectionTailoringClient
 from app.people.service import PeopleService
+from app.prompt_variants.service import PromptVariantService
 from app.settings.service import DEFAULT_USER_PROMPTS, SettingsService
 from app.tailoring.service import DeterministicTailoringClient, TailoringService
 from tests.test_master_cv_workflow import create_profile_resume
@@ -20,7 +21,9 @@ PRIVATE_REFERENCE_EMAIL = "john@example.com"
 
 
 def _set_variant_only(session) -> None:
-    SettingsService(session).set(
+    settings = SettingsService(session)
+    settings.set_llm_mode("fake")
+    settings.set(
         "ai_policy_defaults",
         {
             "use_master_cv": False,
@@ -32,6 +35,35 @@ def _set_variant_only(session) -> None:
 
 
 def _payload_text(client: FakeSectionTailoringClient) -> str:
+    """Return only AI data payloads, not prompt instructions.
+
+    Prompt text is allowed to mention words such as "references",
+    "certificates" or "British English" as instructions. Privacy tests must
+    inspect the resume/job payload after removing user prompt instructions,
+    otherwise they fail on legitimate prompt wording.
+    """
+
+    return str(
+        [
+            _without_prompt_instructions(call["payload"])
+            for call in client.captured_json_calls
+        ]
+    )
+
+
+def _without_prompt_instructions(value):
+    if isinstance(value, dict):
+        return {
+            key: _without_prompt_instructions(item)
+            for key, item in value.items()
+            if key not in {"user_prompt_instruction", "prompt", "system_prompt"}
+        }
+    if isinstance(value, list):
+        return [_without_prompt_instructions(item) for item in value]
+    return value
+
+
+def _all_call_text(client: FakeSectionTailoringClient) -> str:
     return str(client.captured_json_calls)
 
 
@@ -221,31 +253,41 @@ def test_fit_analysis_default_prompt_exists_and_resolves(session):
     )
 
 
-def test_fit_analysis_prompt_page_can_show_and_edit(app_client, session):
+def test_fit_analysis_prompt_variant_page_can_show_and_edit(app_client, session):
     profile, resume = create_profile_resume(session)
     SettingsService(session).set_active_profile(profile.id)
+    service = PromptVariantService(session)
+    custom = service.create_variant(
+        name="Custom fit analysis pack",
+        description="Custom prompt pack",
+        prompts={
+            "resume_tailoring": "Custom resume tailoring prompt",
+            "cover_letter": "Custom cover letter prompt",
+            "fit_analysis": "Custom fit analysis prompt",
+        },
+    )
 
-    page = app_client.get("/settings/prompts?block_type=fit_analysis")
+    page = app_client.get(f"/settings/prompt-variants/{custom.id}/edit")
     assert page.status_code == 200
-    assert "Fit Analysis" in page.text
-    assert "Section scope is not available" in page.text
+    assert "Fit Analysis Prompt" in page.text
+    assert "Expected response format for Fit Analysis" in page.text
+    assert "Expected structured response" in page.text
 
     response = app_client.post(
-        "/settings/prompts-scoped",
+        f"/settings/prompt-variants/{custom.id}/edit",
         data={
-            "scope": "resume",
-            "block_type": "fit_analysis",
-            "resume_id": str(resume.id),
-            "user_prompt_template": "Custom fit analysis prompt",
+            "name": "Custom fit analysis pack",
+            "description": "Updated prompt pack",
+            "resume_tailoring": "Updated resume tailoring prompt",
+            "cover_letter": "Updated cover letter prompt",
+            "fit_analysis": "Updated fit analysis prompt",
         },
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert (
-        SettingsService(session).get_prompt_instruction(
-            "fit_analysis", profile_id=profile.id, resume_id=resume.id
-        )
-        == "Custom fit analysis prompt"
+        PromptVariantService(session).prompts_for(custom.id)["fit_analysis"]
+        == "Updated fit analysis prompt"
     )
 
 
@@ -344,7 +386,7 @@ def test_openai_key_not_persisted_or_leaked_to_fake_payloads(app_client, session
     )
     _profile, _resume, _application, _tailored, client = _adapt_variant_only(session)
 
-    assert raw_key not in _payload_text(client)
+    assert raw_key not in _all_call_text(client)
     stored_settings = session.scalars(select(AppSetting)).all()
     assert raw_key not in str([setting.value_json for setting in stored_settings])
 

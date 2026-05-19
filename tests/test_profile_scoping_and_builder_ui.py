@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.people.service import PeopleService
+from app.prompt_variants.service import PromptVariantService
 from app.resumes.service import ResumeService
 from app.settings.service import SettingsService
 
@@ -76,17 +77,16 @@ def test_master_cv_blocks_cross_profile_access(app_client, session):
     assert PeopleService(session).list_master_entries(profile_b.id) == []
 
 
-def test_prompt_settings_uses_builder_layout(app_client, session):
-    profile, resume = _profile_with_resume(session, "Alice")
+def test_legacy_prompt_settings_routes_to_prompt_variants(app_client, session):
+    profile, _resume = _profile_with_resume(session, "Alice")
     SettingsService(session).set_active_profile(profile.id)
 
     response = app_client.get("/settings/prompts?block_type=summary")
 
     assert response.status_code == 200
-    assert "builder-shell" in response.text
-    assert "builder-nav" in response.text
-    assert "builder-preview" in response.text
-    assert "Prompt impact preview" in response.text
+    assert "Prompt Variants" in response.text
+    assert "Default Prompt Variant" in response.text
+    assert "Prompt impact preview" not in response.text
 
 
 def test_master_cv_uses_cv_builder_fields_without_abstract_fact_fields(
@@ -134,27 +134,22 @@ def test_dashboard_explanatory_sentence_removed(app_client, session):
     assert "data-chart-bar" in response.text
 
 
-def test_prompt_sections_are_filtered_by_prompt_type(app_client, session):
-    profile, resume = _profile_with_resume(session, "Alice")
+def test_prompt_variants_replace_legacy_section_scoped_prompt_page(app_client, session):
+    profile, _resume = _profile_with_resume(session, "Alice")
     SettingsService(session).set_active_profile(profile.id)
+    variant = PromptVariantService(session).ensure_default_variant()
+    session.commit()
 
-    sections = {section.section_type: section.id for section in resume.sections}
+    response = app_client.get(f"/settings/prompt-variants/{variant.id}/edit")
 
-    summary_response = app_client.get("/settings/prompts?block_type=summary")
-
-    assert summary_response.status_code == 200
-    assert f'value="{sections["summary"]}"' in summary_response.text
-    assert f'value="{sections["work_experience"]}"' not in summary_response.text
-    assert f'value="{sections["education"]}"' not in summary_response.text
-
-    work_response = app_client.get(
-        "/settings/prompts?block_type=work_experience_bullets"
-    )
-
-    assert work_response.status_code == 200
-    assert f'value="{sections["work_experience"]}"' in work_response.text
-    assert f'value="{sections["summary"]}"' not in work_response.text
-    assert f'value="{sections["education"]}"' not in work_response.text
+    assert response.status_code == 200
+    assert "Resume Tailoring Prompt" in response.text
+    assert "Cover Letter Prompt" in response.text
+    assert "Fit Analysis Prompt" in response.text
+    assert "Expected response format for Resume Tailoring" in response.text
+    assert "Expected response format for Cover Letter" in response.text
+    assert "Expected response format for Fit Analysis" in response.text
+    assert "Expected structured response" in response.text
 
 
 def test_resume_builder_header_form_contains_optional_website(app_client, session):

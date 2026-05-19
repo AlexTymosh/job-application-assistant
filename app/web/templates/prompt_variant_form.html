@@ -1,15 +1,38 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>{{ title }}</h1></section>
+<section class="hero-card"><h1>{{ title }}</h1><p class="muted">Edit the task instructions on the left. The expected structured response format is shown on the right.</p></section>
 <form class="card" method="post" action="{{ action }}">
   <label>Name<input name="name" value="{{ variant.name if variant else '' }}" {% if is_builtin %}readonly{% endif %}></label>
   <label>Description<textarea name="description" {% if is_builtin %}readonly{% endif %}>{{ variant.description if variant else '' }}</textarea></label>
-  <label>Resume Tailoring Prompt<textarea name="resume_tailoring" {% if is_builtin %}readonly{% endif %}>{{ prompts.resume_tailoring }}</textarea></label>
-  <label>Expected response format (Resume Tailoring)<pre>{{ expected_contracts.resume_tailoring }}</pre></label>
-  <label>Cover Letter Prompt<textarea name="cover_letter" {% if is_builtin %}readonly{% endif %}>{{ prompts.cover_letter }}</textarea></label>
-  <label>Expected response format (Cover Letter)<pre>{{ expected_contracts.cover_letter }}</pre></label>
-  <label>Fit Analysis Prompt<textarea name="fit_analysis" {% if is_builtin %}readonly{% endif %}>{{ prompts.fit_analysis }}</textarea></label>
-  <label>Expected response format (Fit Analysis)<pre>{{ expected_contracts.fit_analysis }}</pre></label>
-  {% if not is_builtin %}<button type="submit">Save Prompt Variant</button>{% else %}<p class="muted">Built-in Prompt Variant is read-only. Use Copy to create a custom variant.</p>{% endif %}
+
+  <div class="prompt-task-grid">
+    <label>Resume Tailoring Prompt<textarea name="resume_tailoring" {% if is_builtin %}readonly{% endif %}>{{ prompts.resume_tailoring }}</textarea></label>
+    <section class="prompt-contract" aria-label="Expected response format for Resume Tailoring">
+      <h3>Expected structured response</h3>
+      <pre>{{ expected_contracts.resume_tailoring }}</pre>
+    </section>
+  </div>
+
+  <div class="prompt-task-grid">
+    <label>Cover Letter Prompt<textarea name="cover_letter" {% if is_builtin %}readonly{% endif %}>{{ prompts.cover_letter }}</textarea></label>
+    <section class="prompt-contract" aria-label="Expected response format for Cover Letter">
+      <h3>Expected structured response</h3>
+      <pre>{{ expected_contracts.cover_letter }}</pre>
+    </section>
+  </div>
+
+  <div class="prompt-task-grid">
+    <label>Fit Analysis Prompt<textarea name="fit_analysis" {% if is_builtin %}readonly{% endif %}>{{ prompts.fit_analysis }}</textarea></label>
+    <section class="prompt-contract" aria-label="Expected response format for Fit Analysis">
+      <h3>Expected structured response</h3>
+      <pre>{{ expected_contracts.fit_analysis }}</pre>
+    </section>
+  </div>
+
+  <div class="actions">
+    {% if not is_builtin %}<button type="submit">Save Prompt Variant</button>{% else %}<p class="muted">Built-in Prompt Variant is read-only. Use Copy to create a custom variant.</p>{% endif %}
+    {% if variant %}<button class="secondary" type="submit" formaction="/settings/prompt-variants/{{ variant.id }}/restore-defaults" formmethod="post">Restore default prompts</button>{% endif %}
+    <a class="button ghost" href="/settings/prompt-variants">Back to Prompt Variants</a>
+  </div>
 </form>
 {% endblock %}

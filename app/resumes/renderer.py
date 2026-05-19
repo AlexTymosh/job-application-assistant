@@ -16,7 +16,7 @@ SECTION_ORDER = [
     "references",
 ]
 SECTION_TITLES = {
-    "summary": "Summary",
+    "summary": "Statement",
     "skills": "Skills",
     "work_experience": "Work Experience",
     "education": "Education",
@@ -104,9 +104,9 @@ def render_resume_markdown_from_content(content: dict[str, Any]) -> str:
     contact_line = " • ".join(part for part in contact_parts if part)
     if contact_line:
         lines.append(contact_line)
-    summary = sections.get("summary", {}).get("text", "").strip()
-    if summary:
-        lines.extend(["", summary])
+    statement = sections.get("summary", {}).get("text", "").strip()
+    if statement:
+        lines.extend(["", statement])
     skills = sections.get("skills", {})
     if skills.get("hard") or skills.get("soft"):
         lines.extend(["", "## Skills"])

@@ -2,15 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
 
 from app.api.dependencies import SessionDep, form_bool, read_form_data
-from app.db.models import Resume, ResumeSection
 from app.llm.schemas import expected_response_contract_for_task
 from app.prompt_variants.service import PromptVariantService
-from app.settings.service import PROMPT_TEMPLATE_TYPES, SettingsService
+from app.settings.service import SettingsService
 from app.storage.location import (
     clear_user_selected_app_data_root,
     set_user_selected_app_data_root,
@@ -18,16 +16,6 @@ from app.storage.location import (
 from app.web.templating import templates
 
 router = APIRouter(prefix="/settings", tags=["settings"])
-
-
-PROMPT_SECTION_TYPE_BY_BLOCK_TYPE: dict[str, str | None] = {
-    "summary": "summary",
-    "skills": "skills",
-    "work_experience_bullets": "work_experience",
-    "education_achievements": "education",
-    "cover_letter": None,
-    "fit_analysis": None,
-}
 
 
 @router.get("")
@@ -94,7 +82,7 @@ async def update_settings(request: Request, session: SessionDep):
         "openai_model_tailor",
     }
     if "llm_mode" in data:
-        service.set_llm_mode(data.get("llm_mode", "fake"))
+        service.set_llm_mode(data.get("llm_mode", "openai"))
     if model_fields & data.keys():
         service.set_model_settings({key: data.get(key, "") for key in model_fields})
     if data.get("openai_api_key", "").strip():
@@ -131,110 +119,25 @@ async def set_active_profile(request: Request, session: SessionDep):
         SettingsService(session).set_active_profile(
             int(data["active_profile_id"]) if data.get("active_profile_id") else None
         )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError:
+        return RedirectResponse("/settings?section=profiles", status_code=303)
     return RedirectResponse(data.get("next") or "/", status_code=303)
 
 
 @router.get("/prompts")
-def prompt_templates(
-    request: Request, session: SessionDep, block_type: str = "summary"
-):
-    service = SettingsService(session)
-    prompt_types = PROMPT_TEMPLATE_TYPES
-    current_block_type = block_type if block_type in prompt_types else "summary"
-    expected_section_type = PROMPT_SECTION_TYPE_BY_BLOCK_TYPE.get(current_block_type)
-    templates_for_type = [
-        template
-        for template in service.list_prompt_templates()
-        if template.block_type == current_block_type
-    ]
-    matching_sections = (
-        list(
-            session.scalars(
-                select(ResumeSection)
-                .where(ResumeSection.section_type == expected_section_type)
-                .order_by(ResumeSection.title)
-            )
-        )
-        if expected_section_type is not None
-        else []
-    )
-    return templates.TemplateResponse(
-        "prompt_templates.html",
-        {
-            "request": request,
-            "prompt_templates": templates_for_type,
-            "all_prompt_templates": service.list_prompt_templates(),
-            "prompt_types": prompt_types,
-            "current_block_type": current_block_type,
-            "profiles": service.list_profiles(),
-            "resumes": list(session.scalars(select(Resume).order_by(Resume.name))),
-            "sections": matching_sections,
-            "section_scope_enabled": expected_section_type is not None,
-            "expected_section_type": expected_section_type,
-        },
-    )
+def prompt_templates_redirect():
+    return RedirectResponse("/settings/prompt-variants", status_code=303)
 
 
 @router.post("/prompts-scoped")
-async def create_scoped_prompt_template(request: Request, session: SessionDep):
-    data = await read_form_data(request)
-
-    def optional_int(key: str) -> int | None:
-        value = data.get(key, "").strip()
-        return int(value) if value else None
-
-    scope = data.get("scope", "global")
-    block_type = data.get("block_type", "summary")
-    expected_section_type = PROMPT_SECTION_TYPE_BY_BLOCK_TYPE.get(block_type)
-    section_id = optional_int("section_id")
-
-    if scope == "section":
-        if expected_section_type is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Section-scoped prompts are not available for this prompt type.",
-            )
-        if section_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Choose a matching resume section for this prompt.",
-            )
-        section = session.get(ResumeSection, section_id)
-        if section is None or section.section_type != expected_section_type:
-            raise HTTPException(
-                status_code=400,
-                detail="Selected section does not match this prompt type.",
-            )
-    else:
-        section_id = None
-
-    SettingsService(session).upsert_scoped_prompt_template(
-        scope=scope,
-        block_type=block_type,
-        user_prompt_template=data.get("user_prompt_template", ""),
-        profile_id=optional_int("profile_id"),
-        resume_id=optional_int("resume_id"),
-        section_id=section_id,
-    )
-    return RedirectResponse(
-        f"/settings/prompts?block_type={block_type}", status_code=303
-    )
+def create_scoped_prompt_template_redirect():
+    return RedirectResponse("/settings/prompt-variants", status_code=303)
 
 
 @router.post("/prompts/{template_id}")
-async def update_prompt_template(
-    template_id: int, request: Request, session: SessionDep
-):
-    data = await read_form_data(request)
-    block_type = data.get("block_type", "summary")
-    SettingsService(session).update_prompt_template(
-        template_id, data.get("user_prompt_template", "")
-    )
-    return RedirectResponse(
-        f"/settings/prompts?block_type={block_type}", status_code=303
-    )
+def update_prompt_template_redirect(template_id: int):
+    _ = template_id
+    return RedirectResponse("/settings/prompt-variants", status_code=303)
 
 
 @router.get("/prompt-variants")
@@ -248,14 +151,14 @@ def prompt_variants_page(request: Request, session: SessionDep):
 
 @router.get("/prompt-variants/new")
 def prompt_variant_new(request: Request, session: SessionDep):
+    service = PromptVariantService(session)
+    default = service.ensure_default_variant()
     return templates.TemplateResponse(
         "prompt_variant_form.html",
         {
             "request": request,
             "variant": None,
-            "prompts": PromptVariantService(session).prompts_for(
-                PromptVariantService(session).ensure_default_variant().id
-            ),
+            "prompts": service.prompts_for(default.id),
             "action": "/settings/prompt-variants/new",
             "title": "New Prompt Variant",
             "is_builtin": False,
@@ -319,6 +222,14 @@ async def prompt_variant_edit_post(
         },
     )
     return RedirectResponse("/settings/prompt-variants", status_code=303)
+
+
+@router.post("/prompt-variants/{variant_id}/restore-defaults")
+def prompt_variant_restore_defaults(variant_id: int, session: SessionDep):
+    PromptVariantService(session).restore_defaults(variant_id)
+    return RedirectResponse(
+        f"/settings/prompt-variants/{variant_id}/edit", status_code=303
+    )
 
 
 @router.post("/prompt-variants/{variant_id}/deactivate")
