@@ -356,3 +356,20 @@ def test_gitignore_keeps_env_and_local_private_data_ignored():
     assert "_local/" in gitignore
     assert "profiles/*/applications/" in gitignore
     assert "profiles/*/*.sqlite3" in gitignore
+
+
+def test_variant_only_payload_excludes_non_editable_sections(session):
+    _profile, _resume, _application, tailored, client = _adapt_variant_only(session)
+
+    payload_text = _payload_text(client)
+
+    assert "languages" not in payload_text
+    assert "certificates" not in payload_text
+    assert "English" not in payload_text
+    assert "Upper-Intermediate" not in payload_text
+    assert "Python for Data Science" not in payload_text
+    assert "https://example.com" not in payload_text
+    assert "2023" not in payload_text
+
+    assert tailored.id is not None
+    assert tailored.content_json["tailoring_mode"] == "variant_only"

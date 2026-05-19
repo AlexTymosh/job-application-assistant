@@ -257,7 +257,7 @@ class TailoringService:
         base_content["sections"] = {
             key: value
             for key, value in base_content.get("sections", {}).items()
-            if key not in PRIVATE_SECTIONS
+            if key in AI_EDITABLE_SECTIONS
         }
         return base_content
 
