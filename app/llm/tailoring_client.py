@@ -171,9 +171,8 @@ class OpenAISectionTailoringClient:
 def parse_model_json_response(raw_text: str) -> dict[str, Any]:
     text = raw_text.strip()
     cleaned = _strip_json_fence(text)
-    for candidate in (text, cleaned, _extract_first_json_object(cleaned)):
-        if not candidate:
-            continue
+    candidates = _json_parse_candidates(text, cleaned)
+    for candidate in candidates:
         try:
             parsed = json.loads(candidate)
         except json.JSONDecodeError:
@@ -190,6 +189,17 @@ def parse_model_json_response(raw_text: str) -> dict[str, Any]:
     )
 
 
+def _json_parse_candidates(text: str, cleaned: str) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for candidate in [text, cleaned, *_extract_json_object_candidates(cleaned)]:
+        if not candidate or candidate in seen:
+            continue
+        candidates.append(candidate)
+        seen.add(candidate)
+    return candidates
+
+
 def _strip_json_fence(text: str) -> str:
     if text.startswith("```json") and text.endswith("```"):
         return text.removeprefix("```json").removesuffix("```").strip()
@@ -198,10 +208,20 @@ def _strip_json_fence(text: str) -> str:
     return text
 
 
-def _extract_first_json_object(text: str) -> str | None:
-    start = text.find("{")
-    if start < 0:
-        return None
+def _extract_json_object_candidates(text: str) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for start, char in enumerate(text):
+        if char != "{":
+            continue
+        candidate = _extract_balanced_json_object_from_index(text, start)
+        if candidate and candidate not in seen:
+            candidates.append(candidate)
+            seen.add(candidate)
+    return candidates
+
+
+def _extract_balanced_json_object_from_index(text: str, start: int) -> str | None:
     depth = 0
     in_string = False
     escaped = False

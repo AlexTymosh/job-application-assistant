@@ -80,6 +80,22 @@ def test_parse_model_json_response_handles_braces_inside_strings():
     assert parsed["cover_letter"] == "Uses {literal} braces"
 
 
+def test_parse_model_json_response_skips_non_json_braces_before_valid_json():
+    parsed = parse_model_json_response(
+        'Ignore this {not JSON}. Actual response: {"cover_letter":"ok"}'
+    )
+
+    assert parsed["cover_letter"] == "ok"
+
+
+def test_parse_model_json_response_skips_invalid_json_candidate_before_valid_json():
+    parsed = parse_model_json_response(
+        'First candidate {"bad": } then final response {"cover_letter":"ok"}'
+    )
+
+    assert parsed["cover_letter"] == "ok"
+
+
 def test_parse_model_json_response_rejects_top_level_array():
     with pytest.raises(TailoringWorkflowError):
         parse_model_json_response('[{"a":1}]')
