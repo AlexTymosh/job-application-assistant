@@ -4,19 +4,16 @@ import json
 from typing import Any, Protocol
 
 from app.core.errors import TailoringWorkflowError
+from app.llm.schemas import expected_response_contract_for_task
 
 
 class SectionTailoringClient(Protocol):
-    """Boundary for variant-only tailoring clients."""
-
     def complete_json(
         self, task_name: str, payload: dict[str, Any], prompt: str, model: str
     ) -> dict[str, Any]: ...
 
 
 class FakeSectionTailoringClient:
-    """Deterministic client for local mode and tests."""
-
     def __init__(self) -> None:
         self.captured_json_calls: list[dict[str, Any]] = []
 
@@ -69,12 +66,7 @@ class FakeSectionTailoringClient:
                 ],
             }
         if task_name == "cover_letter":
-            return {
-                "cover_letter": (
-                    "Thank you for considering my application. The attached tailored "
-                    "resume highlights relevant experience for this role."
-                )
-            }
+            return {"cover_letter": "Thank you for considering my application."}
         if task_name == "fit_analysis":
             return {
                 "fit_summary": "The resume appears relevant for the position.",
@@ -87,8 +79,6 @@ class FakeSectionTailoringClient:
 
 
 class OpenAISectionTailoringClient:
-    """Synchronous OpenAI client for variant-only tailoring."""
-
     def __init__(self, api_key: str) -> None:
         if not api_key:
             raise TailoringWorkflowError(
@@ -102,42 +92,27 @@ class OpenAISectionTailoringClient:
         self, task_name: str, payload: dict[str, Any], prompt: str, model: str
     ) -> dict[str, Any]:
         raw_text = self._complete(
-            task_name=task_name,
-            payload=payload,
-            prompt=prompt,
-            model=model,
+            task_name=task_name, payload=payload, prompt=prompt, model=model
         )
         try:
-            parsed = json.loads(raw_text)
-        except json.JSONDecodeError as exc:
+            return parse_model_json_response(raw_text)
+        except TailoringWorkflowError as exc:
             raise TailoringWorkflowError(
-                "OpenAI returned invalid JSON for a tailoring task. Try again or "
-                "switch to deterministic local mode."
+                str(exc), task_name=task_name, error_kind="parse_error"
             ) from exc
-        if not isinstance(parsed, dict):
-            raise TailoringWorkflowError(
-                "OpenAI returned an unexpected JSON shape for a tailoring task."
-            )
-        return parsed
 
     def _complete(
-        self,
-        *,
-        task_name: str,
-        payload: dict[str, Any],
-        prompt: str,
-        model: str,
+        self, *, task_name: str, payload: dict[str, Any], prompt: str, model: str
     ) -> str:
+        contract = expected_response_contract_for_task(task_name)
         messages = [
-            {
-                "role": "system",
-                "content": _system_instruction(task_name),
-            },
+            {"role": "system", "content": _system_instruction(task_name)},
             {
                 "role": "user",
                 "content": json.dumps(
                     {
                         "task_name": task_name,
+                        "expected_response_contract": contract,
                         "user_prompt_instruction": prompt,
                         "payload": payload,
                     },
@@ -157,8 +132,8 @@ class OpenAISectionTailoringClient:
             )
         except Exception as exc:  # pragma: no cover
             raise TailoringWorkflowError(
-                "OpenAI could not complete the tailoring request. Check the API key, "
-                "model identifier, and network connection."
+                "OpenAI could not complete the tailoring request. "
+                "Check API key, model, and network."
             ) from exc
         content = response.choices[0].message.content if response.choices else ""
         if not content:
@@ -166,27 +141,51 @@ class OpenAISectionTailoringClient:
         return content
 
 
-def _system_instruction(task_name: str) -> str:
-    base = (
-        "You tailor only the provided variant resume content for the pasted job "
-        "description. Header and References are intentionally absent. Follow the "
-        "user prompt instruction for style and emphasis."
+def parse_model_json_response(raw_text: str) -> dict[str, Any]:
+    text = raw_text.strip()
+    cleaned = (
+        text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
     )
-    schemas = {
-        "resume_tailoring": (
-            '{"summary":"text","skills":{"hard_skills":"text","soft_skills":"text"},'
-            '"work_experience":[{"block_id":1,"key_bullets":"text"}],'
-            '"education":[{"block_id":2,"key_bullets":"text"}]}'
-        ),
-        "cover_letter": '{"cover_letter":"text"}',
-        "fit_analysis": (
-            '{"fit_summary":"text","strong_matches":["text"],'
-            '"weak_or_missing_points":["text"],"positioning_advice":["text"],'
-            '"warnings":["text"]}'
-        ),
-    }
+    for candidate in (text, cleaned, _extract_first_json_object(cleaned)):
+        if not candidate:
+            continue
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(parsed, dict):
+            raise TailoringWorkflowError(
+                "AI returned unexpected JSON shape; expected top-level object."
+            )
+        return parsed
+    raise TailoringWorkflowError(
+        "AI returned invalid JSON. Retry or adjust the selected Prompt Variant."
+    )
+
+
+def _extract_first_json_object(text: str) -> str | None:
+    start = text.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    for index in range(start, len(text)):
+        char = text[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+    return None
+
+
+def _system_instruction(task_name: str) -> str:
+    contract = expected_response_contract_for_task(task_name)
     return (
-        f"{base} Return valid JSON only with this shape: {schemas.get(task_name, '{}')}"
+        "You tailor only provided safe resume content for the pasted job description. "
+        "Return JSON only. Do not wrap the response in ```json. "
+        "Do not include any text before or after the JSON. "
+        f"Expected response contract:\n{contract}"
     )
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -32,6 +33,7 @@ from app.llm.tailoring_client import (
     OpenAISectionTailoringClient,
     SectionTailoringClient,
 )
+from app.llm.task_logging import AiTaskLogger
 from app.people.service import PeopleService
 from app.prompt_variants.service import PromptVariantService
 from app.resumes.renderer import render_resume_markdown_from_content
@@ -207,6 +209,22 @@ class ApplicationService:
             if mode == TailoringMode.VARIANT_ONLY
             else None
         )
+        trace_id = str(uuid4())
+        task_logger = AiTaskLogger()
+        task_logger.log(
+            {
+                "status": "started",
+                "task_name": "resume_tailoring",
+                "application_id": application.id,
+                "profile_id": application.profile_id,
+                "resume_id": resume.id,
+                "prompt_variant_id": prompt_variant.id,
+                "prompt_variant_name": prompt_variant.name,
+                "model": resolved_model,
+                "llm_mode": effective.llm_mode,
+                "trace_id": trace_id,
+            }
+        )
         try:
             tailored = TailoringService(
                 self.session,
@@ -249,12 +267,53 @@ class ApplicationService:
                 variant_prompts,
             )
             self.session.commit()
+            task_logger.log(
+                {
+                    "status": "success",
+                    "task_name": "fit_analysis",
+                    "application_id": application.id,
+                    "profile_id": application.profile_id,
+                    "resume_id": resume.id,
+                    "trace_id": trace_id,
+                }
+            )
             return tailored
         except (TailoringWorkflowError, ValidationError) as exc:
             self.session.rollback()
+            error_kind = (
+                "validation_error"
+                if isinstance(exc, ValidationError)
+                else (exc.error_kind or "provider_error")
+            )
+            task_logger.log(
+                {
+                    "status": error_kind,
+                    "task_name": getattr(exc, "task_name", None) or "unknown",
+                    "application_id": application.id,
+                    "profile_id": application.profile_id,
+                    "resume_id": resume.id,
+                    "trace_id": getattr(exc, "trace_id", None) or trace_id,
+                    "error": str(exc),
+                }
+            )
+            self.record_event(
+                application.id,
+                "ai_task_failed",
+                "AI task failed.",
+                {
+                    "task_name": getattr(exc, "task_name", None) or "unknown",
+                    "trace_id": getattr(exc, "trace_id", None) or trace_id,
+                    "status": error_kind,
+                    "model": resolved_model,
+                    "prompt_variant_id": prompt_variant.id,
+                },
+                commit=True,
+            )
             raise ApplicationWorkflowError(
-                "AI returned an invalid response shape. Please try again or adjust "
-                "the selected prompt variant."
+                "AI task failed "
+                f"({getattr(exc, 'task_name', 'unknown')}) "
+                f"[trace_id: {getattr(exc, 'trace_id', None) or trace_id}]. "
+                "Check local logs in logs/ai-tasks."
             ) from exc
 
     def _section_client(

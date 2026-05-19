@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.api.dependencies import SessionDep, form_bool, read_form_data
 from app.db.models import Resume, ResumeSection
+from app.llm.schemas import expected_response_contract_for_task
 from app.prompt_variants.service import PromptVariantService
 from app.settings.service import PROMPT_TEMPLATE_TYPES, SettingsService
 from app.storage.location import (
@@ -258,6 +259,10 @@ def prompt_variant_new(request: Request, session: SessionDep):
             "action": "/settings/prompt-variants/new",
             "title": "New Prompt Variant",
             "is_builtin": False,
+            "expected_contracts": {
+                task: expected_response_contract_for_task(task)
+                for task in ["resume_tailoring", "cover_letter", "fit_analysis"]
+            },
         },
     )
 
@@ -290,6 +295,10 @@ def prompt_variant_edit(variant_id: int, request: Request, session: SessionDep):
             "action": f"/settings/prompt-variants/{variant.id}/edit",
             "title": "Edit Prompt Variant",
             "is_builtin": variant.is_builtin,
+            "expected_contracts": {
+                task: expected_response_contract_for_task(task)
+                for task in ["resume_tailoring", "cover_letter", "fit_analysis"]
+            },
         },
     )
 

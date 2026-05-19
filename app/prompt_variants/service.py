@@ -10,16 +10,30 @@ TASK_TYPES = ("resume_tailoring", "cover_letter", "fit_analysis")
 DEFAULT_VARIANT_NAME = "Default Prompt Variant"
 DEFAULT_PROMPTS = {
     "resume_tailoring": (
-        "Tailor summary, skills, work bullets, and education bullets for the "
-        "pasted job description."
+        "Task: resume_tailoring. Input contains safe_resume, job_description, "
+        "user_prompt_instruction. safe_resume excludes Header and References. Return "
+        "JSON only. Do not wrap the response in ```json. Do not include any text "
+        "before or after the JSON. No Markdown, code fences, comments, XML, or "
+        "prose. Expected keys: summary, skills.hard_skills, skills.soft_skills, "
+        "work_experience[].block_id, work_experience[].key_bullets, "
+        "education[].block_id, education[].key_bullets. "
+        "Use block_id values from input only."
     ),
     "cover_letter": (
-        "Draft a concise cover letter aligned with the tailored resume and job "
-        "description."
+        "Task: cover_letter. Input contains safe tailored resume content without "
+        "Header/References, job_description, user_prompt_instruction. Return JSON "
+        "only. Do not wrap the response in ```json. Do not include any text before "
+        "or after the JSON. No Markdown, code fences, comments, XML, or prose. "
+        "Return JSON object with cover_letter string only. Do not include phone, "
+        "email, LinkedIn, GitHub, website, referee details, or placeholders."
     ),
     "fit_analysis": (
-        "Provide textual fit analysis with strong matches, weak or missing points, "
-        "and positioning advice."
+        "Task: fit_analysis. Input contains safe resume content without "
+        "Header/References, job_description, user_prompt_instruction. Return JSON "
+        "only. Do not wrap the response in ```json. Do not include any text before "
+        "or after the JSON. No Markdown, code fences, comments, XML, or prose. "
+        "Expected keys: fit_summary, strong_matches, weak_or_missing_points, "
+        "positioning_advice, warnings. Do not output ATS scores or percentage matches."
     ),
 }
 

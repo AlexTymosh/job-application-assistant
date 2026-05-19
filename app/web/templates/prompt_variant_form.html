@@ -5,8 +5,11 @@
   <label>Name<input name="name" value="{{ variant.name if variant else '' }}" {% if is_builtin %}readonly{% endif %}></label>
   <label>Description<textarea name="description" {% if is_builtin %}readonly{% endif %}>{{ variant.description if variant else '' }}</textarea></label>
   <label>Resume Tailoring Prompt<textarea name="resume_tailoring" {% if is_builtin %}readonly{% endif %}>{{ prompts.resume_tailoring }}</textarea></label>
+  <label>Expected response format (Resume Tailoring)<pre>{{ expected_contracts.resume_tailoring }}</pre></label>
   <label>Cover Letter Prompt<textarea name="cover_letter" {% if is_builtin %}readonly{% endif %}>{{ prompts.cover_letter }}</textarea></label>
+  <label>Expected response format (Cover Letter)<pre>{{ expected_contracts.cover_letter }}</pre></label>
   <label>Fit Analysis Prompt<textarea name="fit_analysis" {% if is_builtin %}readonly{% endif %}>{{ prompts.fit_analysis }}</textarea></label>
+  <label>Expected response format (Fit Analysis)<pre>{{ expected_contracts.fit_analysis }}</pre></label>
   {% if not is_builtin %}<button type="submit">Save Prompt Variant</button>{% else %}<p class="muted">Built-in Prompt Variant is read-only. Use Copy to create a custom variant.</p>{% endif %}
 </form>
 {% endblock %}

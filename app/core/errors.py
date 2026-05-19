@@ -2,8 +2,6 @@ from __future__ import annotations
 
 
 class AppError(Exception):
-    """Base class for expected, user-safe application errors."""
-
     status_code = 400
     title = "Action could not be completed"
 
@@ -49,6 +47,19 @@ class ApplicationWorkflowError(AppError):
 class TailoringWorkflowError(AppError):
     status_code = 400
     title = "Tailoring workflow action failed"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        task_name: str | None = None,
+        trace_id: str | None = None,
+        error_kind: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.task_name = task_name
+        self.trace_id = trace_id
+        self.error_kind = error_kind
 
 
 class ExportWorkflowError(AppError):
