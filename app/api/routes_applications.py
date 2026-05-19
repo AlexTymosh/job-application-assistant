@@ -47,9 +47,22 @@ def new_application(request: Request, session: SessionDep):
     settings = SettingsService(session)
     active_profile = settings.require_active_profile()
     resumes = ResumeService(session).list_resumes(active_profile.id)
+    settings = SettingsService(session).effective()
+    mode_label = (
+        "Master CV enhanced mode"
+        if settings.ai_policy_defaults.get("use_master_cv", True)
+        else "Variant-only mode"
+    )
+    prompt_variants = [{"id": "default", "name": "Default Prompt Variant"}]
     return templates.TemplateResponse(
         "applications_new.html",
-        {"request": request, "active_profile": active_profile, "resumes": resumes},
+        {
+            "request": request,
+            "active_profile": active_profile,
+            "resumes": resumes,
+            "mode_label": mode_label,
+            "prompt_variants": prompt_variants,
+        },
     )
 
 

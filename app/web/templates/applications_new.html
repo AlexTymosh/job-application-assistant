@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>Adapt resume to a job</h1><p>Select a Resume Variant, paste the job description, and create a saved Tailored Resume.</p></section>
+<section class="hero-card"><h1>Adapt resume to a job</h1><p>Select a Resume Variant, choose a Prompt Variant, paste the job description, and create a saved Tailored Resume.</p><p class="muted">Current tailoring mode: {{ mode_label }}</p></section>
 <form class="card" method="post" action="/applications/adapt">
   <label>Resume Variant<select name="resume_id" required>{% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}{% if resume.target_role %} — {{ resume.target_role }}{% endif %}</option>{% endfor %}</select></label>
   {% if not resumes %}<p class="empty">Create a Resume Variant before tailoring.</p>{% endif %}
+  <label>Prompt Variant<select name="prompt_variant_id">{% for variant in prompt_variants %}<option value="{{ variant.id }}">{{ variant.name }}</option>{% endfor %}</select></label>
   <div class="form-grid"><label>Job title optional<input name="job_title"></label><label>Company optional<input name="company_name"></label></div>
   <label>Source URL optional<input name="source_url"></label>
   <label>Job Description<textarea class="job-description" name="raw_job_text" required></textarea></label>
