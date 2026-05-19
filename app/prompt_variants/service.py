@@ -35,7 +35,9 @@ def _load_default_prompt(task_type: str) -> str:
     return content
 
 
-DEFAULT_PROMPTS = {task_type: _load_default_prompt(task_type) for task_type in TASK_TYPES}
+DEFAULT_PROMPTS = {
+    task_type: _load_default_prompt(task_type) for task_type in TASK_TYPES
+}
 
 
 class PromptVariantService:
@@ -107,6 +109,17 @@ class PromptVariantService:
         variant.name = name.strip() or variant.name
         variant.description = description.strip()
         self._upsert_templates(variant.id, prompts)
+        self.session.commit()
+        return variant
+
+    def restore_defaults(self, variant_id: int) -> PromptVariant:
+        variant = self.get_variant(variant_id)
+        self._upsert_templates(variant.id, DEFAULT_PROMPTS)
+        if variant.is_builtin:
+            variant.name = DEFAULT_VARIANT_NAME
+            variant.description = (
+                "Built-in default prompts for Variant 1 tailoring tasks."
+            )
         self.session.commit()
         return variant
 

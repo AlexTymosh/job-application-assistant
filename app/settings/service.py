@@ -19,7 +19,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "allow_title_edits": False,
     },
     "locale": "en",
-    "llm_mode": "fake",
+    "llm_mode": "openai",
     "active_profile_id": None,
     "openai_model_default": os.getenv("OPENAI_MODEL", "gpt-5.4-mini"),
     "openai_model_qa": os.getenv("OPENAI_MODEL_QA", "gpt-5.4-mini"),
@@ -38,7 +38,8 @@ PROMPT_TEMPLATE_TYPES = [
 
 DEFAULT_USER_PROMPTS: dict[str, str] = {
     "summary": (
-        "Rewrite the summary for the selected job according to the user's instruction."
+        "Rewrite the professional statement for the selected job according to the "
+        "user's instruction."
     ),
     "skills": (
         "Rewrite the hard and soft skills for the selected job according to the "
@@ -200,7 +201,7 @@ class SettingsService:
                 self.set(key, values[key].strip())
 
     def set_llm_mode(self, value: str) -> None:
-        self.set("llm_mode", value if value in {"fake", "openai"} else "fake")
+        self.set("llm_mode", value if value in {"fake", "openai"} else "openai")
 
     def ensure_prompt_templates(self, *, commit: bool = True) -> None:
         existing = {
@@ -215,7 +216,11 @@ class SettingsService:
                         scope="global",
                         block_type=block_type,
                         section_type=block_type,
-                        name=block_type.replace("_", " ").title(),
+                        name=(
+                            "Statement"
+                            if block_type == "summary"
+                            else block_type.replace("_", " ").title()
+                        ),
                         system_prompt=INTERNAL_GUARDRAILS,
                         user_prompt_template=DEFAULT_USER_PROMPTS[block_type],
                         is_active=True,
@@ -321,7 +326,11 @@ class SettingsService:
                 scope=scope,
                 block_type=block_type,
                 section_type=block_type,
-                name=f"{scope.title()} {block_type.replace('_', ' ').title()}",
+                name=(
+                    f"{scope.title()} Statement"
+                    if block_type == "summary"
+                    else f"{scope.title()} {block_type.replace('_', ' ').title()}"
+                ),
                 user_prompt_template=user_prompt_template.strip(),
                 system_prompt=INTERNAL_GUARDRAILS,
                 profile_id=profile_id,

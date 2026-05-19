@@ -4,7 +4,7 @@
   <aside class="builder-nav" aria-label="Resume sections">
     <a class="brand-mini" href="/cv-builder">CV Builder</a>
     {% for key, title, ai in sections_nav %}
-      <a class="builder-nav-item {% if section_type == key %}active{% endif %}" href="/resumes/{{ resume.id }}/builder/{{ key }}">{{ title }}</a>
+      <a class="builder-nav-item {% if section_type == key %}active{% endif %}" href="/resumes/{{ resume.id }}/builder/{{ key }}">{{ title|replace('Summary', 'Statement') }}</a>
     {% endfor %}
     <div class="builder-nav-actions">
       <form method="post" action="/resumes/{{ resume.id }}/export/pdf"><button class="compact" type="submit">PDF</button></form>
@@ -12,7 +12,7 @@
     </div>
   </aside>
   <section class="builder-editor">
-    <div class="section-header-row"><div><h1>{{ section.title }}</h1><p class="muted">Editing {{ resume.name }}{% if resume.target_role %} for {{ resume.target_role }}{% endif %}.</p></div><a class="button ghost" href="/resumes/{{ resume.id }}/edit">Variant settings</a></div>
+    <div class="section-header-row"><div><h1>{{ section.title|replace('Summary', 'Statement') }}</h1><p class="muted">Editing {{ resume.name }}{% if resume.target_role %} for {{ resume.target_role }}{% endif %}.</p></div><a class="button ghost" href="/resumes/{{ resume.id }}/edit">Variant settings</a></div>
     <form class="builder-form card" method="post">
       {% if section_type == "header" %}
         {% set block = section.blocks[0] if section.blocks else none %}{% set meta = block.metadata_json if block else {} %}
@@ -21,7 +21,7 @@
         <div class="form-grid"><label>Phone<input name="phone" value="{{ meta.get('phone','') }}"></label><label>Email address<input name="email" value="{{ meta.get('email','') }}"></label></div>
         <label>LinkedIn URL<input name="linkedin_url" value="{{ meta.get('linkedin_url','') }}"></label><label>GitHub URL optional<input name="github_url" value="{{ meta.get('github_url','') }}"></label><label>Website URL optional<input name="website_url" value="{{ meta.get('website_url', meta.get('personal_website_url','')) }}"></label><label>Extra text optional<input name="extra_text" value="{{ meta.get('extra_text','') }}"></label>
       {% elif section_type == "summary" %}
-        {% set block = section.blocks[0] if section.blocks else none %}<label>Summary<textarea name="description">{{ block.content if block else '' }}</textarea></label>
+        {% set block = section.blocks[0] if section.blocks else none %}<label>Statement<textarea name="description">{{ block.content if block else '' }}</textarea></label>
       {% elif section_type == "skills" %}
         {% set hard = section.blocks|selectattr('title','equalto','Hard Skills')|list %}{% set soft = section.blocks|selectattr('title','equalto','Soft Skills')|list %}
         <label>Hard Skills<textarea name="hard_skills_text">{{ hard[0].content if hard else '' }}</textarea></label>
