@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -32,6 +33,8 @@ from app.llm.tailoring_client import (
     OpenAISectionTailoringClient,
     SectionTailoringClient,
 )
+from app.llm.task_logging import AiTaskLogger
+from app.llm.task_runner import AiTaskRunner
 from app.people.service import PeopleService
 from app.prompt_variants.service import PromptVariantService
 from app.resumes.renderer import render_resume_markdown_from_content
@@ -46,7 +49,7 @@ from app.tailoring.service import (
 AI_SAFE_MASTER_CV_CATEGORIES = {"summary", "skills", "work_experience", "education"}
 PRIVATE_AI_SOURCE_CATEGORIES = {
     "header",
-    "reference",  # legacy singular category used before the Master CV reset
+    "reference",
     "references",
     "languages",
     "certificates",
@@ -207,11 +210,29 @@ class ApplicationService:
             if mode == TailoringMode.VARIANT_ONLY
             else None
         )
+        trace_id = str(uuid4())
+        task_runner = (
+            AiTaskRunner(
+                client=resolved_section_client,
+                logger=AiTaskLogger(),
+                application_id=application.id,
+                profile_id=application.profile_id,
+                resume_id=resume.id,
+                prompt_variant_id=prompt_variant.id,
+                prompt_variant_name=prompt_variant.name,
+                model=resolved_model,
+                llm_mode=effective.llm_mode,
+                trace_id=trace_id,
+            )
+            if resolved_section_client is not None
+            else None
+        )
         try:
             tailored = TailoringService(
                 self.session,
                 client=client,
                 section_client=resolved_section_client,
+                ai_task_runner=task_runner,
                 model=resolved_model,
             ).tailor(
                 application_id=application.id,
@@ -237,6 +258,7 @@ class ApplicationService:
                 master_items,
                 mode,
                 resolved_section_client,
+                task_runner,
                 resolved_model,
                 variant_prompts,
             )
@@ -245,6 +267,7 @@ class ApplicationService:
                 tailored,
                 mode,
                 resolved_section_client,
+                task_runner,
                 resolved_model,
                 variant_prompts,
             )
@@ -252,9 +275,29 @@ class ApplicationService:
             return tailored
         except (TailoringWorkflowError, ValidationError) as exc:
             self.session.rollback()
+            task_name = getattr(exc, "task_name", None) or "unknown"
+            error_kind = (
+                "validation_error"
+                if isinstance(exc, ValidationError)
+                else (exc.error_kind or "provider_error")
+            )
+            failure_trace_id = getattr(exc, "trace_id", None) or trace_id
+            self.record_event(
+                application.id,
+                "ai_task_failed",
+                "AI task failed.",
+                {
+                    "task_name": task_name,
+                    "trace_id": failure_trace_id,
+                    "status": error_kind,
+                    "model": resolved_model,
+                    "prompt_variant_id": prompt_variant.id,
+                },
+                commit=True,
+            )
             raise ApplicationWorkflowError(
-                "AI returned an invalid response shape. Please try again or adjust "
-                "the selected prompt variant."
+                f"AI task failed ({task_name}) [trace_id: {failure_trace_id}]. "
+                "Check local logs in logs/ai-tasks."
             ) from exc
 
     def _section_client(
@@ -331,6 +374,7 @@ class ApplicationService:
         master_items: list,
         mode: TailoringMode,
         section_client: SectionTailoringClient | None,
+        task_runner: AiTaskRunner | None,
         model: str,
         variant_prompts: dict[str, str],
     ) -> CoverLetter:
@@ -355,7 +399,15 @@ class ApplicationService:
             ],
             "user_prompt_instruction": instruction,
         }
-        if mode == TailoringMode.VARIANT_ONLY and section_client is not None:
+        if mode == TailoringMode.VARIANT_ONLY and task_runner is not None:
+            response = task_runner.run_json_task(
+                task_name="cover_letter",
+                payload=payload,
+                prompt=instruction,
+                response_model=CoverLetterResponse,
+            )
+            content = response.cover_letter.strip()
+        elif mode == TailoringMode.VARIANT_ONLY and section_client is not None:
             response = CoverLetterResponse.model_validate(
                 section_client.complete_json(
                     "cover_letter", payload, instruction, model
@@ -381,6 +433,7 @@ class ApplicationService:
         tailored: TailoredResume,
         mode: TailoringMode,
         section_client: SectionTailoringClient | None,
+        task_runner: AiTaskRunner | None,
         model: str,
         variant_prompts: dict[str, str],
     ) -> ApplicationAnalysis:
@@ -400,7 +453,15 @@ class ApplicationService:
             "user_prompt_instruction": instruction,
             "master_cv_items": [],
         }
-        if mode == TailoringMode.VARIANT_ONLY and section_client is not None:
+        if mode == TailoringMode.VARIANT_ONLY and task_runner is not None:
+            response = task_runner.run_json_task(
+                task_name="fit_analysis",
+                payload=payload,
+                prompt=instruction,
+                response_model=FitAnalysisResponse,
+            )
+            content = _render_fit_analysis(response)
+        elif mode == TailoringMode.VARIANT_ONLY and section_client is not None:
             response = FitAnalysisResponse.model_validate(
                 section_client.complete_json(
                     "fit_analysis", payload, instruction, model

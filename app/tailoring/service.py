@@ -10,6 +10,7 @@ from app.core.errors import TailoringWorkflowError
 from app.db.models import MasterCVEntry, Resume, TailoredResume
 from app.llm.schemas import ResumeTailoringResponse
 from app.llm.tailoring_client import SectionTailoringClient
+from app.llm.task_runner import AiTaskRunner
 from app.resumes.renderer import render_resume_markdown_from_content, resume_to_content
 from app.settings.service import SettingsService
 
@@ -98,11 +99,13 @@ class TailoringService:
         session: Session,
         client: DeterministicTailoringClient | None = None,
         section_client: SectionTailoringClient | None = None,
+        ai_task_runner: AiTaskRunner | None = None,
         model: str = "",
     ) -> None:
         self.session = session
         self.client = client or DeterministicTailoringClient()
         self.section_client = section_client
+        self.ai_task_runner = ai_task_runner
         self.model = model
 
     def build_payload(
@@ -221,19 +224,27 @@ class TailoringService:
         *,
         variant_prompts: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        if self.section_client is None:
-            raise RuntimeError("Variant-only tailoring requires a section client.")
         content = _deepcopy_content(self._safe_resume_content(resume))
         payload = self.build_variant_only_payload(resume, job_description)
         prompt = (variant_prompts or {}).get("resume_tailoring", "")
-        parsed = ResumeTailoringResponse.model_validate(
-            self.section_client.complete_json(
-                "resume_tailoring",
-                payload,
-                prompt,
-                self.model,
+        if self.ai_task_runner is not None:
+            parsed = self.ai_task_runner.run_json_task(
+                task_name="resume_tailoring",
+                payload=payload,
+                prompt=prompt,
+                response_model=ResumeTailoringResponse,
             )
-        )
+        elif self.section_client is not None:
+            parsed = ResumeTailoringResponse.model_validate(
+                self.section_client.complete_json(
+                    "resume_tailoring",
+                    payload,
+                    prompt,
+                    self.model,
+                )
+            )
+        else:
+            raise RuntimeError("Variant-only tailoring requires a section client.")
         sections = content.setdefault("sections", {})
         sections.setdefault("summary", {})["text"] = parsed.summary.strip()
         sections["skills"] = {
@@ -264,8 +275,6 @@ class TailoringService:
     def _reattach_private_sections(
         self, resume: Resume, tailored_content: dict[str, Any]
     ) -> dict[str, Any]:
-        # Render/export needs private header/reference sections. Those sections are
-        # never sent to AI payloads.
         full_base = resume_to_content(resume)
         for private_key in PRIVATE_SECTIONS:
             if private_key in full_base.get("sections", {}):
@@ -288,7 +297,9 @@ def _merge_tailored_key_bullets(
         block_id = int(tailored.block_id)
         if block_id not in original_by_id:
             raise TailoringWorkflowError(
-                "AI returned an unknown block identifier in resume tailoring output."
+                "AI returned an unknown block identifier in resume tailoring output.",
+                task_name="resume_tailoring",
+                error_kind="validation_error",
             )
         original_by_id[block_id]["content"] = tailored.key_bullets.strip()
     merged = []

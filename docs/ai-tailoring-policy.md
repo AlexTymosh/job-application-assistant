@@ -49,3 +49,10 @@ OpenAI calls require `llm_mode=openai` and a configured API key. The OpenAI API 
 Prompt Variant packs provide three task prompts: `resume_tailoring`, `cover_letter`, and `fit_analysis`. In Variant-only mode, `resume_tailoring` is used across summary, skills, work experience bullets, and education achievements tasks.
 
 Variant-only now uses one structured `resume_tailoring` request (not four section requests), plus structured `cover_letter` and `fit_analysis` responses validated for technical shape.
+
+## 2026-05 diagnostics update
+
+- Built-in prompt variants for `resume_tailoring`, `cover_letter`, and `fit_analysis` now include strict JSON-only output contracts.
+- OpenAI task responses are parsed with resilient JSON extraction and validated against task schemas.
+- Failures surface controlled trace IDs and local AI task logs (`logs/ai-tasks/*.jsonl`) with redaction safeguards for secrets/contact patterns.
+

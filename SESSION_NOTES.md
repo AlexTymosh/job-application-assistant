@@ -37,3 +37,6 @@ OpenAI mode uses the OS keyring-backed secret service for the API key and model 
 - Prompt Variant support is end-to-end for Variant-only mode: the selected variant controls resume tailoring, cover letter, and fit analysis prompts.
 
 - Variant-only flow now executes exactly three structured tasks: `resume_tailoring`, `cover_letter`, and `fit_analysis`, with schema validation and transaction rollback on invalid AI response shapes.
+
+- Variant-only prompts now enforce explicit JSON-only response contracts for resume_tailoring, cover_letter, and fit_analysis, with schema contracts shown in Prompt Variant settings and parser hardening for fenced/prose responses.
+- Variant-only AI failures now include trace IDs and local JSONL diagnostics under logs/ai-tasks with sensitive-pattern redaction.

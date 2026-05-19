@@ -88,3 +88,6 @@ uv run pre-commit run --all-files
 ```
 
 - Prompt Variants are user-manageable prompt packs in Settings (`resume_tailoring`, `cover_letter`, `fit_analysis`). Variant-only mode uses a single structured `resume_tailoring` request plus structured cover letter and fit analysis requests.
+
+- Prompt Variant settings now show read-only expected JSON response contracts for all three Variant-only tasks.
+- Variant-only AI JSON responses are parsed with a resilience layer (direct JSON, fenced JSON, or first object extraction) and invalid responses return controlled errors with trace IDs and local AI task logs.
