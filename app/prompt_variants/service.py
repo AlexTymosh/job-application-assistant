@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -8,44 +10,32 @@ from app.db.models import PromptVariant, PromptVariantTemplate
 
 TASK_TYPES = ("resume_tailoring", "cover_letter", "fit_analysis")
 DEFAULT_VARIANT_NAME = "Default Prompt Variant"
-DEFAULT_PROMPTS = {
-    "resume_tailoring": (
-        "Task: resume_tailoring. You receive safe_resume, job_description, and "
-        "user_prompt_instruction. safe_resume intentionally excludes Header, "
-        "References, and contact/private data. Follow the user prompt for tone and "
-        "emphasis, but return JSON only. Do not wrap the response in ```json. Do not "
-        "include text before or after the JSON. Do not use Markdown headings, XML, "
-        "comments, or prose outside JSON. Return exactly: summary string; skills "
-        "object with hard_skills and soft_skills strings; work_experience array of "
-        "objects with block_id and key_bullets; education array of objects with "
-        "block_id and key_bullets. Use block_id values from the input only. Do not "
-        "invent block_id values. Do not return Header, References, employer, role "
-        "title, dates, institution name, or other locked metadata as changed output. "
-        "If a source section is empty, return an empty string or empty list according "
-        "to the schema. The application will assemble the final Tailored Resume."
-    ),
-    "cover_letter": (
-        "Task: cover_letter. You receive safe tailored resume content without Header "
-        "or References, job_description, and user_prompt_instruction. Draft a concise, "
-        "professional cover letter for manual user review. Return JSON only with one "
-        "cover_letter string. Do not wrap the response in ```json. Do not include text "
-        "before or after the JSON. Do not use Markdown headings, XML, comments, or "
-        "prose outside JSON. Do not include phone, email, address, LinkedIn, GitHub, "
-        "website, referee details, or placeholders such as [Your Name], [Phone], or "
-        "[Email]."
-    ),
-    "fit_analysis": (
-        "Task: fit_analysis. You receive safe resume content without Header or "
-        "References, job_description, and user_prompt_instruction. Provide useful "
-        "textual guidance for the user. Return JSON only with fit_summary string, "
-        "strong_matches array, weak_or_missing_points array, positioning_advice array, "
-        "and warnings array. Do not wrap the response in ```json. Do not include text "
-        "before or after the JSON. Do not use Markdown headings, XML, comments, or "
-        "prose outside JSON. Do not output fake ATS scores, percentage matches, or "
-        "unsupported precision. Do not include Header, References, contact details, or "
-        "private data."
-    ),
+PROMPT_TEMPLATE_DIR = Path(__file__).parent / "templates"
+DEFAULT_PROMPT_FILES = {
+    "resume_tailoring": PROMPT_TEMPLATE_DIR / "resume_tailoring.md",
+    "cover_letter": PROMPT_TEMPLATE_DIR / "cover_letter.md",
+    "fit_analysis": PROMPT_TEMPLATE_DIR / "fit_analysis.md",
 }
+
+
+def _load_default_prompt(task_type: str) -> str:
+    try:
+        path = DEFAULT_PROMPT_FILES[task_type]
+    except KeyError as exc:
+        raise ValueError(f"Unknown default prompt task type: {task_type}") from exc
+
+    try:
+        content = path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"Default prompt template file is missing: {path}") from exc
+
+    if not content:
+        raise RuntimeError(f"Default prompt template file is empty: {path}")
+
+    return content
+
+
+DEFAULT_PROMPTS = {task_type: _load_default_prompt(task_type) for task_type in TASK_TYPES}
 
 
 class PromptVariantService:
