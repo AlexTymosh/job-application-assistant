@@ -26,6 +26,7 @@ from app.llm.tailoring_client import (
     SectionTailoringClient,
 )
 from app.people.service import PeopleService
+from app.prompt_variants.service import PromptVariantService
 from app.resumes.renderer import render_resume_markdown_from_content
 from app.resumes.service import ResumeService
 from app.settings.service import SettingsService
@@ -124,6 +125,7 @@ class ApplicationService:
         source_url: str = "",
         job_title: str = "",
         company_name: str = "",
+        prompt_variant_id: int | None = None,
     ) -> Application:
         resume = ResumeService(self.session).get_resume(resume_id)
         if resume.profile_id != profile_id:
@@ -137,6 +139,9 @@ class ApplicationService:
         next_number = (
             self.session.scalar(select(func.max(Application.application_number))) or 0
         ) + 1
+        prompt_variant = PromptVariantService(self.session).resolve_or_default(
+            prompt_variant_id
+        )
         application = Application(
             profile_id=profile_id,
             base_resume_id=resume_id,
@@ -146,6 +151,7 @@ class ApplicationService:
             job_title=job_title.strip(),
             company_name=company_name.strip(),
             status=ApplicationStatus.JOB_SAVED.value,
+            prompt_variant_id=prompt_variant.id,
         )
         self.session.add(application)
         self.session.flush()
@@ -181,6 +187,12 @@ class ApplicationService:
             else []
         )
         resolved_model = effective.openai_model_tailor or effective.openai_model_default
+        prompt_variant = PromptVariantService(self.session).resolve_or_default(
+            application.prompt_variant_id
+        )
+        variant_prompts = PromptVariantService(self.session).prompts_for(
+            prompt_variant.id
+        )
         resolved_section_client = (
             self._section_client(
                 section_client, effective.llm_mode, openai_secret_service
@@ -217,6 +229,7 @@ class ApplicationService:
             mode,
             resolved_section_client,
             resolved_model,
+            variant_prompts,
         )
         self._create_fit_analysis(
             application,
@@ -224,6 +237,7 @@ class ApplicationService:
             mode,
             resolved_section_client,
             resolved_model,
+            variant_prompts,
         )
         self.session.commit()
         return tailored
@@ -303,6 +317,7 @@ class ApplicationService:
         mode: TailoringMode,
         section_client: SectionTailoringClient | None,
         model: str,
+        variant_prompts: dict[str, str],
     ) -> CoverLetter:
         existing = self.latest_cover_letter(application.id)
         if existing is not None:
@@ -311,11 +326,7 @@ class ApplicationService:
         safe_tailored_content = deepcopy(tailored.content_json or {})
         for private_key in ["header", "references"]:
             safe_tailored_content.get("sections", {}).pop(private_key, None)
-        instruction = SettingsService(self.session).get_prompt_instruction(
-            "cover_letter",
-            profile_id=application.profile_id,
-            resume_id=application.base_resume_id,
-        )
+        instruction = variant_prompts.get("cover_letter", "")
         payload = {
             "tailored_resume": render_resume_markdown_from_content(
                 safe_tailored_content
@@ -353,6 +364,7 @@ class ApplicationService:
         mode: TailoringMode,
         section_client: SectionTailoringClient | None,
         model: str,
+        variant_prompts: dict[str, str],
     ) -> ApplicationAnalysis:
         existing = self.latest_fit_analysis(application.id)
         if existing is not None:
@@ -361,11 +373,7 @@ class ApplicationService:
         safe_tailored_content = deepcopy(tailored.content_json or {})
         for private_key in ["header", "references"]:
             safe_tailored_content.get("sections", {}).pop(private_key, None)
-        instruction = SettingsService(self.session).get_prompt_instruction(
-            "fit_analysis",
-            profile_id=application.profile_id,
-            resume_id=application.base_resume_id,
-        )
+        instruction = variant_prompts.get("fit_analysis", "")
         payload = {
             "tailored_resume": render_resume_markdown_from_content(
                 safe_tailored_content

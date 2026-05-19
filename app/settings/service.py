@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AppSetting, PersonProfile, PromptTemplate
+from app.prompt_variants.service import PromptVariantService
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "exports": {"markdown": False, "html": False, "pdf": True, "docx": True},
@@ -88,6 +89,7 @@ class SettingsService:
             if self.session.get(AppSetting, key) is None:
                 self.session.add(AppSetting(key=key, value_json=value))
         self.ensure_prompt_templates(commit=False)
+        PromptVariantService(self.session).ensure_default_variant()
         self.session.commit()
 
     def get(self, key: str, default: Any = None) -> Any:

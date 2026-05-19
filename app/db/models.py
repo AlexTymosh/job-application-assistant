@@ -286,6 +286,9 @@ class Application(Base, TimestampMixin):
     base_resume_id: Mapped[int] = mapped_column(
         ForeignKey("resumes.id", ondelete="CASCADE"), index=True
     )
+    prompt_variant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("prompt_variants.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     tailored_resume_id: Mapped[int | None] = mapped_column(
         ForeignKey("tailored_resumes.id", ondelete="SET NULL"),
         nullable=True,
@@ -408,3 +411,31 @@ class Artifact(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=utc_now_naive, server_default=func.now(), nullable=False
     )
+
+
+class PromptVariant(Base, TimestampMixin):
+    __tablename__ = "prompt_variants"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    is_builtin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    templates: Mapped[list[PromptVariantTemplate]] = relationship(
+        back_populates="prompt_variant", cascade="all, delete-orphan"
+    )
+
+
+class PromptVariantTemplate(Base, TimestampMixin):
+    __tablename__ = "prompt_variant_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    prompt_variant_id: Mapped[int] = mapped_column(
+        ForeignKey("prompt_variants.id", ondelete="CASCADE"), index=True
+    )
+    task_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    user_prompt_template: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+    prompt_variant: Mapped[PromptVariant] = relationship(back_populates="templates")
