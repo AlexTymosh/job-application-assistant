@@ -10,30 +10,40 @@ TASK_TYPES = ("resume_tailoring", "cover_letter", "fit_analysis")
 DEFAULT_VARIANT_NAME = "Default Prompt Variant"
 DEFAULT_PROMPTS = {
     "resume_tailoring": (
-        "Task: resume_tailoring. Input contains safe_resume, job_description, "
-        "user_prompt_instruction. safe_resume excludes Header and References. Return "
-        "JSON only. Do not wrap the response in ```json. Do not include any text "
-        "before or after the JSON. No Markdown, code fences, comments, XML, or "
-        "prose. Expected keys: summary, skills.hard_skills, skills.soft_skills, "
-        "work_experience[].block_id, work_experience[].key_bullets, "
-        "education[].block_id, education[].key_bullets. "
-        "Use block_id values from input only."
+        "Task: resume_tailoring. You receive safe_resume, job_description, and "
+        "user_prompt_instruction. safe_resume intentionally excludes Header, "
+        "References, and contact/private data. Follow the user prompt for tone and "
+        "emphasis, but return JSON only. Do not wrap the response in ```json. Do not "
+        "include text before or after the JSON. Do not use Markdown headings, XML, "
+        "comments, or prose outside JSON. Return exactly: summary string; skills "
+        "object with hard_skills and soft_skills strings; work_experience array of "
+        "objects with block_id and key_bullets; education array of objects with "
+        "block_id and key_bullets. Use block_id values from the input only. Do not "
+        "invent block_id values. Do not return Header, References, employer, role "
+        "title, dates, institution name, or other locked metadata as changed output. "
+        "If a source section is empty, return an empty string or empty list according "
+        "to the schema. The application will assemble the final Tailored Resume."
     ),
     "cover_letter": (
-        "Task: cover_letter. Input contains safe tailored resume content without "
-        "Header/References, job_description, user_prompt_instruction. Return JSON "
-        "only. Do not wrap the response in ```json. Do not include any text before "
-        "or after the JSON. No Markdown, code fences, comments, XML, or prose. "
-        "Return JSON object with cover_letter string only. Do not include phone, "
-        "email, LinkedIn, GitHub, website, referee details, or placeholders."
+        "Task: cover_letter. You receive safe tailored resume content without Header "
+        "or References, job_description, and user_prompt_instruction. Draft a concise, "
+        "professional cover letter for manual user review. Return JSON only with one "
+        "cover_letter string. Do not wrap the response in ```json. Do not include text "
+        "before or after the JSON. Do not use Markdown headings, XML, comments, or "
+        "prose outside JSON. Do not include phone, email, address, LinkedIn, GitHub, "
+        "website, referee details, or placeholders such as [Your Name], [Phone], or "
+        "[Email]."
     ),
     "fit_analysis": (
-        "Task: fit_analysis. Input contains safe resume content without "
-        "Header/References, job_description, user_prompt_instruction. Return JSON "
-        "only. Do not wrap the response in ```json. Do not include any text before "
-        "or after the JSON. No Markdown, code fences, comments, XML, or prose. "
-        "Expected keys: fit_summary, strong_matches, weak_or_missing_points, "
-        "positioning_advice, warnings. Do not output ATS scores or percentage matches."
+        "Task: fit_analysis. You receive safe resume content without Header or "
+        "References, job_description, and user_prompt_instruction. Provide useful "
+        "textual guidance for the user. Return JSON only with fit_summary string, "
+        "strong_matches array, weak_or_missing_points array, positioning_advice array, "
+        "and warnings array. Do not wrap the response in ```json. Do not include text "
+        "before or after the JSON. Do not use Markdown headings, XML, comments, or "
+        "prose outside JSON. Do not output fake ATS scores, percentage matches, or "
+        "unsupported precision. Do not include Header, References, contact details, or "
+        "private data."
     ),
 }
 
@@ -47,7 +57,7 @@ class PromptVariantService:
             select(PromptVariant).where(PromptVariant.is_builtin.is_(True))
         )
         if existing is not None:
-            self._ensure_templates_exist(existing.id)
+            self._sync_builtin_templates(existing.id)
             return existing
         variant = PromptVariant(
             name=DEFAULT_VARIANT_NAME,
@@ -176,6 +186,9 @@ class PromptVariantService:
                     )
                 )
         self.session.flush()
+
+    def _sync_builtin_templates(self, variant_id: int) -> None:
+        self._upsert_templates(variant_id, DEFAULT_PROMPTS)
 
     def _upsert_templates(self, variant_id: int, prompts: dict[str, str]) -> None:
         for task in TASK_TYPES:
