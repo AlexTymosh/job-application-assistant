@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import models  # noqa: F401
@@ -31,8 +31,22 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 def initialise_database(engine: Engine) -> None:
-    """Initialise the clean pre-release schema without legacy repair bridges."""
+    """Initialise schema and apply small pre-release SQLite compatibility repairs."""
     Base.metadata.create_all(engine)
+
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    if "applications" not in tables:
+        return
+    application_columns = {
+        column["name"] for column in inspector.get_columns("applications")
+    }
+    if "prompt_variant_id" in application_columns:
+        return
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE applications ADD COLUMN prompt_variant_id INTEGER")
+        )
 
 
 def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:

@@ -79,3 +79,5 @@ Use emoji plus conventional commit style:
 
 - Variant-only mode excludes Master CV, Header, and References from all AI payloads; Header and References are reattached only for local preview/export.
 - OpenAI API keys are stored through the OS keyring boundary only. Saving a key does not prove real OpenAI calls work, and tests never call real OpenAI.
+
+- Prompt Variant packs (`resume_tailoring`, `cover_letter`, `fit_analysis`) drive Variant-only mode prompts; Variant-only must use the selected prompt variant for resume section tasks.

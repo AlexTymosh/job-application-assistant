@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 
 from app.api.dependencies import SessionDep, get_app_data_root, read_form_data
 from app.applications.service import ApplicationService
+from app.prompt_variants.service import PromptVariantService
 from app.resumes.renderer import render_resume_html, render_resume_html_from_content
 from app.resumes.service import ResumeService
 from app.settings.service import SettingsService
@@ -49,7 +50,15 @@ def new_application(request: Request, session: SessionDep):
     resumes = ResumeService(session).list_resumes(active_profile.id)
     return templates.TemplateResponse(
         "applications_new.html",
-        {"request": request, "active_profile": active_profile, "resumes": resumes},
+        {
+            "request": request,
+            "active_profile": active_profile,
+            "resumes": resumes,
+            "prompt_variants": PromptVariantService(session).list_active(),
+            "use_master_cv": bool(
+                settings.effective().ai_policy_defaults.get("use_master_cv", True)
+            ),
+        },
     )
 
 
@@ -64,6 +73,9 @@ async def adapt_application(request: Request, session: SessionDep):
         source_url=data.get("source_url", ""),
         job_title=data.get("job_title", ""),
         company_name=data.get("company_name", ""),
+        prompt_variant_id=(
+            int(data["prompt_variant_id"]) if data.get("prompt_variant_id") else None
+        ),
     )
     ApplicationService(session).adapt_application(
         application.id, openai_secret_service=request.app.state.openai_secret_service

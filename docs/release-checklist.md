@@ -41,3 +41,6 @@
 - [ ] Cross-profile application review/export/download URLs are rejected.
 - [ ] Cross-profile Master CV page/item edit/item delete URLs are rejected.
 - [ ] Dashboard renders zero and non-zero activity for 10/20/30-day ranges.
+
+- [ ] Application → New adaptation shows real Prompt Variant options and excludes inactive variants.
+- [ ] Selected Prompt Variant controls resume tailoring, cover letter, and fit analysis in Variant-only mode.
