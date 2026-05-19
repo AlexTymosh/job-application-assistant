@@ -35,3 +35,5 @@ Master CV enhanced prompt and fake-client guardrails prohibit invented employers
 OpenAI mode uses the OS keyring-backed secret service for the API key and model identifiers from SQLite settings. The key is never stored in SQLite or rendered in templates. Saving a key does not test a real call. Tests use fake/spy clients and do not call real OpenAI or the real OS keyring.
 
 - Prompt Variant support is end-to-end for Variant-only mode: the selected variant controls resume tailoring, cover letter, and fit analysis prompts.
+
+- Variant-only flow now executes exactly three structured tasks: `resume_tailoring`, `cover_letter`, and `fit_analysis`, with schema validation and transaction rollback on invalid AI response shapes.

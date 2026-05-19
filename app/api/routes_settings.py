@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.api.dependencies import SessionDep, form_bool, read_form_data
 from app.db.models import Resume, ResumeSection
+from app.prompt_variants.service import PromptVariantService
 from app.settings.service import PROMPT_TEMPLATE_TYPES, SettingsService
 from app.storage.location import (
     clear_user_selected_app_data_root,
@@ -233,3 +234,91 @@ async def update_prompt_template(
     return RedirectResponse(
         f"/settings/prompts?block_type={block_type}", status_code=303
     )
+
+
+@router.get("/prompt-variants")
+def prompt_variants_page(request: Request, session: SessionDep):
+    service = PromptVariantService(session)
+    return templates.TemplateResponse(
+        "prompt_variants.html",
+        {"request": request, "variants": service.list_active()},
+    )
+
+
+@router.get("/prompt-variants/new")
+def prompt_variant_new(request: Request, session: SessionDep):
+    return templates.TemplateResponse(
+        "prompt_variant_form.html",
+        {
+            "request": request,
+            "variant": None,
+            "prompts": PromptVariantService(session).prompts_for(
+                PromptVariantService(session).ensure_default_variant().id
+            ),
+            "action": "/settings/prompt-variants/new",
+            "title": "New Prompt Variant",
+            "is_builtin": False,
+        },
+    )
+
+
+@router.post("/prompt-variants/new")
+async def prompt_variant_new_post(request: Request, session: SessionDep):
+    data = await read_form_data(request)
+    PromptVariantService(session).create_variant(
+        name=data.get("name", ""),
+        description=data.get("description", ""),
+        prompts={
+            "resume_tailoring": data.get("resume_tailoring", ""),
+            "cover_letter": data.get("cover_letter", ""),
+            "fit_analysis": data.get("fit_analysis", ""),
+        },
+    )
+    return RedirectResponse("/settings/prompt-variants", status_code=303)
+
+
+@router.get("/prompt-variants/{variant_id}/edit")
+def prompt_variant_edit(variant_id: int, request: Request, session: SessionDep):
+    service = PromptVariantService(session)
+    variant = service.get_variant(variant_id)
+    return templates.TemplateResponse(
+        "prompt_variant_form.html",
+        {
+            "request": request,
+            "variant": variant,
+            "prompts": service.prompts_for(variant.id),
+            "action": f"/settings/prompt-variants/{variant.id}/edit",
+            "title": "Edit Prompt Variant",
+            "is_builtin": variant.is_builtin,
+        },
+    )
+
+
+@router.post("/prompt-variants/{variant_id}/edit")
+async def prompt_variant_edit_post(
+    variant_id: int, request: Request, session: SessionDep
+):
+    data = await read_form_data(request)
+    PromptVariantService(session).update_variant(
+        variant_id,
+        name=data.get("name", ""),
+        description=data.get("description", ""),
+        prompts={
+            "resume_tailoring": data.get("resume_tailoring", ""),
+            "cover_letter": data.get("cover_letter", ""),
+            "fit_analysis": data.get("fit_analysis", ""),
+        },
+    )
+    return RedirectResponse("/settings/prompt-variants", status_code=303)
+
+
+@router.post("/prompt-variants/{variant_id}/deactivate")
+def prompt_variant_deactivate(variant_id: int, session: SessionDep):
+    PromptVariantService(session).deactivate_variant(variant_id)
+    return RedirectResponse("/settings/prompt-variants", status_code=303)
+
+
+@router.post("/prompt-variants/{variant_id}/copy")
+def prompt_variant_copy(variant_id: int, session: SessionDep):
+    PromptVariantService(session).copy_variant(variant_id)
+    return RedirectResponse("/settings/prompt-variants", status_code=303)

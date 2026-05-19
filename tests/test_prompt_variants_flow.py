@@ -102,10 +102,12 @@ def test_selected_prompt_variant_drives_all_variant_only_prompts(session):
     ApplicationService(session).adapt_application(application.id, section_client=client)
 
     assert client.captured_json_calls
-    assert client.captured_text_calls
+    resume_calls = [
+        c for c in client.captured_json_calls if c["task_name"] == "resume_tailoring"
+    ]
+    assert resume_calls
     assert all(
-        call["prompt"] == "CUSTOM RESUME TAILORING PROMPT"
-        for call in client.captured_json_calls
+        call["prompt"] == "CUSTOM RESUME TAILORING PROMPT" for call in resume_calls
     )
     assert all(
         call["prompt"] != SettingsService(session).get_prompt_instruction("summary")
@@ -113,12 +115,12 @@ def test_selected_prompt_variant_drives_all_variant_only_prompts(session):
     )
     cover_prompt = [
         call["prompt"]
-        for call in client.captured_text_calls
+        for call in client.captured_json_calls
         if call["task_name"] == "cover_letter"
     ][0]
     fit_prompt = [
         call["prompt"]
-        for call in client.captured_text_calls
+        for call in client.captured_json_calls
         if call["task_name"] == "fit_analysis"
     ][0]
     assert cover_prompt == "CUSTOM COVER LETTER PROMPT"

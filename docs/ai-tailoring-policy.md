@@ -47,3 +47,5 @@ The prompt types are `summary`, `skills`, `work_experience_bullets`, `education_
 OpenAI calls require `llm_mode=openai` and a configured API key. The OpenAI API key is read through the OS keyring boundary and is never stored in SQLite or rendered back into templates. Saving the key only stores it; it does not prove that a real OpenAI call will succeed.
 
 Prompt Variant packs provide three task prompts: `resume_tailoring`, `cover_letter`, and `fit_analysis`. In Variant-only mode, `resume_tailoring` is used across summary, skills, work experience bullets, and education achievements tasks.
+
+Variant-only now uses one structured `resume_tailoring` request (not four section requests), plus structured `cover_letter` and `fit_analysis` responses validated for technical shape.

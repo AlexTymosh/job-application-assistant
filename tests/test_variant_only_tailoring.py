@@ -32,7 +32,7 @@ def _set_variant_only(session) -> None:
 
 
 def _payload_text(client: FakeSectionTailoringClient) -> str:
-    return str(client.captured_json_calls + client.captured_text_calls)
+    return str(client.captured_json_calls)
 
 
 def _adapt_variant_only(session):
@@ -64,7 +64,7 @@ def test_variant_only_mode_does_not_use_master_cv(session):
     assert MASTER_ONLY_TEXT not in _payload_text(client)
     assert all(
         call["payload"].get("master_cv_items") in (None, [])
-        for call in client.captured_json_calls + client.captured_text_calls
+        for call in client.captured_json_calls
     )
 
 
@@ -143,9 +143,7 @@ def test_variant_only_text_tasks_use_default_model_when_tailor_model_is_blank(se
 
     ApplicationService(session).adapt_application(application.id, section_client=client)
 
-    assert client.captured_text_calls
     assert all(call["model"] == "fallback-model" for call in client.captured_json_calls)
-    assert all(call["model"] == "fallback-model" for call in client.captured_text_calls)
 
 
 def test_default_variant_only_prompts_do_not_include_hidden_claim_constraints():
@@ -156,20 +154,12 @@ def test_default_variant_only_prompts_do_not_include_hidden_claim_constraints():
     assert "institution" not in DEFAULT_USER_PROMPTS["education_achievements"]
 
 
-def test_variant_only_section_calls_are_separate(session):
+def test_variant_only_single_structured_calls(session):
     _profile, _resume, _application, _tailored, client = _adapt_variant_only(session)
 
     task_names = [call["task_name"] for call in client.captured_json_calls]
-    task_names += [call["task_name"] for call in client.captured_text_calls]
 
-    assert task_names == [
-        "summary",
-        "skills",
-        "work_experience_bullets",
-        "education_achievements",
-        "cover_letter",
-        "fit_analysis",
-    ]
+    assert task_names == ["resume_tailoring", "cover_letter", "fit_analysis"]
 
 
 def test_variant_only_excludes_private_sections_from_all_ai_payloads(session):
@@ -203,7 +193,7 @@ def test_variant_only_preserves_base_resume_variant(session):
     profile, resume = create_profile_resume(session)
     _set_variant_only(session)
     original_content = deepcopy(
-        TailoringService(session).build_variant_only_payloads(resume, "job")
+        TailoringService(session).build_variant_only_payload(resume, "job")
     )
     application = ApplicationService(session).create_application(
         profile_id=profile.id, resume_id=resume.id, raw_job_text="FastAPI role"
@@ -212,7 +202,7 @@ def test_variant_only_preserves_base_resume_variant(session):
     tailored = ApplicationService(session).adapt_application(
         application.id, section_client=FakeSectionTailoringClient()
     )
-    refreshed_content = TailoringService(session).build_variant_only_payloads(
+    refreshed_content = TailoringService(session).build_variant_only_payload(
         resume, "job"
     )
 
@@ -275,7 +265,7 @@ def test_fit_analysis_displayed_above_comparison(app_client, session):
     base_index = response.text.index("Base Resume Variant")
     tailored_index = response.text.index("Tailored Resume Preview")
     assert fit_index < base_index < tailored_index
-    assert "strong matches" in response.text
+    assert "Strong matches" in response.text
     assert "Cover Letter" in response.text
 
 
@@ -283,7 +273,7 @@ def test_variant_only_cover_letter_payload_excludes_private_and_master_cv(sessio
     _profile, _resume, _application, _tailored, client = _adapt_variant_only(session)
     cover_call = next(
         call
-        for call in client.captured_text_calls
+        for call in client.captured_json_calls
         if call["task_name"] == "cover_letter"
     )
 

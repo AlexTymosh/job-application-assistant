@@ -54,3 +54,5 @@ The current UI does not expose raw Tailored Resume editing. Future section-based
 - Dashboard chart background and activity bars use flat colours without gradients while keeping range switching and date/count axes.
 
 Variant-only adaptation now requires selecting a Prompt Variant on the application form, and the selected pack controls all three AI tasks.
+
+Settings now includes Prompt Variant management pages to create, edit, copy, and deactivate custom prompt packs; inactive variants are hidden from application creation.

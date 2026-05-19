@@ -6,7 +6,9 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.errors import TailoringWorkflowError
 from app.db.models import MasterCVEntry, Resume, TailoredResume
+from app.llm.schemas import ResumeTailoringResponse
 from app.llm.tailoring_client import SectionTailoringClient
 from app.resumes.renderer import render_resume_markdown_from_content, resume_to_content
 from app.settings.service import SettingsService
@@ -21,12 +23,6 @@ PRIVATE_MASTER_CV_CATEGORIES = {
     "languages",
     "certificates",
 }
-VARIANT_ONLY_TASKS = (
-    "summary",
-    "skills",
-    "work_experience_bullets",
-    "education_achievements",
-)
 
 
 class TailoringMode(StrEnum):
@@ -202,28 +198,20 @@ class TailoringService:
         self.session.flush()
         return tailored
 
+    def build_variant_only_payload(
+        self, resume: Resume, job_description: str
+    ) -> dict[str, Any]:
+        return {
+            "safe_resume": self._safe_resume_content(resume),
+            "job_description": job_description,
+        }
+
     def build_variant_only_payloads(
         self, resume: Resume, job_description: str
     ) -> dict[str, dict[str, Any]]:
-        safe_content = self._safe_resume_content(resume)
-        sections = safe_content.get("sections", {})
-        base = {
-            "resume_id": safe_content.get("resume_id"),
-            "resume_name": safe_content.get("name", ""),
-            "target_role": safe_content.get("target_role", ""),
-            "job_description": job_description,
-        }
+        """Compatibility helper retained for existing tests and callers."""
         return {
-            "summary": {**base, "summary": sections.get("summary", {}).get("text", "")},
-            "skills": {**base, "skills": sections.get("skills", {})},
-            "work_experience_bullets": {
-                **base,
-                "work_experience": sections.get("work_experience", []),
-            },
-            "education_achievements": {
-                **base,
-                "education": sections.get("education", []),
-            },
+            "resume_tailoring": self.build_variant_only_payload(resume, job_description)
         }
 
     def _tailor_variant_only(
@@ -236,38 +224,30 @@ class TailoringService:
         if self.section_client is None:
             raise RuntimeError("Variant-only tailoring requires a section client.")
         content = _deepcopy_content(self._safe_resume_content(resume))
-        # Variant-only mode uses Prompt Variant prompt pack instructions.
-        # Legacy scoped section prompts remain in SettingsService for existing
-        # Master CV-enhanced flow and future compatibility.
-        resume_tailoring_prompt = (variant_prompts or {}).get("resume_tailoring", "")
-        prompts = {
-            task_name: resume_tailoring_prompt for task_name in VARIANT_ONLY_TASKS
-        }
-        payloads = self.build_variant_only_payloads(resume, job_description)
-        sections = content.setdefault("sections", {})
-        for task_name in VARIANT_ONLY_TASKS:
-            result = self.section_client.complete_json(
-                task_name,
-                payloads[task_name],
-                prompts.get(task_name, ""),
+        payload = self.build_variant_only_payload(resume, job_description)
+        prompt = (variant_prompts or {}).get("resume_tailoring", "")
+        parsed = ResumeTailoringResponse.model_validate(
+            self.section_client.complete_json(
+                "resume_tailoring",
+                payload,
+                prompt,
                 self.model,
             )
-            if task_name == "summary" and "text" in result:
-                sections.setdefault("summary", {})["text"] = str(result["text"])
-            elif task_name == "skills":
-                sections["skills"] = {
-                    "hard": str(result.get("hard", "")),
-                    "soft": str(result.get("soft", "")),
-                }
-            elif task_name == "work_experience_bullets":
-                sections["work_experience"] = _merge_item_content(
-                    sections.get("work_experience", []),
-                    result.get("work_experience", []),
-                )
-            elif task_name == "education_achievements":
-                sections["education"] = _merge_item_content(
-                    sections.get("education", []), result.get("education", [])
-                )
+        )
+        sections = content.setdefault("sections", {})
+        sections.setdefault("summary", {})["text"] = parsed.summary.strip()
+        sections["skills"] = {
+            "hard": parsed.skills.hard_skills.strip(),
+            "soft": parsed.skills.soft_skills.strip(),
+        }
+        sections["work_experience"] = _merge_tailored_key_bullets(
+            sections.get("work_experience", []),
+            parsed.work_experience,
+        )
+        sections["education"] = _merge_tailored_key_bullets(
+            sections.get("education", []),
+            parsed.education,
+        )
         content["tailoring_sources"] = []
         content["tailoring_mode"] = TailoringMode.VARIANT_ONLY.value
         return content
@@ -295,27 +275,29 @@ class TailoringService:
         return tailored_content
 
 
-def _merge_item_content(
-    original_items: list[dict[str, Any]], tailored_items: Any
+def _merge_tailored_key_bullets(
+    original_items: list[dict[str, Any]],
+    tailored_items: list[Any],
 ) -> list[dict[str, Any]]:
-    if not isinstance(tailored_items, list):
-        return original_items
-    content_by_id = {
-        item.get("id"): item.get("content")
-        for item in tailored_items
-        if isinstance(item, dict) and item.get("id") is not None
+    original_by_id = {
+        int(item.get("id")): dict(item)
+        for item in original_items
+        if item.get("id") is not None
     }
-    merged: list[dict[str, Any]] = []
-    for index, original in enumerate(original_items):
-        item = dict(original)
-        replacement = content_by_id.get(item.get("id"))
-        if replacement is None and index < len(tailored_items):
-            candidate = tailored_items[index]
-            if isinstance(candidate, dict):
-                replacement = candidate.get("content")
-        if replacement is not None:
-            item["content"] = str(replacement)
-        merged.append(item)
+    for tailored in tailored_items:
+        block_id = int(tailored.block_id)
+        if block_id not in original_by_id:
+            raise TailoringWorkflowError(
+                "AI returned an unknown block identifier in resume tailoring output."
+            )
+        original_by_id[block_id]["content"] = tailored.key_bullets.strip()
+    merged = []
+    for item in original_items:
+        item_id = item.get("id")
+        if item_id is None:
+            merged.append(dict(item))
+        else:
+            merged.append(original_by_id[int(item_id)])
     return merged
 
 

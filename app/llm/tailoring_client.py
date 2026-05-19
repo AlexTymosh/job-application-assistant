@@ -1,30 +1,24 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from app.core.errors import TailoringWorkflowError
 
 
 class SectionTailoringClient(Protocol):
-    """Boundary for section-by-section tailoring clients."""
+    """Boundary for variant-only tailoring clients."""
 
     def complete_json(
         self, task_name: str, payload: dict[str, Any], prompt: str, model: str
     ) -> dict[str, Any]: ...
 
-    def complete_text(
-        self, task_name: str, payload: dict[str, Any], prompt: str, model: str
-    ) -> str: ...
 
-
-@dataclass
 class FakeSectionTailoringClient:
-    """Deterministic section-by-section client for local mode and tests."""
+    """Deterministic client for local mode and tests."""
 
-    captured_json_calls: list[dict[str, Any]] = field(default_factory=list)
-    captured_text_calls: list[dict[str, Any]] = field(default_factory=list)
+    def __init__(self) -> None:
+        self.captured_json_calls: list[dict[str, Any]] = []
 
     def complete_json(
         self, task_name: str, payload: dict[str, Any], prompt: str, model: str
@@ -37,56 +31,63 @@ class FakeSectionTailoringClient:
                 "model": model,
             }
         )
-        if task_name == "summary":
-            summary = payload.get("summary", "").strip()
-            return {"text": f"{summary} Variant-only tailored summary.".strip()}
-        if task_name == "skills":
-            skills = dict(payload.get("skills") or {})
-            skills["hard"] = _append_csv(
-                skills.get("hard", ""), "Variant-only tailored skill"
-            )
-            return skills
-        if task_name in {"work_experience_bullets", "education_achievements"}:
-            key = (
-                "work_experience"
-                if task_name == "work_experience_bullets"
-                else "education"
-            )
-            items = []
-            for item in payload.get(key, []):
-                tailored = dict(item)
-                tailored["content"] = _append_bullet(
-                    str(tailored.get("content", "")),
-                    "Variant-only tailored bullet.",
-                )
-                items.append(tailored)
-            return {key: items}
-        return {}
-
-    def complete_text(
-        self, task_name: str, payload: dict[str, Any], prompt: str, model: str
-    ) -> str:
-        self.captured_text_calls.append(
-            {
-                "task_name": task_name,
-                "payload": payload,
-                "prompt": prompt,
-                "model": model,
+        if task_name == "resume_tailoring":
+            sections = payload.get("safe_resume", {}).get("sections", {})
+            return {
+                "summary": (
+                    f"{sections.get('summary', {}).get('text', '').strip()} "
+                    "Variant-only tailored summary."
+                ).strip(),
+                "skills": {
+                    "hard_skills": _append_csv(
+                        sections.get("skills", {}).get("hard", ""),
+                        "Variant-only tailored skill",
+                    ),
+                    "soft_skills": sections.get("skills", {}).get("soft", ""),
+                },
+                "work_experience": [
+                    {
+                        "block_id": int(item.get("id")),
+                        "key_bullets": _append_bullet(
+                            str(item.get("content", "")),
+                            "Variant-only tailored bullet.",
+                        ),
+                    }
+                    for item in sections.get("work_experience", [])
+                    if item.get("id") is not None
+                ],
+                "education": [
+                    {
+                        "block_id": int(item.get("id")),
+                        "key_bullets": _append_bullet(
+                            str(item.get("content", "")),
+                            "Variant-only tailored bullet.",
+                        ),
+                    }
+                    for item in sections.get("education", [])
+                    if item.get("id") is not None
+                ],
             }
-        )
+        if task_name == "cover_letter":
+            return {
+                "cover_letter": (
+                    "Thank you for considering my application. The attached tailored "
+                    "resume highlights relevant experience for this role."
+                )
+            }
         if task_name == "fit_analysis":
-            return (
-                "Fit analysis: strong matches are visible in the selected resume; "
-                "review weak or missing areas before applying."
-            )
-        return (
-            "Thank you for considering my application. The attached tailored resume "
-            "highlights relevant experience for this role."
-        )
+            return {
+                "fit_summary": "The resume appears relevant for the position.",
+                "strong_matches": ["Relevant Python and FastAPI experience"],
+                "weak_or_missing_points": ["Domain-specific tooling is not explicit"],
+                "positioning_advice": ["Emphasise delivery outcomes and ownership"],
+                "warnings": ["Review and refine before final submission"],
+            }
+        return {}
 
 
 class OpenAISectionTailoringClient:
-    """Synchronous OpenAI client for variant-only section tailoring."""
+    """Synchronous OpenAI client for variant-only tailoring."""
 
     def __init__(self, api_key: str) -> None:
         if not api_key:
@@ -105,31 +106,19 @@ class OpenAISectionTailoringClient:
             payload=payload,
             prompt=prompt,
             model=model,
-            json_response=True,
         )
         try:
             parsed = json.loads(raw_text)
         except json.JSONDecodeError as exc:
             raise TailoringWorkflowError(
-                "OpenAI returned invalid JSON for a tailoring section. Try again or "
+                "OpenAI returned invalid JSON for a tailoring task. Try again or "
                 "switch to deterministic local mode."
             ) from exc
         if not isinstance(parsed, dict):
             raise TailoringWorkflowError(
-                "OpenAI returned an unexpected JSON shape for a tailoring section."
+                "OpenAI returned an unexpected JSON shape for a tailoring task."
             )
         return parsed
-
-    def complete_text(
-        self, task_name: str, payload: dict[str, Any], prompt: str, model: str
-    ) -> str:
-        return self._complete(
-            task_name=task_name,
-            payload=payload,
-            prompt=prompt,
-            model=model,
-            json_response=False,
-        ).strip()
 
     def _complete(
         self,
@@ -138,12 +127,11 @@ class OpenAISectionTailoringClient:
         payload: dict[str, Any],
         prompt: str,
         model: str,
-        json_response: bool,
     ) -> str:
         messages = [
             {
                 "role": "system",
-                "content": _system_instruction(task_name, json_response=json_response),
+                "content": _system_instruction(task_name),
             },
             {
                 "role": "user",
@@ -157,15 +145,17 @@ class OpenAISectionTailoringClient:
                 ),
             },
         ]
-        kwargs: dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-        }
-        if json_response:
-            kwargs["response_format"] = {"type": "json_object"}
+        if not model.strip():
+            raise TailoringWorkflowError(
+                "OpenAI model is empty. Configure OpenAI model settings first."
+            )
         try:
-            response = self.client.chat.completions.create(**kwargs)
-        except Exception as exc:  # pragma: no cover - provider/runtime boundary
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                response_format={"type": "json_object"},
+            )
+        except Exception as exc:  # pragma: no cover
             raise TailoringWorkflowError(
                 "OpenAI could not complete the tailoring request. Check the API key, "
                 "model identifier, and network connection."
@@ -176,25 +166,23 @@ class OpenAISectionTailoringClient:
         return content
 
 
-def _system_instruction(task_name: str, *, json_response: bool) -> str:
+def _system_instruction(task_name: str) -> str:
     base = (
         "You tailor only the provided variant resume content for the pasted job "
         "description. Header and References are intentionally absent. Follow the "
         "user prompt instruction for style and emphasis."
     )
-    if not json_response:
-        return base
     schemas = {
-        "summary": '{"text": "tailored summary text"}',
-        "skills": (
-            '{"hard": "comma separated hard skills", '
-            '"soft": "comma separated soft skills"}'
+        "resume_tailoring": (
+            '{"summary":"text","skills":{"hard_skills":"text","soft_skills":"text"},'
+            '"work_experience":[{"block_id":1,"key_bullets":"text"}],'
+            '"education":[{"block_id":2,"key_bullets":"text"}]}'
         ),
-        "work_experience_bullets": (
-            '{"work_experience": [{"id": 1, "content": "bullet lines"}]}'
-        ),
-        "education_achievements": (
-            '{"education": [{"id": 1, "content": "bullet lines"}]}'
+        "cover_letter": '{"cover_letter":"text"}',
+        "fit_analysis": (
+            '{"fit_summary":"text","strong_matches":["text"],'
+            '"weak_or_missing_points":["text"],"positioning_advice":["text"],'
+            '"warnings":["text"]}'
         ),
     }
     return (

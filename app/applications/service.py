@@ -4,10 +4,16 @@ from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.errors import ApplicationWorkflowError, NotFoundError, ProfileScopeError
+from app.core.errors import (
+    ApplicationWorkflowError,
+    NotFoundError,
+    ProfileScopeError,
+    TailoringWorkflowError,
+)
 from app.db.models import (
     Application,
     ApplicationAnalysis,
@@ -20,6 +26,7 @@ from app.db.models import (
 from app.exporters.docx_exporter import DocxExporter
 from app.exporters.pdf_exporter import PdfExporter
 from app.llm.fake_client import FakeCoverLetterClient
+from app.llm.schemas import CoverLetterResponse, FitAnalysisResponse
 from app.llm.tailoring_client import (
     FakeSectionTailoringClient,
     OpenAISectionTailoringClient,
@@ -200,48 +207,55 @@ class ApplicationService:
             if mode == TailoringMode.VARIANT_ONLY
             else None
         )
-        tailored = TailoringService(
-            self.session,
-            client=client,
-            section_client=resolved_section_client,
-            model=resolved_model,
-        ).tailor(
-            application_id=application.id,
-            profile_id=application.profile_id,
-            resume=resume,
-            master_items=master_items,
-            job_description=application.raw_job_text,
-            mode=mode,
-            variant_prompts=variant_prompts,
-        )
-        application.tailored_resume_id = tailored.id
-        application.status = ApplicationStatus.TAILORED.value
-        self.record_event(
-            application.id,
-            "resume_tailored",
-            "Tailored resume saved automatically.",
-            {"tailored_resume_id": tailored.id, "tailoring_mode": mode.value},
-            commit=False,
-        )
-        self._create_cover_letter(
-            application,
-            tailored,
-            master_items,
-            mode,
-            resolved_section_client,
-            resolved_model,
-            variant_prompts,
-        )
-        self._create_fit_analysis(
-            application,
-            tailored,
-            mode,
-            resolved_section_client,
-            resolved_model,
-            variant_prompts,
-        )
-        self.session.commit()
-        return tailored
+        try:
+            tailored = TailoringService(
+                self.session,
+                client=client,
+                section_client=resolved_section_client,
+                model=resolved_model,
+            ).tailor(
+                application_id=application.id,
+                profile_id=application.profile_id,
+                resume=resume,
+                master_items=master_items,
+                job_description=application.raw_job_text,
+                mode=mode,
+                variant_prompts=variant_prompts,
+            )
+            application.tailored_resume_id = tailored.id
+            application.status = ApplicationStatus.TAILORED.value
+            self.record_event(
+                application.id,
+                "resume_tailored",
+                "Tailored resume saved automatically.",
+                {"tailored_resume_id": tailored.id, "tailoring_mode": mode.value},
+                commit=False,
+            )
+            self._create_cover_letter(
+                application,
+                tailored,
+                master_items,
+                mode,
+                resolved_section_client,
+                resolved_model,
+                variant_prompts,
+            )
+            self._create_fit_analysis(
+                application,
+                tailored,
+                mode,
+                resolved_section_client,
+                resolved_model,
+                variant_prompts,
+            )
+            self.session.commit()
+            return tailored
+        except (TailoringWorkflowError, ValidationError) as exc:
+            self.session.rollback()
+            raise ApplicationWorkflowError(
+                "AI returned an invalid response shape. Please try again or adjust "
+                "the selected prompt variant."
+            ) from exc
 
     def _section_client(
         self,
@@ -342,9 +356,12 @@ class ApplicationService:
             "user_prompt_instruction": instruction,
         }
         if mode == TailoringMode.VARIANT_ONLY and section_client is not None:
-            content = section_client.complete_text(
-                "cover_letter", payload, instruction, model
+            response = CoverLetterResponse.model_validate(
+                section_client.complete_json(
+                    "cover_letter", payload, instruction, model
+                )
             )
+            content = response.cover_letter.strip()
         else:
             content = FakeCoverLetterClient().draft(payload)
         cover_letter = CoverLetter(
@@ -384,9 +401,12 @@ class ApplicationService:
             "master_cv_items": [],
         }
         if mode == TailoringMode.VARIANT_ONLY and section_client is not None:
-            content = section_client.complete_text(
-                "fit_analysis", payload, instruction, model
+            response = FitAnalysisResponse.model_validate(
+                section_client.complete_json(
+                    "fit_analysis", payload, instruction, model
+                )
             )
+            content = _render_fit_analysis(response)
         else:
             content = (
                 "Fit analysis: deterministic Master CV-enhanced mode is available. "
@@ -523,3 +543,16 @@ def _normalise_export_format(export_format: str) -> str:
     if export_format not in {"pdf", "docx"}:
         raise ApplicationWorkflowError("Choose PDF or DOCX export.")
     return export_format
+
+
+def _render_fit_analysis(response: FitAnalysisResponse) -> str:
+    lines = [f"Fit summary: {response.fit_summary.strip()}"]
+    lines.append("Strong matches:")
+    lines.extend([f"- {item}" for item in response.strong_matches])
+    lines.append("Weak or missing points:")
+    lines.extend([f"- {item}" for item in response.weak_or_missing_points])
+    lines.append("Positioning advice:")
+    lines.extend([f"- {item}" for item in response.positioning_advice])
+    lines.append("Warnings:")
+    lines.extend([f"- {item}" for item in response.warnings])
+    return "\n".join(lines).strip()

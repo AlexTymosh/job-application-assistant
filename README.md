@@ -86,3 +86,5 @@ uv run ruff check .
 uv run pytest
 uv run pre-commit run --all-files
 ```
+
+- Prompt Variants are user-manageable prompt packs in Settings (`resume_tailoring`, `cover_letter`, `fit_analysis`). Variant-only mode uses a single structured `resume_tailoring` request plus structured cover letter and fit analysis requests.
