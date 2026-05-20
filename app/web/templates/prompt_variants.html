@@ -1,26 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>Prompt Variants</h1><p>Manage prompt packs for Variant-only tailoring.</p></section>
-<section class="card">
-  <div class="section-header-row"><h2>Variants</h2><a class="button" href="/settings/prompt-variants/new">New Prompt Variant</a></div>
-  <table>
-    <thead><tr><th>Name</th><th>Status</th><th>Description</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for variant in variants %}
-      <tr>
-        <td>{{ variant.name }}{% if variant.is_builtin %} <span class="badge">Built-in</span>{% endif %}</td>
-        <td>{% if variant.is_active %}<span class="badge good">Active</span>{% else %}<span class="badge">Inactive</span>{% endif %}</td>
-        <td>{{ variant.description }}</td>
-        <td>
-          <a class="button compact ghost" href="/settings/prompt-variants/{{ variant.id }}/edit">Edit</a>
-          <form class="inline-form" method="post" action="/settings/prompt-variants/{{ variant.id }}/copy"><button class="compact secondary" type="submit">Copy</button></form>
-          {% if not variant.is_builtin %}
-            <form class="inline-form" method="post" action="/settings/prompt-variants/{{ variant.id }}/deactivate"><button class="compact danger" type="submit">Deactivate</button></form>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</section>
+<section class="page-hero"><div><span class="page-kicker">🧠 Prompt Variants</span><h1>Prompt Variants</h1><p>Manage prompt packs for Variant-only tailoring.</p></div><a class="button" href="/settings/prompt-variants/new">New Prompt Variant</a></section>
+<section class="card"><div class="section-header-row"><h2>Variants</h2></div><table><thead><tr><th>Name</th><th>Status</th><th>Description</th><th>Actions</th></tr></thead><tbody>{% for variant in variants %}<tr><td><strong>{{ variant.name }}</strong>{% if variant.is_builtin %} <span class="badge">Built-in</span>{% endif %}</td><td>{% if variant.is_active %}<span class="badge good">Active</span>{% else %}<span class="badge">Inactive</span>{% endif %}</td><td>{{ variant.description }}</td><td class="actions"><a class="button compact ghost" href="/settings/prompt-variants/{{ variant.id }}/edit">Edit</a><form class="inline-form" method="post" action="/settings/prompt-variants/{{ variant.id }}/copy"><button class="compact secondary" type="submit">Copy</button></form>{% if not variant.is_builtin %}<form class="inline-form" method="post" action="/settings/prompt-variants/{{ variant.id }}/deactivate"><button class="compact danger" type="submit">Deactivate</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></section>
 {% endblock %}
