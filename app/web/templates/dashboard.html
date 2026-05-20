@@ -1,54 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero">
-  <p class="badge">🏠 Dashboard</p>
-  <h1>Profile-scoped application dashboard</h1>
-  <p class="muted">Statistics are calculated for the active profile only. Copy and download activity means likely applied, not confirmed submission.</p>
+<section class="page-hero">
+  <div><span class="page-kicker">🏠 Dashboard</span><h1>Profile-scoped application dashboard</h1><p>Statistics are calculated for the active profile only. Copy and download activity means likely applied, not confirmed submission.</p></div>
 </section>
 {% if not active_profile %}
-  <div class="empty">
-    <h2>No active profile</h2>
-    <p>Create or select a profile in Settings to unlock the Dashboard and Application workspace.</p>
-    <a class="button" href="/settings">Open Settings</a>
-    <a class="button secondary" href="/profiles/new">Create profile</a>
-  </div>
+  <div class="empty"><h2>No active profile</h2><p>Create or select a profile in Settings to unlock the Dashboard and Application workspace.</p><div class="actions" style="justify-content:center"><a class="button" href="/settings">Open Settings</a><a class="button secondary" href="/profiles/new">Create profile</a></div></div>
 {% else %}
-  <div class="grid">
-    <div class="card"><span class="muted">Active profile</span><h2>{{ stats.profile_name }}</h2></div>
-    <div class="card"><span class="muted">Resumes</span><h2>{{ stats.resume_count }}</h2></div>
-    <div class="card"><span class="muted">Applications</span><h2>{{ stats.application_count }}</h2></div>
-    <div class="card"><span class="muted">Last 30 days</span><h2>{{ stats.applications_last_30_days }}</h2></div>
-  </div>
-  <section class="card" style="margin-top:1rem">
-    <div class="section-header-row">
-      <div><h2>Application activity over the last {{ stats.activity_range_days }} days</h2></div>
-      <div class="tabs" aria-label="Activity range">
-        {% for option in [10, 20, 30] %}<a class="tab {% if stats.activity_range_days == option %}active{% endif %}" href="/?days={{ option }}">{{ option }} days</a>{% endfor %}
-      </div>
-    </div>
-    <div class="chart-frame" data-chart-days="{{ stats.activity_range_days }}">
-      <div class="y-axis" aria-label="Y axis application count">
-        {% for label in stats.y_axis_labels %}<span>{{ label }}</span>{% endfor %}
-      </div>
-      <div class="chart" role="img" aria-label="Application activity chart for {{ stats.activity_range_days }} days">
-        {% for day in stats.activity_days %}
-          <span class="bar {% if day.count == 0 %}empty-bar{% endif %}" data-chart-bar="1" title="{{ day.label }}" style="height:{{ day.height }}px"></span>
-        {% endfor %}
-      </div>
-      <div class="x-axis" aria-label="X axis dates" style="grid-template-columns: repeat({{ stats.activity_range_days }}, minmax(0, 1fr));">
-        {% for day in stats.activity_days %}<span class="x-axis-label">{% if day.show_x_label %}{{ day.x_label }}{% endif %}</span>{% endfor %}
-      </div>
-    </div>
-    {% set has_activity = stats.activity_days | selectattr('count') | list | length > 0 %}
-    {% if not has_activity %}<p class="muted">No application activity in the selected period.</p>{% endif %}
-  </section>
-  <section class="card" style="margin-top:1rem">
-    <h2>Recent applications</h2>
-    {% if stats.recent_applications %}
-      <table><thead><tr><th>Job</th><th>Company</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>
-      {% for application in stats.recent_applications %}<tr><td>{{ application.job_title or "Untitled role" }}</td><td>{{ application.company_name or "Unknown company" }}</td><td><span class="badge">{{ application.status }}</span></td><td>{{ application.created_at.date() }}</td><td><a href="/applications/{{ application.id }}">Review</a></td></tr>{% endfor %}
-      </tbody></table>
-    {% else %}<p class="muted">No applications yet. Use the Application workspace to paste a job and adapt a resume.</p>{% endif %}
-  </section>
+  <div class="grid"><div class="stat-card"><span>Active profile</span><h2>{{ stats.profile_name }}</h2></div><div class="stat-card"><span>Resumes</span><h2>{{ stats.resume_count }}</h2></div><div class="stat-card"><span>Applications</span><h2>{{ stats.application_count }}</h2></div><div class="stat-card"><span>Last 30 days</span><h2>{{ stats.applications_last_30_days }}</h2></div></div>
+  <section class="card"><div class="section-header-row"><div><h2>Application activity over the last {{ stats.activity_range_days }} days</h2><p class="muted">Hover over a bar to inspect daily application activity.</p></div><div class="tabs" aria-label="Activity range">{% for option in [10, 20, 30] %}<a class="tab {% if stats.activity_range_days == option %}active{% endif %}" href="/?days={{ option }}">{{ option }} days</a>{% endfor %}</div></div><div class="chart-frame" data-chart-days="{{ stats.activity_range_days }}"><div class="y-axis" aria-label="Y axis application count">{% for label in stats.y_axis_labels %}<span>{{ label }}</span>{% endfor %}</div><div class="chart" role="img" aria-label="Application activity chart for {{ stats.activity_range_days }} days">{% for day in stats.activity_days %}<span class="bar {% if day.count == 0 %}empty-bar{% endif %}" data-chart-bar="1" title="{{ day.label }}" style="height:{{ day.height }}px"></span>{% endfor %}</div><div class="x-axis" aria-label="X axis dates" style="grid-template-columns: repeat({{ stats.activity_range_days }}, minmax(0, 1fr));">{% for day in stats.activity_days %}<span class="x-axis-label">{% if day.show_x_label %}{{ day.x_label }}{% endif %}</span>{% endfor %}</div></div>{% set has_activity = stats.activity_days | selectattr('count') | list | length > 0 %}{% if not has_activity %}<p class="muted">No application activity in the selected period.</p>{% endif %}</section>
+  <section class="card"><div class="section-header-row"><div><h2>Recent applications</h2><p class="muted">Latest profile-scoped application records.</p></div><a class="button ghost compact" href="/applications">View all</a></div>{% if stats.recent_applications %}<table><thead><tr><th>Job</th><th>Company</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>{% for application in stats.recent_applications %}<tr><td>{{ application.job_title or "Untitled role" }}</td><td>{{ application.company_name or "Unknown company" }}</td><td><span class="badge">{{ application.status }}</span></td><td>{{ application.created_at.date() }}</td><td><a class="button compact ghost" href="/applications/{{ application.id }}">Review</a></td></tr>{% endfor %}</tbody></table>{% else %}<p class="empty">No applications yet. Use the Application workspace to paste a job and adapt a resume.</p>{% endif %}</section>
 {% endif %}
 {% endblock %}

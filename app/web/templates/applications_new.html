@@ -1,19 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>Adapt resume to a job</h1><p>Select a Resume Variant, paste the job description, and create a saved Tailored Resume.</p></section>
+<section class="page-hero"><div><span class="page-kicker">✨ New adaptation</span><h1>Adapt resume to a job</h1><p>Select a Resume Variant, paste the job description, and create a saved Tailored Resume.</p></div></section>
 <form class="card" method="post" action="/applications/adapt" data-loading-form>
-  <div class="application-select-row">
-    <label>Resume Variant<select name="resume_id" required>{% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}{% if resume.target_role %} — {{ resume.target_role }}{% endif %}</option>{% endfor %}</select></label>
-    <label>Prompt Variant<select name="prompt_variant_id" required>{% for variant in prompt_variants %}<option value="{{ variant.id }}">{{ variant.name }}</option>{% endfor %}</select></label>
-  </div>
-  <p class="muted">Current mode: {% if use_master_cv %}Master CV enhanced mode{% else %}Variant-only mode{% endif %}</p>
+  <div class="section-header-row"><div><h2>Tailoring setup</h2><p class="muted">Choose the source resume and prompt pack for this adaptation.</p></div><span class="badge {% if use_master_cv %}warn{% else %}good{% endif %}">{% if use_master_cv %}Master CV enhanced mode{% else %}Variant-only mode{% endif %}</span></div>
+  <div class="application-select-row"><label>Resume Variant<select name="resume_id" required>{% for resume in resumes %}<option value="{{ resume.id }}">{{ resume.name }}{% if resume.target_role %} — {{ resume.target_role }}{% endif %}</option>{% endfor %}</select></label><label>Prompt Variant<select name="prompt_variant_id" required>{% for variant in prompt_variants %}<option value="{{ variant.id }}">{{ variant.name }}</option>{% endfor %}</select></label></div>
   {% if not resumes %}<p class="empty">Create a Resume Variant before tailoring.</p>{% endif %}
-  <div class="form-grid"><label>Job title optional<input name="job_title"></label><label>Company optional<input name="company_name"></label></div>
-  <label>Source URL optional<input name="source_url"></label>
-  <label>Job Description<textarea class="job-description" name="raw_job_text" required></textarea></label>
-  <div class="actions">
-    <button type="submit" {% if not resumes %}disabled{% endif %}>Adapt resume</button>
-    <span class="loading-note" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span>Waiting for LLM response…</span>
-  </div>
+  <div class="form-grid"><label>Job title optional<input name="job_title"></label><label>Company optional<input name="company_name"></label></div><label>Source URL optional<input name="source_url"></label><label>Job Description<textarea class="job-description" name="raw_job_text" required></textarea></label><div class="actions"><button type="submit" {% if not resumes %}disabled{% endif %}>Adapt resume</button><span class="loading-note" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span>Waiting for LLM response…</span></div>
 </form>
 {% endblock %}
