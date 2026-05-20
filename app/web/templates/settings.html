@@ -1,76 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero-card"><h1>Settings</h1><p>Configure local data, exports, prompt variants, and model identifiers.</p></section>
+<section class="page-hero"><div><span class="page-kicker">⚙ Settings</span><h1>Settings</h1><p>Configure local data, exports, prompt variants, and model identifiers.</p></div></section>
 <div class="settings-layout">
-  <aside class="side-menu"><a href="/settings?section=profiles">Profiles</a><a href="/settings?section=exports">Exports</a><a href="/settings?section=ai-policy">AI policy</a><a href="/settings/prompt-variants">Prompt Variants</a><a href="/settings?section=models">Models</a><a href="/settings?section=data-folder">Data folder</a></aside>
+  <aside class="side-menu"><a class="{% if section == 'profiles' or not section %}active{% endif %}" href="/settings?section=profiles">Profiles</a><a class="{% if section == 'exports' %}active{% endif %}" href="/settings?section=exports">Exports</a><a class="{% if section == 'ai-policy' %}active{% endif %}" href="/settings?section=ai-policy">AI policy</a><a href="/settings/prompt-variants">Prompt Variants</a><a class="{% if section == 'models' %}active{% endif %}" href="/settings?section=models">Models</a><a class="{% if section == 'data-folder' %}active{% endif %}" href="/settings?section=data-folder">Data folder</a></aside>
   <section class="card">
     {% if section == 'exports' %}
-      <h2>Export formats</h2>
-      <form method="post"><input type="hidden" name="settings_section" value="exports"><label class="checkbox-line"><input type="checkbox" name="export_pdf" {% if settings.exports.pdf %}checked{% endif %}> PDF</label><label class="checkbox-line"><input type="checkbox" name="export_docx" {% if settings.exports.docx %}checked{% endif %}> DOCX</label><button>Save exports</button></form>
+      <h2>Export formats</h2><p class="muted">Choose which export formats should be enabled for generated resumes.</p><form method="post"><input type="hidden" name="settings_section" value="exports"><label class="checkbox-line"><input type="checkbox" name="export_pdf" {% if settings.exports.pdf %}checked{% endif %}> PDF</label><label class="checkbox-line"><input type="checkbox" name="export_docx" {% if settings.exports.docx %}checked{% endif %}> DOCX</label><button>Save exports</button></form>
     {% elif section == 'ai-policy' %}
-      <h2>AI policy defaults</h2>
-      <form method="post"><input type="hidden" name="settings_section" value="ai-policy"><label class="checkbox-line"><input type="checkbox" name="use_master_cv" {% if settings.ai_policy_defaults.use_master_cv %}checked{% endif %}> Use Master CV source material</label><label class="checkbox-line"><input type="checkbox" name="allow_new_bullets" {% if settings.ai_policy_defaults.allow_new_bullets %}checked{% endif %}> Allow new bullets in editable sections</label><label class="checkbox-line"><input type="checkbox" name="allow_hide_bullets" {% if settings.ai_policy_defaults.allow_hide_bullets %}checked{% endif %}> Allow hiding weak bullets</label><button>Save policy</button></form>
+      <h2>AI policy defaults</h2><p class="muted">Control which source material is available to the adaptation workflow.</p><form method="post"><input type="hidden" name="settings_section" value="ai-policy"><label class="checkbox-line"><input type="checkbox" name="use_master_cv" {% if settings.ai_policy_defaults.use_master_cv %}checked{% endif %}> Use Master CV source material</label><label class="checkbox-line"><input type="checkbox" name="allow_new_bullets" {% if settings.ai_policy_defaults.allow_new_bullets %}checked{% endif %}> Allow new bullets in editable sections</label><label class="checkbox-line"><input type="checkbox" name="allow_hide_bullets" {% if settings.ai_policy_defaults.allow_hide_bullets %}checked{% endif %}> Allow hiding weak bullets</label><button>Save policy</button></form>
     {% elif section == 'models' %}
-      <h2>Models and provider mode</h2>
-      <p class="muted">Model identifiers are stored in SQLite settings. The OpenAI API key is stored in the OS keyring only, and saving it does not test a real API call.</p>
-      <p class="model-links"><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API keys</a><span class="muted">·</span><a href="https://platform.openai.com/docs/models" target="_blank" rel="noopener noreferrer">OpenAI Models documentation</a></p>
-      <form method="post">
-        <input type="hidden" name="settings_section" value="models">
-        <label>LLM mode
-          <select name="llm_mode">
-            <option value="openai" {% if settings.llm_mode == 'openai' %}selected{% endif %}>OpenAI mode</option>
-            <option value="fake" {% if settings.llm_mode == 'fake' %}selected{% endif %}>Fake / deterministic local mode</option>
-          </select>
-        </label>
-        {% set model_options = ['gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.4', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini'] %}
-        {% for key, value in model_settings.items() %}
-          {% if key != 'llm_mode' %}
-            <label>{{ key.replace('_',' ')|title }}
-              <select name="{{ key }}">
-                {% if value and value not in model_options %}<option value="{{ value }}" selected>{{ value }} (current)</option>{% endif %}
-                {% for model in model_options %}<option value="{{ model }}" {% if value == model %}selected{% endif %}>{{ model }}</option>{% endfor %}
-              </select>
-            </label>
-          {% endif %}
-        {% endfor %}
-        <label>OpenAI API key<input name="openai_api_key" type="password" value="" placeholder="Stored in OS keyring only"></label>
-        <p class="muted">Key available: {{ 'yes' if openai_key_available else 'no' }}</p>
-        <button>Save models</button>
-      </form>
+      <h2>Models and provider mode</h2><div class="callout"><p>Model identifiers are stored in SQLite settings. The OpenAI API key is stored in the OS keyring only, and saving it does not test a real API call.</p><p class="model-links"><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API keys</a><span>·</span><a href="https://platform.openai.com/docs/models" target="_blank" rel="noopener noreferrer">OpenAI Models documentation</a></p></div><form method="post"><input type="hidden" name="settings_section" value="models"><label>LLM mode<select name="llm_mode"><option value="openai" {% if settings.llm_mode == 'openai' %}selected{% endif %}>OpenAI mode</option><option value="fake" {% if settings.llm_mode == 'fake' %}selected{% endif %}>Fake / deterministic local mode</option></select></label>{% set model_options = ['gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.4', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini'] %}{% for key, value in model_settings.items() %}{% if key != 'llm_mode' %}<label>{{ key.replace('_',' ')|title }}<select name="{{ key }}">{% if value and value not in model_options %}<option value="{{ value }}" selected>{{ value }} (current)</option>{% endif %}{% for model in model_options %}<option value="{{ model }}" {% if value == model %}selected{% endif %}>{{ model }}</option>{% endfor %}</select></label>{% endif %}{% endfor %}<label>OpenAI API key<input name="openai_api_key" type="password" value="" placeholder="Stored in OS keyring only"></label><p class="muted">Key available: {{ 'yes' if openai_key_available else 'no' }}</p><button>Save models</button></form>
     {% elif section == 'data-folder' %}
-      <h2>Data folder</h2>
-      <form method="post"><input type="hidden" name="settings_section" value="data-folder"><label>Folder path<input name="root"></label>{% if data_folder_error %}<p class="badge bad">{{ data_folder_error }}</p>{% endif %}<button>Save folder</button><button class="secondary" name="data_folder_action" value="reset">Reset</button></form>
+      <h2>Data folder</h2><p class="muted">Choose where local profiles, SQLite data, logs, backups, and exports are stored.</p><form method="post"><input type="hidden" name="settings_section" value="data-folder"><label>Folder path<input name="root"></label>{% if data_folder_error %}<p class="badge bad">{{ data_folder_error }}</p>{% endif %}<div class="actions"><button>Save folder</button><button class="secondary" name="data_folder_action" value="reset">Reset</button></div></form>
     {% else %}
-      <h2>Profiles</h2>
-      <form method="post"><input type="hidden" name="settings_section" value="profiles"><label>Active profile<select name="active_profile_id"><option value="">No profile</option>{% for profile in profiles %}<option value="{{ profile.id }}" {% if settings.active_profile_id == profile.id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}</select></label><button>Save active profile</button></form>
-      <div class="section-header-row" style="margin-top:1rem"><h2>Manage profiles</h2><a class="button compact" href="/profiles/new">Add profile</a></div>
-      {% if profiles %}
-        <table><thead><tr><th>Profile</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-        {% for profile in profiles %}
-          <tr>
-            <td><strong>{{ profile.display_name }}</strong></td>
-            <td>{% if settings.active_profile_id == profile.id %}<span class="badge good">Active</span>{% else %}<span class="badge">Inactive</span>{% endif %}</td>
-            <td class="profile-actions">
-              <a class="button compact ghost" href="/profiles/{{ profile.id }}">Open</a>
-              <a class="button compact ghost" href="/profiles/{{ profile.id }}/edit">Edit</a>
-              <form class="inline-form" method="post" action="/profiles/{{ profile.id }}/set-active"><button class="compact secondary" type="submit">Set active</button></form>
-              <form class="profile-delete-form" method="post" action="/profiles/{{ profile.id }}/delete">
-                <input
-                  type="text"
-                  name="confirm_profile_name"
-                  aria-label="Type {{ profile.display_name }} to confirm deletion"
-                  placeholder="Type profile name"
-                  autocomplete="off"
-                >
-                <button class="compact danger" type="submit">Delete</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-        </tbody></table>
-      {% else %}
-        <p class="empty">No profiles yet. Create a profile to start using the workspace.</p>
-      {% endif %}
+      <h2>Profiles</h2><p class="muted">Profiles scope resumes, applications, Master CV material, and prompt usage.</p><form method="post"><input type="hidden" name="settings_section" value="profiles"><label>Active profile<select name="active_profile_id"><option value="">No profile</option>{% for profile in profiles %}<option value="{{ profile.id }}" {% if settings.active_profile_id == profile.id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}</select></label><button>Save active profile</button></form><div class="section-header-row" style="margin-top:1rem"><h2>Manage profiles</h2><a class="button compact" href="/profiles/new">Add profile</a></div>{% if profiles %}<table><thead><tr><th>Profile</th><th>Status</th><th>Actions</th></tr></thead><tbody>{% for profile in profiles %}<tr><td><strong>{{ profile.display_name }}</strong></td><td>{% if settings.active_profile_id == profile.id %}<span class="badge good">Active</span>{% else %}<span class="badge">Inactive</span>{% endif %}</td><td class="profile-actions"><a class="button compact ghost" href="/profiles/{{ profile.id }}">Open</a><a class="button compact ghost" href="/profiles/{{ profile.id }}/edit">Edit</a><form class="inline-form" method="post" action="/profiles/{{ profile.id }}/set-active"><button class="compact secondary" type="submit">Set active</button></form><form class="profile-delete-form" method="post" action="/profiles/{{ profile.id }}/delete"><input type="text" name="confirm_profile_name" aria-label="Type {{ profile.display_name }} to confirm deletion" placeholder="Type profile name" autocomplete="off"><button class="compact danger" type="submit">Delete</button></form></td></tr>{% endfor %}</tbody></table>{% else %}<p class="empty">No profiles yet. Create a profile to start using the workspace.</p>{% endif %}
     {% endif %}
   </section>
 </div>
